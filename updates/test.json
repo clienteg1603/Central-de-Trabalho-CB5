@@ -2,17 +2,18 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.8.3",
+  "Version": "0.8.4",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.3.zip",
-  "PackageSha256": "28A3913D5E844F8F6F865AE1D5133CFC157B813B140795B2B502DDE412EF21E9",
-  "PackageSize": 141350,
-  "PackageRoot": "Central-de-Trabalho-v0.8.3",
+  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.4.zip",
+  "PackageSha256": "70B89AF3531A2A22B8D818385409678B3FAFBC4E2CFC0425761D802EA0B717B0",
+  "PackageSize": 141815,
+  "PackageRoot": "Central-de-Trabalho-v0.8.4",
   "ReleaseNotes": [
-    "Correção da reabertura automática da Central após atualizar ou restaurar.",
-    "O executável principal passa a abrir com a pasta de trabalho correta.",
-    "Fallback automático para o launcher VBS se necessário.",
-    "Mantidas as correções anteriores do Atualizador.",
+    "Correção do Central de Trabalho.exe para abertura normal por duplo clique.",
+    "O EXE principal passa a usar o launcher confiável sem exibir janela preta.",
+    "Adicionadas novas tentativas automáticas em falhas temporárias de consulta, como erro 503.",
+    "Configurar Endereço passa a refletir o endereço realmente usado pelo canal.",
+    "Mantidas as correções anteriores de atualização, backup, restauração e reabertura automática.",
     "Nenhuma regra do Gerenciador ou da Manutenção foi alterada."
   ]
 }
