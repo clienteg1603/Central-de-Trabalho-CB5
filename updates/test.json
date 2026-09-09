@@ -1,0 +1,16 @@
+{
+  "SchemaVersion": 1,
+  "AppId": "central-de-trabalho",
+  "Channel": "test",
+  "Version": "0.8.2",
+  "MinimumUpdaterVersion": "1.0.0",
+  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.2.zip",
+  "PackageSha256": "966B08C6B3A39CD424064DD923354A84286AFBFD825F7050CC8D7175A38EA88F",
+  "PackageSize": 142208,
+  "PackageRoot": "Central-de-Trabalho-v0.8.2",
+  "ReleaseNotes": [
+    "Primeiro teste real de atualização pela internet.",
+    "Canais Estável e Teste passam a vir configurados no pacote.",
+    "Nenhuma regra do Gerenciador ou da Manutenção foi alterada."
+  ]
+}
