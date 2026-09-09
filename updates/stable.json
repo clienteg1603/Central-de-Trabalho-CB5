@@ -1,0 +1,15 @@
+{
+  "SchemaVersion": 1,
+  "AppId": "central-de-trabalho",
+  "Channel": "stable",
+  "Version": "0.8.1",
+  "MinimumUpdaterVersion": "1.0.0",
+  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.1.zip",
+  "PackageSha256": "FB96DFB7FB135ACA7BBFBC295E5BE223C98713026C0E9D4F8B31E16009AAAA0E",
+  "PackageSize": 142096,
+  "PackageRoot": "Central-de-Trabalho-v0.8.1",
+  "ReleaseNotes": [
+    "Versão estável inicial do sistema de atualização.",
+    "Correção do layout da janela Atualizações para diferentes escalas do Windows."
+  ]
+}
