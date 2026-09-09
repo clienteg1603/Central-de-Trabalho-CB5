@@ -2,14 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "stable",
-  "Version": "0.8.1",
+  "Version": "0.8.5",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.1.zip",
-  "PackageSha256": "FB96DFB7FB135ACA7BBFBC295E5BE223C98713026C0E9D4F8B31E16009AAAA0E",
-  "PackageSize": 142096,
-  "PackageRoot": "Central-de-Trabalho-v0.8.1",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.8.5.zip",
+  "PackageSha256": "7A1E4BA8889387596F9005658FD938A86FD518C818ACCDC36156604EA5939094",
+  "PackageSize": 927661,
+  "PackageRoot": "Central-de-Trabalho-v0.8.5",
   "ReleaseNotes": [
-    "Versão estável inicial do sistema de atualização.",
-    "Correção do layout da janela Atualizações para diferentes escalas do Windows."
+    "Versão estável consolidada após testes de atualização e restauração.",
+    "Novo launcher nativo de 64 bits para abertura normal pelo Central de Trabalho.exe.",
+    "Reabertura automática após atualização e restauração.",
+    "Tentativas automáticas em falhas temporárias como erro 503.",
+    "Persistência correta do endereço dos canais.",
+    "Validações de SHA-256, backup e restauração mantidas.",
+    "Download do pacote pela CDN para maior estabilidade.",
+    "Nenhuma regra do Gerenciador ou da Manutenção foi alterada."
   ]
 }
