@@ -26,7 +26,7 @@ jobs:
           BASE_URL="https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v${BASE_VERSION}.zip"
           BUILD_DIR="$RUNNER_TEMP/central-build"
           rm -rf "$BUILD_DIR"
-          mkdir -p "$BUILD_DIR"
+          mkdir -p "$BUILD_DIR/patches"
 
           curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 \
             -o "$BUILD_DIR/base.zip" "$BASE_URL"
@@ -34,8 +34,10 @@ jobs:
           BASE_ROOT="$BUILD_DIR/base/Central-de-Trabalho-v${BASE_VERSION}"
           test -d "$BASE_ROOT"
 
-          # Normaliza apenas os três scripts que recebem patches. Depois do patch,
-          # o BOM UTF-8 é recolocado para manter compatibilidade com Windows PowerShell.
+          for NAME in central-trabalho manutencao-cb5 gerador-planilhas; do
+            base64 -d "src/current/patches/${NAME}.patch.gz.b64" | gzip -d > "$BUILD_DIR/patches/${NAME}.patch"
+          done
+
           python3 - "$BASE_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
@@ -49,9 +51,9 @@ jobs:
               p.write_text(text, encoding='utf-8', newline='')
           PY
 
-          patch --batch -p1 -d "$BASE_ROOT" < src/current/patches/central-trabalho.patch
-          patch --batch -p1 -d "$BASE_ROOT" < src/current/patches/manutencao-cb5.patch
-          patch --batch -p1 -d "$BASE_ROOT" < src/current/patches/gerador-planilhas.patch
+          patch --batch -p1 -d "$BASE_ROOT" < "$BUILD_DIR/patches/central-trabalho.patch"
+          patch --batch -p1 -d "$BASE_ROOT" < "$BUILD_DIR/patches/manutencao-cb5.patch"
+          patch --batch -p1 -d "$BASE_ROOT" < "$BUILD_DIR/patches/gerador-planilhas.patch"
 
           python3 - "$BASE_ROOT" <<'PY'
           import pathlib, sys
