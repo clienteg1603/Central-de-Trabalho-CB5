@@ -2,16 +2,17 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.8.2",
+  "Version": "0.8.3",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.2.zip",
-  "PackageSha256": "BB5C8B7CAA8DFC0FA7F23A01632219608BF528801028F7BCBAACB43E0E76967B",
-  "PackageSize": 140935,
-  "PackageRoot": "Central-de-Trabalho-v0.8.2",
+  "PackageUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/packages/Central-de-Trabalho-v0.8.3.zip",
+  "PackageSha256": "28A3913D5E844F8F6F865AE1D5133CFC157B813B140795B2B502DDE412EF21E9",
+  "PackageSize": 141350,
+  "PackageRoot": "Central-de-Trabalho-v0.8.3",
   "ReleaseNotes": [
-    "Primeiro teste real de atualização pela internet.",
-    "Canais Estável e Teste passam a vir configurados no pacote.",
-    "Correção no confirmador de instalação do Atualizador.",
+    "Correção da reabertura automática da Central após atualizar ou restaurar.",
+    "O executável principal passa a abrir com a pasta de trabalho correta.",
+    "Fallback automático para o launcher VBS se necessário.",
+    "Mantidas as correções anteriores do Atualizador.",
     "Nenhuma regra do Gerenciador ou da Manutenção foi alterada."
   ]
 }
