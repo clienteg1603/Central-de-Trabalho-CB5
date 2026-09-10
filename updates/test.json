@@ -2,20 +2,19 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.11.5",
+  "Version": "0.12.0",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.5.zip",
-  "PackageSha256": "2284366564CEECDE6C6DEC7A638942107574FF569921C08EB9FC1C73CFFC996A",
-  "PackageSize": 901232,
-  "PackageRoot": "Central-de-Trabalho-v0.11.5",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.12.0.zip",
+  "PackageSha256": "E5547BED375B36F6FBF452D0FC20330DB96757B1488B786BD62E6EB117F0E6ED",
+  "PackageSize": 901881,
+  "PackageRoot": "Central-de-Trabalho-v0.12.0",
   "ReleaseNotes": [
-    "Etapa 3 avança para a tela Passagem / manutenção da Central de Manutenção CB5.",
-    "Corrigida a matemática interna do bloco Identificação: em perfis compactos a altura agora comporta todas as linhas sem compressão ou corte.",
-    "Conclusão também recebeu alturas internas compatíveis com os perfis responsivos, evitando ComboBox e ajuda espremidos.",
-    "Identificação, modo atual, fluxo automático, avisos de atualização e regra de código receberam hierarquia visual mais clara.",
-    "Os avisos laterais ganharam margens, cantos arredondados e melhor separação das ações da passagem.",
-    "O botão de limpeza foi simplificado para NOVA / LIMPAR e os principais campos e ações agora têm tooltips explicativos.",
-    "Os títulos dos blocos foram encurtados para leitura mais rápida sem alterar a sequência operacional.",
-    "Nenhuma regra de manutenção, validação, histórico, salvamento ou conclusão foi alterada."
+    "Etapa 4 começa pelo Gerenciador de Planilhas CB5/TV5 com uma correção estrutural da integração.",
+    "Dentro da Central, o Gerenciador deixa de ser uma janela Form dimensionada pelo monitor e passa a ser um UserControl nativo encaixado diretamente na área disponível.",
+    "A responsividade do Gerenciador integrado agora usa as dimensões reais fornecidas pela Central, sem uma segunda redução indevida pelo DPI.",
+    "Corrigido o contrato de integração para o Gerenciador receber o tema atual da Central e acompanhar mudanças de aparência enquanto está aberto.",
+    "Adicionada a aparência Técnico industrial ao Gerenciador, mantendo CB5 e TV5 com seus destaques próprios.",
+    "O modo independente do Gerenciador continua disponível como janela normal.",
+    "Nenhuma regra de leitura ou geração do Excel, manutenção adicional, faturamento, baixa de componentes ou união de lotes foi alterada."
   ]
 }

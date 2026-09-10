@@ -1,6 +1,7 @@
 param(
     [Int64]$EmbeddedParentHandle = 0,
-    [switch]$HostedInCentral
+    [switch]$HostedInCentral,
+    [string]$HostTheme = ""
 )
 
 Set-StrictMode -Version Latest
@@ -13,6 +14,7 @@ Add-Type -AssemblyName System.Drawing
 $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:IsEmbedded = (($EmbeddedParentHandle -gt 0) -and -not $script:IsInProcessHosted)
 $script:HostedFormExport = $null
+$script:HostedControlExport = $null
 $script:EmbeddedParentHandle = [IntPtr]::new($EmbeddedParentHandle)
 $script:EmbeddedResizeTimer = $null
 
@@ -76,7 +78,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.4.0"
+$script:AppVersion = "3.5.0"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1553,7 +1555,7 @@ function Get-AppSettings {
     try {
         if ([IO.File]::Exists($script:SettingsPath)) {
             $saved = Get-Content -LiteralPath $script:SettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if (@("Claro moderno", "Escuro grafite", "Alto contraste") -contains [string]$saved.Theme) {
+            if (@("Claro moderno", "Escuro grafite", "Técnico industrial", "Alto contraste") -contains [string]$saved.Theme) {
                 $settings.Theme = [string]$saved.Theme
             }
             if (@("CB5", "TV5") -contains [string]$saved.Product) {
@@ -1644,6 +1646,28 @@ function Get-ThemePalette {
                 Warning = [Drawing.Color]::FromArgb(251, 191, 36)
             }
         }
+        "Técnico industrial" {
+            $accent = if ($Product -eq "TV5") { [Drawing.Color]::FromArgb(72, 202, 143) } else { [Drawing.Color]::FromArgb(44, 189, 197) }
+            return [pscustomobject]@{
+                Background = [Drawing.Color]::FromArgb(18, 23, 25)
+                Surface = [Drawing.Color]::FromArgb(27, 35, 38)
+                Panel = [Drawing.Color]::FromArgb(34, 43, 46)
+                Input = [Drawing.Color]::FromArgb(18, 23, 25)
+                Text = [Drawing.Color]::FromArgb(242, 246, 245)
+                Muted = [Drawing.Color]::FromArgb(174, 188, 186)
+                Border = [Drawing.Color]::FromArgb(62, 77, 80)
+                Accent = $accent
+                AccentText = [Drawing.Color]::FromArgb(9, 24, 28)
+                Info = [Drawing.Color]::FromArgb(27, 55, 59)
+                Quantity = [Drawing.Color]::FromArgb(86, 59, 13)
+                SelectedRow = [Drawing.Color]::FromArgb(39, 55, 57)
+                SelectedQuantity = [Drawing.Color]::FromArgb(112, 75, 18)
+                Invalid = [Drawing.Color]::FromArgb(78, 28, 26)
+                Success = [Drawing.Color]::FromArgb(72, 202, 143)
+                Error = [Drawing.Color]::FromArgb(239, 108, 102)
+                Warning = [Drawing.Color]::FromArgb(246, 186, 68)
+            }
+        }
         "Alto contraste" {
             return [pscustomobject]@{
                 Background = [Drawing.Color]::Black
@@ -1687,6 +1711,30 @@ function Get-ThemePalette {
             }
         }
     }
+}
+
+function Get-GeneratorThemeFromHost {
+    param([string]$Theme)
+    switch ($Theme) {
+        "Escuro profissional" { return "Escuro grafite" }
+        "Técnico industrial" { return "Técnico industrial" }
+        "Claro corporativo" { return "Claro moderno" }
+        "Alto contraste" { return "Alto contraste" }
+        default { return "Escuro grafite" }
+    }
+}
+
+function Set-HostedGeneratorTheme {
+    param([string]$CentralTheme)
+    if (-not $script:IsInProcessHosted) { return }
+    $mapped = Get-GeneratorThemeFromHost $CentralTheme
+    try {
+        if ($themeCombo.Items.Contains($mapped)) { $themeCombo.SelectedItem = $mapped }
+        else { $themeCombo.SelectedItem = "Escuro grafite" }
+        Apply-AppTheme
+        Update-GeneratorResponsiveLayout
+        Update-RootLayout
+    } catch {}
 }
 
 function New-AppLogoBitmap {
@@ -2406,25 +2454,13 @@ function Show-AppSplash {
 }
 
 $script:AppSettings = Get-AppSettings
+if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) {
+    $script:AppSettings.Theme = Get-GeneratorThemeFromHost $HostTheme
+}
 $script:LastInputDirectory = [string]$script:AppSettings.LastInputDirectory
 $initialPalette = Get-ThemePalette $script:AppSettings.Theme $script:AppSettings.Product
 $script:CurrentPalette = $initialPalette
 
-$form = New-Object Windows.Forms.Form
-$form.Text = "Gerenciador de Planilhas CB5 e TV5"
-$form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
-if ($script:IsInProcessHosted) {
-    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::None
-}
-else {
-    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
-}
-$form.AutoScaleDimensions = New-Object Drawing.SizeF(96, 96)
-$form.FormBorderStyle = [Windows.Forms.FormBorderStyle]::Sizable
-$form.MaximizeBox = $true
-$form.MinimizeBox = $true
-$form.Size = New-Object Drawing.Size(1080, 780)
-$form.MinimumSize = New-Object Drawing.Size(820, 560)
 $workingArea = [Windows.Forms.Screen]::PrimaryScreen.WorkingArea
 $targetWidth = [Math]::Min($workingArea.Width, [Math]::Max(760, [int]($workingArea.Width * 0.94)))
 $targetHeight = [Math]::Min($workingArea.Height, [Math]::Max(520, [int]($workingArea.Height * 0.94)))
@@ -2432,12 +2468,38 @@ $targetWidth = [Math]::Min($targetWidth, $workingArea.Width)
 $targetHeight = [Math]::Min($targetHeight, $workingArea.Height)
 $minimumWidth = [Math]::Min(820, $workingArea.Width)
 $minimumHeight = [Math]::Min(560, $workingArea.Height)
-$form.Font = New-Object Drawing.Font("Segoe UI", 10)
-$form.BackColor = $initialPalette.Background
-$form.KeyPreview = $true
-$script:AppIconBitmap = New-AppLogoBitmap $initialPalette.Accent 32
-$script:AppIcon = [Drawing.Icon]::FromHandle($script:AppIconBitmap.GetHicon())
-$form.Icon = $script:AppIcon
+
+if ($script:IsInProcessHosted) {
+    $form = New-Object Windows.Forms.UserControl
+    $form.Name = "GeneratorHostedControl"
+    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::None
+    $form.AutoScaleDimensions = New-Object Drawing.SizeF(96, 96)
+    $form.MinimumSize = New-Object Drawing.Size(1, 1)
+    $form.Margin = New-Object Windows.Forms.Padding(0)
+    $form.Dock = [Windows.Forms.DockStyle]::Fill
+    $form.Font = New-Object Drawing.Font("Segoe UI", 9.25)
+    $form.BackColor = $initialPalette.Background
+    $script:AppIconBitmap = $null
+    $script:AppIcon = $null
+}
+else {
+    $form = New-Object Windows.Forms.Form
+    $form.Text = "Gerenciador de Planilhas CB5 e TV5"
+    $form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
+    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
+    $form.AutoScaleDimensions = New-Object Drawing.SizeF(96, 96)
+    $form.FormBorderStyle = [Windows.Forms.FormBorderStyle]::Sizable
+    $form.MaximizeBox = $true
+    $form.MinimizeBox = $true
+    $form.Size = New-Object Drawing.Size(1080, 780)
+    $form.MinimumSize = New-Object Drawing.Size(820, 560)
+    $form.Font = New-Object Drawing.Font("Segoe UI", 10)
+    $form.BackColor = $initialPalette.Background
+    $form.KeyPreview = $true
+    $script:AppIconBitmap = New-AppLogoBitmap $initialPalette.Accent 32
+    $script:AppIcon = [Drawing.Icon]::FromHandle($script:AppIconBitmap.GetHicon())
+    $form.Icon = $script:AppIcon
+}
 
 $toolTip = New-Object Windows.Forms.ToolTip
 $toolTip.AutoPopDelay = 8000
@@ -2491,6 +2553,7 @@ $themeCombo.Anchor = "Top,Right"
 $themeCombo.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
 [void]$themeCombo.Items.Add("Claro moderno")
 [void]$themeCombo.Items.Add("Escuro grafite")
+[void]$themeCombo.Items.Add("Técnico industrial")
 [void]$themeCombo.Items.Add("Alto contraste")
 $themeCombo.SelectedItem = $script:AppSettings.Theme
 $headerPanel.Controls.Add($themeCombo)
@@ -3325,8 +3388,11 @@ function Get-GeneratorLogicalViewport {
     $h = [Math]::Max(1,[int]$form.ClientSize.Height)
     [pscustomobject]@{
         Dpi=$dpi
-        LogicalWidth=[int][Math]::Round($w*96.0/$dpi)
-        LogicalHeight=[int][Math]::Round($h*96.0/$dpi)
+        Scale=[Math]::Round($dpi/96.0, 2)
+        Width=$w
+        Height=$h
+        LogicalWidth=if ($script:IsInProcessHosted) { $w } else { [int][Math]::Round($w*96.0/$dpi) }
+        LogicalHeight=if ($script:IsInProcessHosted) { $h } else { [int][Math]::Round($h*96.0/$dpi) }
     }
 }
 
@@ -4871,35 +4937,11 @@ $combineGenerateButton.Add_Click({
     }
 })
 
-$form.MinimumSize = [Drawing.Size]::new([int]$minimumWidth, [int]$minimumHeight)
-$form.Size = [Drawing.Size]::new([int]$targetWidth, [int]$targetHeight)
 if ($script:IsInProcessHosted) {
-    $form.TopLevel = $false
-    $form.FormBorderStyle = [Windows.Forms.FormBorderStyle]::None
-    $form.ShowInTaskbar = $false
-    $form.ControlBox = $false
-    $form.MinimizeBox = $false
-    $form.MaximizeBox = $false
     $form.MinimumSize = [Drawing.Size]::new(1, 1)
     $form.Dock = [Windows.Forms.DockStyle]::Fill
-}
-else {
-    Initialize-EmbeddedModuleWindow $form
-}
-$form.Add_Shown({
-    if (-not $script:IsEmbedded -and -not $script:IsInProcessHosted) {
-        $visibleArea = [Windows.Forms.Screen]::FromControl($form).WorkingArea
-        if ($form.WindowState -eq [Windows.Forms.FormWindowState]::Normal) {
-            $fittedWidth = [Math]::Min($form.Width, $visibleArea.Width)
-            $fittedHeight = [Math]::Min($form.Height, $visibleArea.Height)
-            $form.Size = [Drawing.Size]::new([int]$fittedWidth, [int]$fittedHeight)
-        }
-    }
-    Update-RootLayout
-})
-
-if ($script:IsInProcessHosted) {
-    $form.Add_FormClosed({
+    $form.Add_HandleCreated({ try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })
+    $form.Add_Disposed({
         try { Save-AppSettings } catch {}
         try { if ($null -ne $logoPicture.Image) { $logoPicture.Image.Dispose() } } catch {}
         try { if ($null -ne $script:AppIcon) { $script:AppIcon.Dispose() } } catch {}
@@ -4907,13 +4949,27 @@ if ($script:IsInProcessHosted) {
         try { $toolTip.Dispose() } catch {}
         try { Close-GeneratorSingleInstanceMutex } catch {}
     })
-    $script:HostedFormExport = $form
+    try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {}
+    $script:HostedControlExport = $form
+    $script:HostedFormExport = $null
 }
 else {
+    $form.MinimumSize = [Drawing.Size]::new([int]$minimumWidth, [int]$minimumHeight)
+    $form.Size = [Drawing.Size]::new([int]$targetWidth, [int]$targetHeight)
+    Initialize-EmbeddedModuleWindow $form
+    $form.Add_Shown({
+        if (-not $script:IsEmbedded) {
+            $visibleArea = [Windows.Forms.Screen]::FromControl($form).WorkingArea
+            if ($form.WindowState -eq [Windows.Forms.FormWindowState]::Normal) {
+                $fittedWidth = [Math]::Min($form.Width, $visibleArea.Width)
+                $fittedHeight = [Math]::Min($form.Height, $visibleArea.Height)
+                $form.Size = [Drawing.Size]::new([int]$fittedWidth, [int]$fittedHeight)
+            }
+        }
+        Update-RootLayout
+    })
     if (-not $script:IsEmbedded) { Show-AppSplash }
-    try {
-        [void]$form.ShowDialog()
-    }
+    try { [void]$form.ShowDialog() }
     finally {
         Save-AppSettings
         if ($null -ne $logoPicture.Image) { $logoPicture.Image.Dispose() }
@@ -4924,3 +4980,5 @@ else {
         Close-GeneratorSingleInstanceMutex
     }
 }
+
+# GENERATOR_NATIVE_HOST_V120

@@ -6,9 +6,9 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.11.5"
+$script:AppVersion = "0.12.0"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.4.0"
+$script:GeneratorVersion = "3.5.0"
 $script:MaintenanceVersion = "0.5.5"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
@@ -353,8 +353,13 @@ function Sync-HostedModuleTheme {
     try {
         & $script:HostedModule {
             param($hostTheme)
-            $cmd = Get-Command -Name Set-HostedMaintenanceTheme -ErrorAction SilentlyContinue
-            if ($null -ne $cmd) { Set-HostedMaintenanceTheme $hostTheme }
+            $maintenanceCmd = Get-Command -Name Set-HostedMaintenanceTheme -ErrorAction SilentlyContinue
+            if ($null -ne $maintenanceCmd) {
+                Set-HostedMaintenanceTheme $hostTheme
+                return
+            }
+            $generatorCmd = Get-Command -Name Set-HostedGeneratorTheme -ErrorAction SilentlyContinue
+            if ($null -ne $generatorCmd) { Set-HostedGeneratorTheme $hostTheme }
         } $theme
     } catch {}
 }
@@ -448,6 +453,10 @@ function Start-EmbeddedModule {
             & $moduleInfo {
                 if (Get-Command Update-MaintenanceResponsiveLayout -ErrorAction SilentlyContinue) {
                     Update-MaintenanceResponsiveLayout
+                }
+                elseif (Get-Command Update-GeneratorResponsiveLayout -ErrorAction SilentlyContinue) {
+                    Update-GeneratorResponsiveLayout
+                    if (Get-Command Update-RootLayout -ErrorAction SilentlyContinue) { Update-RootLayout }
                 }
             }
         } catch {}
@@ -1597,6 +1606,10 @@ $embeddedContent.Add_SizeChanged({
                 & $script:HostedModule {
                     if (Get-Command Update-MaintenanceResponsiveLayout -ErrorAction SilentlyContinue) {
                         Update-MaintenanceResponsiveLayout
+                    }
+                    elseif (Get-Command Update-GeneratorResponsiveLayout -ErrorAction SilentlyContinue) {
+                        Update-GeneratorResponsiveLayout
+                        if (Get-Command Update-RootLayout -ErrorAction SilentlyContinue) { Update-RootLayout }
                     }
                 }
             }
