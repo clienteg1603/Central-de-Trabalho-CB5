@@ -9,34 +9,35 @@ permissions:
   contents: read
 
 jobs:
-  inspect:
-    runs-on: ubuntu-latest
+  hidden-runtime-test:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect updater validation
-        shell: bash
+      - name: Reproduce install-root validation with hidden runtime
+        shell: powershell
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import zipfile, pathlib
-          package = pathlib.Path('updates/packages/Central-de-Trabalho-v0.19.4.zip')
-          with zipfile.ZipFile(package) as z:
-              names = z.namelist()
-              root = names[0].split('/')[0]
-              def read(suffix):
-                  name = next(n for n in names if n.replace('\\','/').endswith(suffix))
-                  return z.read(name).decode('utf-8-sig').splitlines()
-              updater = read('Atualizador/Central de Trabalho Updater.ps1')
-              core = read('Atualizador/Update.Core.ps1')
-              def show(title, lines, lo, hi):
-                  print(f'\n===== {title} lines {lo}-{hi} =====')
-                  for i in range(lo-1, min(hi, len(lines))):
-                      print(f'{i+1:04d}: {lines[i]}')
-              show('UPDATER install flow', updater, 250, 335)
-              show('UPDATER event handlers', updater, 620, 660)
-              show('CORE assert install root', core, 56, 82)
-              show('CORE copy directory', core, 460, 505)
-              show('CORE backup', core, 500, 545)
-              show('CORE install payload', core, 612, 680)
-              show('CORE application locks', core, 680, 735)
-          PY
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $PWD 'updates\packages\Central-de-Trabalho-v0.19.4.zip'
+          $dest = Join-Path $env:RUNNER_TEMP 'central-hidden-test'
+          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+          Expand-Archive -LiteralPath $zip -DestinationPath $dest
+          $root = Get-ChildItem -LiteralPath $dest -Directory | Select-Object -First 1
+          if ($null -eq $root) { throw 'Package root not found' }
+          $rootPath = $root.FullName
+          $centralPs1 = Join-Path $rootPath 'Central de Trabalho.ps1'
+          $updaterDir = Join-Path $rootPath 'Atualizador'
+          $core = Join-Path $updaterDir 'Update.Core.ps1'
+          Write-Host "ROOT=$rootPath"
+          Write-Host "Before hide: central=$([IO.File]::Exists($centralPs1)) core=$([IO.File]::Exists($core))"
+          [IO.File]::SetAttributes($centralPs1, ([IO.File]::GetAttributes($centralPs1) -bor [IO.FileAttributes]::Hidden))
+          [IO.File]::SetAttributes($updaterDir, ([IO.File]::GetAttributes($updaterDir) -bor [IO.FileAttributes]::Hidden))
+          Write-Host "After hide: central=$([IO.File]::Exists($centralPs1)) core=$([IO.File]::Exists($core))"
+          . $core
+          try {
+            $validated = Assert-CentralUpdateInstallRoot -InstallRoot $rootPath
+            Write-Host "ASSERT_OK=$validated"
+          }
+          catch {
+            Write-Host "ASSERT_FAIL=$($_.Exception.Message)"
+            throw
+          }
