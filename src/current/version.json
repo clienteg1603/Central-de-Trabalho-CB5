@@ -1,11 +1,15 @@
 {
-  "version": "0.11.2",
+  "version": "0.11.3",
   "buildRevision": 1,
   "releaseNotes": [
-    "Limpeza de navegação da Central de Manutenção CB5.",
-    "Removidos da Visão geral os botões Histórico, Apoio ao diagnóstico e Esquemáticos, pois repetiam as abas principais.",
-    "A Visão geral volta a priorizar resumo, indicadores, Nova passagem e atividade recente.",
-    "Mantido o botão Nova passagem porque ele inicia um registro limpo, função diferente de apenas abrir a aba Passagem.",
-    "Nenhuma regra de manutenção, histórico, diagnóstico ou salvamento foi alterada."
+    "Limpeza ampla de duplicações visuais na Central de Trabalho e na Central de Manutenção CB5.",
+    "Na Central de Trabalho, Programas e Backup deixam de aparecer como navegações separadas; Atualizações passa a concentrar atualização, backup e restauração.",
+    "A área Ações rápidas e os cartões-resumo repetidos foram retirados da tela principal; permanecem os cartões dos dois programas.",
+    "Status repetido do cabeçalho e versão repetida do rodapé foram removidos da visualização.",
+    "Na Central de Manutenção integrada, a faixa superior de abas foi ocultada e os botões centrais passam a ser a navegação principal.",
+    "A Visão geral da Manutenção oferece Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras/Dados, além de Nova passagem.",
+    "Nas páginas internas da Manutenção, um único botão Voltar à visão geral aparece no rodapé.",
+    "Botões FILTRAR e BUSCAR foram ocultados onde a atualização já acontece automaticamente.",
+    "Nenhuma regra de manutenção, salvamento, histórico, diagnóstico ou atualização foi alterada."
   ]
 }
