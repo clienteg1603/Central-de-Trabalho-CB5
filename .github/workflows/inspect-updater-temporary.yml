@@ -1,0 +1,51 @@
+name: Inspect updater temporary
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-updater-temporary.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect updater validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile, pathlib, re
+          package = pathlib.Path('updates/packages/Central-de-Trabalho-v0.19.4.zip')
+          with zipfile.ZipFile(package) as z:
+              names = z.namelist()
+              print('PACKAGE ROOT FILES:')
+              root = names[0].split('/')[0]
+              for n in names:
+                  rel = n[len(root)+1:] if n.startswith(root + '/') else n
+                  if rel and '/' not in rel.rstrip('/'):
+                      print(' -', rel)
+              for suffix in ('Atualizador/Central de Trabalho Updater.ps1', 'Atualizador/Update.Core.ps1'):
+                  name = next(n for n in names if n.replace('\\','/').endswith(suffix))
+                  text = z.read(name).decode('utf-8-sig')
+                  lines = text.splitlines()
+                  print('\n===== ', suffix, ' =====')
+                  patterns = [r'instala.*válid', r'InstallRoot', r'Test-Path', r'Get-ChildItem', r'Central de Trabalho\.exe', r'Assert.*Install', r'Valid.*Install']
+                  hits = set()
+                  for i, line in enumerate(lines):
+                      if any(re.search(p, line, re.I) for p in patterns):
+                          hits.add(i)
+                  shown = set()
+                  for i in sorted(hits):
+                      lo=max(0,i-8); hi=min(len(lines),i+9)
+                      block=tuple(range(lo,hi))
+                      if all(j in shown for j in block):
+                          continue
+                      print(f'--- context around line {i+1} ---')
+                      for j in range(lo,hi):
+                          print(f'{j+1:04d}: {lines[j]}')
+                          shown.add(j)
+          PY
