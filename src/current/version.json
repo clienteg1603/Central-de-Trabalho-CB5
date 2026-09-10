@@ -1,14 +1,14 @@
 {
-  "version": "0.15.2",
+  "version": "0.16.0",
   "buildRevision": 1,
   "releaseNotes": [
-    "Continuação do fluxo com acabamento das áreas restantes do Gerenciador de Planilhas.",
-    "Gerar passa a recalcular cartões, destino, resumo e resultado pela largura e altura reais da página, evitando sobreposição interna.",
-    "Manutenções passa a ajustar instrução, resumo, grade e larguras de colunas conforme o espaço disponível.",
-    "Códigos ganha bloco informativo no mesmo padrão visual das demais áreas e grade responsiva até a parte inferior da página.",
-    "Juntar lotes passa a reorganizar também a barra superior de ações: em larguras menores os comandos se dividem em duas linhas, sem remover funções.",
-    "A área de resultado do Juntar lotes passa a reposicionar grade, conferência, cópia e texto final conforme a altura real disponível.",
-    "Gerenciador de Planilhas passa para v3.7.2; Central de Manutenção permanece em v0.6.1.",
+    "Início do polimento global da Central de Trabalho após o fechamento do acabamento responsivo do Gerenciador.",
+    "A tela inicial passa a recalcular cartões dos dois módulos pela largura e altura realmente disponíveis, reduzindo espaços excessivos e risco de cortes em janelas menores.",
+    "Título, descrição e botões dos cartões ganham comportamento adaptativo; em larguras estreitas os textos compactam sem esconder funções.",
+    "Cabeçalho principal passa a proteger o espaço entre título, subtítulo e data; a data é ocultada apenas quando não há largura suficiente.",
+    "A barra lateral passa a dimensionar botões, seletor de aparência, status e versão pela largura interna real em vez de depender apenas de medidas fixas por perfil.",
+    "A barra superior dos módulos integrados passa a reservar dinamicamente o espaço do botão Pasta do módulo e aplica reticências seguras ao título e subtítulo quando necessário.",
+    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1.",
     "Nenhuma regra de geração, manutenção, componentes, saldo, união ou dados foi alterada."
   ]
 }
