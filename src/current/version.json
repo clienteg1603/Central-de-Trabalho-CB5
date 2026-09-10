@@ -1,13 +1,12 @@
 {
-  "version": "0.12.3",
+  "version": "0.12.4",
   "buildRevision": 1,
   "releaseNotes": [
-    "Ajustado o Juntar lotes do Gerenciador de Planilhas para permitir textos de REPARO não cadastrados quando Consumir saldo de componentes a faturar estiver desmarcado.",
-    "Exemplos como ASTEC, TROCADO BANANA deixam de bloquear a conferência e a união no modo sem consumo; o texto original é preservado na planilha unida.",
-    "Com Consumir saldo marcado, a validação continua rigorosa: manutenções e componentes precisam ser reconhecidos para que o saldo possa ser conferido e baixado com segurança.",
-    "A mesma regra foi aplicada a CB5 e TV5 e vale tanto para a conferência quanto para a execução da união.",
-    "As demais validações estruturais das planilhas continuam ativas, incluindo série, lote, NF, versão e demais campos obrigatórios.",
-    "Gerenciador de Planilhas passa para v3.5.2; Central de Manutenção permanece em v0.5.7.",
-    "Nenhum saldo é consumido por textos de REPARO desconhecidos quando a opção de consumo está desmarcada."
+    "Corrigido o campo Série opcional em Apoio ao diagnóstico da Central de Manutenção CB5.",
+    "O antigo MaskedTextBox foi removido para eliminar os caracteres de máscara/linha branca e o comportamento de precisar clicar duas vezes antes de digitar.",
+    "O campo agora é um TextBox comum, nasce realmente vazio, aceita até 8 dígitos e bloqueia caracteres não numéricos digitados.",
+    "A validação de exatamente 8 dígitos continua ativa quando a série é utilizada.",
+    "Central de Manutenção passa para v0.5.8; Gerenciador de Planilhas permanece em v3.5.2.",
+    "Nenhuma regra de manutenção, diagnóstico, histórico, planilhas ou componentes foi alterada além desta correção de entrada."
   ]
 }
