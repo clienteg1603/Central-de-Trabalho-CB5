@@ -11,11 +11,17 @@ using System.Windows.Forms;
 internal static class Program
 {
     private const string RuntimeSwitch = "--runtime";
+    private const string SelfTestSwitch = "--self-test";
     private const string UpdaterMutexName = "CentralDeTrabalho_Atualizador";
 
     [STAThread]
     private static int Main(string[] args)
     {
+        if (HasArgument(args, SelfTestSwitch))
+        {
+            return RunSelfTest(args);
+        }
+
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
@@ -32,6 +38,96 @@ internal static class Program
         {
             ShowFatal(ex.Message);
             return 1;
+        }
+    }
+
+    private static int RunSelfTest(string[] args)
+    {
+        try
+        {
+            string updaterRoot = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string installRoot = GetArgumentValue(args, "-InstallRoot");
+            if (string.IsNullOrWhiteSpace(installRoot))
+            {
+                DirectoryInfo parent = Directory.GetParent(updaterRoot);
+                if (parent == null) return 20;
+                installRoot = parent.FullName;
+            }
+            installRoot = Path.GetFullPath(installRoot);
+
+            string[] updaterFiles =
+            {
+                "Central de Trabalho Updater.exe",
+                "Central de Trabalho Updater.ps1",
+                "Update.Core.ps1",
+                "CANAIS.json"
+            };
+            foreach (string fileName in updaterFiles)
+            {
+                string path = Path.Combine(updaterRoot, fileName);
+                if (!File.Exists(path) || new FileInfo(path).Length <= 0)
+                {
+                    return 21;
+                }
+            }
+
+            string[] installFiles =
+            {
+                "Central de Trabalho.exe",
+                "Central de Trabalho.ps1",
+                @"Modulos\Central-de-Manutencao-CB5\Central Manutencao CB5.ps1",
+                @"Modulos\Central-de-Manutencao-CB5\Manutencao.Core.ps1",
+                @"Modulos\Gerador-de-Planilhas-CB5-TV5\Gerador Planilhas.ps1",
+                @"Modulos\Gerador-de-Planilhas-CB5-TV5\Componentes.Core.ps1"
+            };
+            foreach (string relativePath in installFiles)
+            {
+                string path = Path.Combine(installRoot, relativePath);
+                if (!File.Exists(path) || new FileInfo(path).Length <= 0)
+                {
+                    return 22;
+                }
+            }
+
+            foreach (string script in new[]
+            {
+                Path.Combine(updaterRoot, "Central de Trabalho Updater.ps1"),
+                Path.Combine(updaterRoot, "Update.Core.ps1")
+            })
+            {
+                System.Management.Automation.Language.Token[] tokens;
+                System.Management.Automation.Language.ParseError[] errors;
+                System.Management.Automation.Language.Parser.ParseFile(script, out tokens, out errors);
+                if (errors != null && errors.Length > 0)
+                {
+                    return 23;
+                }
+            }
+
+            InitialSessionState state = InitialSessionState.CreateDefault();
+            state.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
+            using (Runspace runspace = RunspaceFactory.CreateRunspace(state))
+            {
+                runspace.ApartmentState = ApartmentState.STA;
+                runspace.ThreadOptions = PSThreadOptions.UseCurrentThread;
+                runspace.Open();
+                using (PowerShell ps = PowerShell.Create())
+                {
+                    ps.Runspace = runspace;
+                    ps.AddScript("$PSVersionTable.PSVersion.Major -ge 5");
+                    var result = ps.Invoke();
+                    if (ps.HadErrors || result == null || result.Count != 1 || !LanguagePrimitives.IsTrue(result[0].BaseObject))
+                    {
+                        return 24;
+                    }
+                }
+            }
+
+            return 0;
+        }
+        catch
+        {
+            return 25;
         }
     }
 
@@ -239,6 +335,7 @@ internal static class Program
 
     private static bool HasArgument(string[] args, string name)
     {
+        if (args == null) return false;
         for (int i = 0; i < args.Length; i++)
         {
             if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
@@ -251,6 +348,7 @@ internal static class Program
 
     private static string GetArgumentValue(string[] args, string name)
     {
+        if (args == null) return null;
         for (int i = 0; i < args.Length - 1; i++)
         {
             if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
