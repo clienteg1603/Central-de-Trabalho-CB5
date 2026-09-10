@@ -1,14 +1,14 @@
 {
-  "version": "0.19.0",
+  "version": "0.19.1",
   "buildRevision": 1,
   "releaseNotes": [
-    "Início da limpeza final da distribuição após a validação dos hosts nativos da Central e do Atualizador.",
-    "O arquivo legado ABRIR CENTRAL DE TRABALHO.vbs foi removido do pacote de instalação; o ponto de entrada oficial passa a ser somente Central de Trabalho.exe.",
-    "Ao iniciar com sucesso após a atualização, a Central remove de forma silenciosa uma cópia antiga do VBS que ainda possa ter permanecido na pasta de uma instalação anterior.",
-    "A remoção do VBS acontece somente depois que a nova Central já iniciou, evitando eliminar o fallback antigo antes de uma atualização concluída com sucesso.",
-    "O pipeline agora rejeita pacotes que tragam de volta arquivos VBS, BAT ou CMD na distribuição limpa e a auditoria considera somente os dez arquivos operacionais necessários, além do manifesto interno.",
-    "Central e Atualizador continuam como executáveis gráficos nativos, sem powershell.exe ou pwsh.exe como lançador externo.",
+    "A Central de Trabalho passa a usar oficialmente a nova identidade visual CT criada para o programa.",
+    "O ícone personalizado foi convertido para formato ICO multirresolução e incorporado diretamente ao Central de Trabalho.exe, cobrindo tamanhos do Windows de 16 até 256 pixels.",
+    "A janela principal também passa a carregar o ícone gravado no próprio executável, mantendo a mesma identidade no Explorador, barra de tarefas, Alt+Tab e título da aplicação.",
+    "O Central de Trabalho Updater.exe recebe a mesma identidade visual CT para manter consistência entre a Central e o Atualizador.",
+    "O build dos hosts nativos deixou de baixar a antiga v0.8.5 apenas para reaproveitar seus ícones; os executáveis agora são construídos diretamente a partir do ativo visual oficial do projeto.",
+    "Permanece a distribuição limpa iniciada na v0.19.0, sem VBS, BAT ou CMD e com Central de Trabalho.exe como único ponto de entrada do usuário.",
     "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional, saldo, histórico ou dado do usuário foi alterado.",
-    "A versão Estável permanece v0.8.5; a v0.19.0 é publicada somente no canal Teste."
+    "A versão Estável permanece v0.8.5; a v0.19.1 é publicada somente no canal Teste."
   ]
 }
