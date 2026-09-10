@@ -1,6 +1,6 @@
 {
   "version": "0.16.3",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Continuação do polimento global com foco em consistência de estado e pequenas proteções da Central de Trabalho.",
     "O status lateral passa a refletir dinamicamente a instalação real: quantidade de módulos disponíveis e ausência do Atualizador são mostradas sem depender de trocar o tema ou reiniciar a Central.",
