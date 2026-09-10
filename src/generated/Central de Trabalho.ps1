@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.17.0"
+$script:AppVersion = "0.17.1"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -608,7 +608,11 @@ function Enable-RoundedControl {
     if ($null -eq $Control) { return }
     $r = $Radius
     $target = $Control
-    $Control.Add_SizeChanged({ Set-RoundedRegion $target $r }.GetNewClosure())
+    # O callback pode disparar depois que a criação inicial da janela terminou.
+    # Capturamos o ScriptBlock da função para não depender da resolução de nome
+    # dentro do módulo dinâmico criado por GetNewClosure().
+    $roundAction = ${function:Set-RoundedRegion}
+    $Control.Add_SizeChanged({ & $roundAction $target $r }.GetNewClosure())
     Set-RoundedRegion $Control $Radius
 }
 

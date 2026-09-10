@@ -2,20 +2,19 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.17.0",
+  "Version": "0.17.1",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.17.0.zip",
-  "PackageSha256": "98CBBC5CF4E3CE17D7355C5B2718CCBB7B3C8665F304275813F8BBE8C0C38824",
-  "PackageSize": 124844,
-  "PackageRoot": "Central-de-Trabalho-v0.17.0",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.17.1.zip",
+  "PackageSha256": "493081B44D46F13D2A2869B30730CF4DCCDA847D95112C2E639358AF9B7D482D",
+  "PackageSize": 124982,
+  "PackageRoot": "Central-de-Trabalho-v0.17.1",
   "ReleaseNotes": [
-    "Primeira etapa do executável Windows definitivo da Central de Trabalho.",
-    "Central de Trabalho.exe deixa de ser apenas um lançador de powershell.exe e passa a hospedar o motor do Windows PowerShell dentro do próprio processo gráfico.",
-    "Ao abrir a Central pelo EXE, a interface principal continua usando os mesmos scripts e módulos já validados, mas sem criar um processo powershell.exe separado para sustentar a aplicação.",
-    "O novo host é compilado como Windows GUI, em STA, preservando WinForms, integração dos módulos e automação COM do Excel.",
-    "O build do EXE acontece em ambiente Windows e reutiliza o ícone da Central atual; o pacote só é montado depois que o host nativo passa pelas validações de PE, subsistema gráfico, versão e ausência de chamada externa para powershell.exe ou pwsh.exe.",
-    "As auditorias de integridade, regressão funcional, sintaxe PowerShell, manifesto, SHA-256 e ZIP continuam obrigatórias antes da publicação no canal Teste.",
-    "Central de Trabalho passa para v0.17.0; Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1.",
-    "Esta é uma etapa de teste do novo host: a versão Estável permanece v0.8.5 e nenhuma regra funcional ou de dados foi alterada."
+    "Correção imediata da primeira versão com o motor PowerShell incorporado.",
+    "O script principal agora é carregado no escopo persistente do runspace interno, mantendo funções disponíveis para eventos WinForms disparados após a abertura da janela.",
+    "Corrigido o erro repetido 'Set-RoundedRegion não é reconhecido' que podia gerar várias caixas de exceção em sequência ao abrir a Central pela v0.17.0.",
+    "O callback de arredondamento também passa a capturar diretamente o ScriptBlock da função, evitando depender da resolução de nome dentro de GetNewClosure().",
+    "A arquitetura do EXE verdadeiro permanece: a Central continua hospedando o Windows PowerShell dentro do próprio processo gráfico, sem precisar manter um powershell.exe externo aberto.",
+    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra funcional ou dado do usuário foi alterado.",
+    "A versão Estável permanece v0.8.5; esta correção é publicada somente no canal Teste."
   ]
 }
