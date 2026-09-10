@@ -6,9 +6,9 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.13.0"
+$script:AppVersion = "0.13.1"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.6.0"
+$script:GeneratorVersion = "3.6.1"
 $script:MaintenanceVersion = "0.5.8"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(

@@ -78,7 +78,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.6.0"
+$script:AppVersion = "3.6.1"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1980,8 +1980,11 @@ function Update-CombineSummary {
     $invalidText = if ($invalidFields -gt 0) { "  •  $invalidFields quantidade(s) inválida(s)" } else { "" }
     $balanceText = if ($combineConsumeBalanceCheck.Checked) { "consumir saldo" } else { "não consumir saldo" }
     $combineSelectionLabel.Text = "$($combineGrid.Rows.Count) lote(s) selecionado(s)  •  $withMaintenance mestre(s) serão atualizadas  •  $balanceText$invalidText"
+    $combineBalanceStatus.Text = if ($combineConsumeBalanceCheck.Checked) { "SALDO: SERÁ CONSUMIDO" } else { "SALDO: NÃO SERÁ CONSUMIDO" }
     if ($null -ne $script:CurrentPalette) {
         $combineSelectionLabel.ForeColor = if ($invalidFields -gt 0) { $script:CurrentPalette.Error } else { $script:CurrentPalette.Text }
+        $combineBalanceStatus.ForeColor = if ($combineConsumeBalanceCheck.Checked) { $script:CurrentPalette.Warning } else { $script:CurrentPalette.Success }
+        $combineBalanceCard.BackColor = $script:CurrentPalette.Surface
         Update-CombineGridHighlights
     }
 }
@@ -2362,7 +2365,7 @@ function Apply-AppTheme {
         $page.BackColor = $palette.Background
         $page.ForeColor = $palette.Text
     }
-    foreach ($panel in @($masterCard, $summaryCard, $destinationCard, $componentActiveCard, $componentPendingCard, $componentOperationsCard)) {
+    foreach ($panel in @($masterCard, $summaryCard, $destinationCard, $componentActiveCard, $componentPendingCard, $componentOperationsCard, $combineBalanceCard)) {
         $panel.BackColor = $palette.Surface
         $panel.ForeColor = $palette.Text
         $panel.BorderStyle = [Windows.Forms.BorderStyle]::None
@@ -2378,6 +2381,13 @@ function Apply-AppTheme {
     foreach ($label in @($componentActiveValue, $componentPendingValue, $componentOperationsValue)) { $label.ForeColor = $palette.Accent }
     $infoBox.BackColor = $palette.Info
     $infoBox.ForeColor = $palette.Text
+    $extraIntro.BackColor = $palette.Info
+    $extraIntro.ForeColor = $palette.Text
+    $extraSelectionLabel.BackColor = $palette.Surface
+    $extraSelectionLabel.ForeColor = $palette.Text
+    $componentsIntro.BackColor = $palette.Info
+    $componentsIntro.ForeColor = $palette.Text
+    $combineBalanceCard.BackColor = $palette.Surface
     foreach ($textBox in @($masterText, $statusText, $combineStatusText, $componentSearchText)) {
         $textBox.BackColor = $palette.Input
         $textBox.ForeColor = $palette.Text
@@ -2881,22 +2891,31 @@ $tabGenerate.Controls.Add($statusText)
 
 $extraIntro = New-Object Windows.Forms.Label
 $extraIntro.Text = "Digite na coluna amarela quantas peças receberão cada manutenção. A maior quantidade é aplicada primeiro."
-$extraIntro.Location = New-Object Drawing.Point(18, 16)
-$extraIntro.Size = New-Object Drawing.Size(982, 36)
+$extraIntro.Location = New-Object Drawing.Point(18, 12)
+$extraIntro.Size = New-Object Drawing.Size(982, 38)
 $extraIntro.Anchor = "Top,Left,Right"
 $tabExtra.Controls.Add($extraIntro)
 
 $extraSelectionLabel = New-Object Windows.Forms.Label
 $extraSelectionLabel.Text = "Nenhuma manutenção adicional"
 $extraSelectionLabel.Font = New-Object Drawing.Font("Segoe UI Semibold", 10)
-$extraSelectionLabel.Location = New-Object Drawing.Point(18, 53)
-$extraSelectionLabel.Size = New-Object Drawing.Size(982, 23)
+$extraSelectionLabel.Location = New-Object Drawing.Point(18, 56)
+$extraSelectionLabel.Size = New-Object Drawing.Size(982, 34)
 $extraSelectionLabel.Anchor = "Top,Left,Right"
 $tabExtra.Controls.Add($extraSelectionLabel)
+$extraIntro.Font = New-Object Drawing.Font("Segoe UI Semibold", 9.2)
+$extraIntro.Padding = New-Object Windows.Forms.Padding(12, 7, 12, 6)
+$extraIntro.BorderStyle = [Windows.Forms.BorderStyle]::None
+$extraSelectionLabel.Padding = New-Object Windows.Forms.Padding(12, 7, 12, 6)
+$extraSelectionLabel.BorderStyle = [Windows.Forms.BorderStyle]::None
+$extraIntro.Add_SizeChanged({ Set-GeneratorRoundedRegion $this 9 })
+$extraSelectionLabel.Add_SizeChanged({ Set-GeneratorRoundedRegion $this 9 })
+Set-GeneratorRoundedRegion $extraIntro 9
+Set-GeneratorRoundedRegion $extraSelectionLabel 9
 
 $extraGrid = New-Object Windows.Forms.DataGridView
-$extraGrid.Location = New-Object Drawing.Point(18, 80)
-$extraGrid.Size = New-Object Drawing.Size(982, 407)
+$extraGrid.Location = New-Object Drawing.Point(18, 98)
+$extraGrid.Size = New-Object Drawing.Size(982, 389)
 $extraGrid.Anchor = "Top,Bottom,Left,Right"
 $extraGrid.AllowUserToAddRows = $false
 $extraGrid.AllowUserToDeleteRows = $false
@@ -2923,14 +2942,19 @@ $tabExtra.Controls.Add($extraGrid)
 
 $componentsIntro = New-Object Windows.Forms.Label
 $componentsIntro.Text = "Saldo a faturar: quantidades já usadas nas manutenções e ainda não enviadas ao faturamento. A baixa automática acontece somente após Juntar lotes terminar com sucesso."
-$componentsIntro.Location = New-Object Drawing.Point(18, 12)
-$componentsIntro.Size = New-Object Drawing.Size(982, 26)
+$componentsIntro.Location = New-Object Drawing.Point(18, 10)
+$componentsIntro.Size = New-Object Drawing.Size(982, 38)
 $componentsIntro.Anchor = "Top,Left,Right"
 $tabComponents.Controls.Add($componentsIntro)
+$componentsIntro.Font = New-Object Drawing.Font("Segoe UI Semibold", 9.1)
+$componentsIntro.Padding = New-Object Windows.Forms.Padding(12, 7, 12, 6)
+$componentsIntro.BorderStyle = [Windows.Forms.BorderStyle]::None
+$componentsIntro.Add_SizeChanged({ Set-GeneratorRoundedRegion $this 9 })
+Set-GeneratorRoundedRegion $componentsIntro 9
 
 $componentMetricsLayout = New-Object Windows.Forms.TableLayoutPanel
-$componentMetricsLayout.Location = New-Object Drawing.Point(18, 42)
-$componentMetricsLayout.Size = New-Object Drawing.Size(982, 56)
+$componentMetricsLayout.Location = New-Object Drawing.Point(18, 56)
+$componentMetricsLayout.Size = New-Object Drawing.Size(982, 58)
 $componentMetricsLayout.Anchor = "Top,Left,Right"
 $componentMetricsLayout.ColumnCount = 3
 $componentMetricsLayout.RowCount = 1
@@ -2993,12 +3017,12 @@ $componentOperationsCard.Controls.Add($componentOperationsValue)
 
 $componentSearchLabel = New-Object Windows.Forms.Label
 $componentSearchLabel.Text = "Pesquisar"
-$componentSearchLabel.Location = New-Object Drawing.Point(18, 111)
+$componentSearchLabel.Location = New-Object Drawing.Point(18, 125)
 $componentSearchLabel.AutoSize = $true
 $tabComponents.Controls.Add($componentSearchLabel)
 
 $componentSearchText = New-Object Windows.Forms.TextBox
-$componentSearchText.Location = New-Object Drawing.Point(88, 106)
+$componentSearchText.Location = New-Object Drawing.Point(88, 120)
 $componentSearchText.Size = New-Object Drawing.Size(225, 27)
 $componentSearchText.Anchor = "Top,Left"
 $tabComponents.Controls.Add($componentSearchText)
@@ -3006,37 +3030,37 @@ $toolTip.SetToolTip($componentSearchText, "Pesquise pelo componente, nome, códi
 
 $componentSearchClearButton = New-Object Windows.Forms.Button
 $componentSearchClearButton.Text = "Limpar"
-$componentSearchClearButton.Location = New-Object Drawing.Point(321, 104)
+$componentSearchClearButton.Location = New-Object Drawing.Point(321, 118)
 $componentSearchClearButton.Size = New-Object Drawing.Size(76, 31)
 $componentSearchClearButton.Tag = "Secondary"
 $tabComponents.Controls.Add($componentSearchClearButton)
 
 $componentsSummaryLabel = New-Object Windows.Forms.Label
 $componentsSummaryLabel.Text = "Carregando componentes..."
-$componentsSummaryLabel.Location = New-Object Drawing.Point(409, 111)
+$componentsSummaryLabel.Location = New-Object Drawing.Point(409, 125)
 $componentsSummaryLabel.Size = New-Object Drawing.Size(260, 21)
 $componentsSummaryLabel.Anchor = "Top,Left,Right"
 $tabComponents.Controls.Add($componentsSummaryLabel)
 
 $componentBackupButton = New-Object Windows.Forms.Button
-$componentBackupButton.Text = "Exportar backup"
-$componentBackupButton.Location = New-Object Drawing.Point(690, 104)
+$componentBackupButton.Text = "Backup"
+$componentBackupButton.Location = New-Object Drawing.Point(690, 118)
 $componentBackupButton.Size = New-Object Drawing.Size(142, 31)
 $componentBackupButton.Anchor = "Top,Right"
 $componentBackupButton.Tag = "Secondary"
 $tabComponents.Controls.Add($componentBackupButton)
 
 $componentRestoreButton = New-Object Windows.Forms.Button
-$componentRestoreButton.Text = "Restaurar backup"
-$componentRestoreButton.Location = New-Object Drawing.Point(842, 104)
+$componentRestoreButton.Text = "Restaurar"
+$componentRestoreButton.Location = New-Object Drawing.Point(842, 118)
 $componentRestoreButton.Size = New-Object Drawing.Size(142, 31)
 $componentRestoreButton.Anchor = "Top,Right"
 $componentRestoreButton.Tag = "Secondary"
 $tabComponents.Controls.Add($componentRestoreButton)
 
 $componentTabs = New-Object Windows.Forms.TabControl
-$componentTabs.Location = New-Object Drawing.Point(18, 146)
-$componentTabs.Size = New-Object Drawing.Size(982, 341)
+$componentTabs.Location = New-Object Drawing.Point(18, 160)
+$componentTabs.Size = New-Object Drawing.Size(982, 327)
 $componentTabs.Anchor = "Top,Bottom,Left,Right"
 $componentTabs.DrawMode = [Windows.Forms.TabDrawMode]::OwnerDrawFixed
 $componentTabs.SizeMode = [Windows.Forms.TabSizeMode]::Fixed
@@ -3056,11 +3080,12 @@ $componentOperationsPage.Text = "Uniões processadas"
 $componentTabs.TabPages.Add($componentOperationsPage)
 
 $componentLaunchButton = New-Object Windows.Forms.Button
-$componentLaunchButton.Text = "+  Lançar quantidade"
+$componentLaunchButton.Text = "+  Lançar uso"
 $componentLaunchButton.Location = New-Object Drawing.Point(10, 9)
 $componentLaunchButton.Size = New-Object Drawing.Size(174, 34)
 $componentLaunchButton.Tag = "Primary"
 $componentBalancesPage.Controls.Add($componentLaunchButton)
+$toolTip.SetToolTip($componentLaunchButton, "Acrescenta ao saldo a faturar a quantidade usada do componente selecionado.")
 
 $componentAdjustButton = New-Object Windows.Forms.Button
 $componentAdjustButton.Text = "Ajustar saldo"
@@ -3068,16 +3093,17 @@ $componentAdjustButton.Location = New-Object Drawing.Point(194, 9)
 $componentAdjustButton.Size = New-Object Drawing.Size(145, 34)
 $componentAdjustButton.Tag = "Secondary"
 $componentBalancesPage.Controls.Add($componentAdjustButton)
+$toolTip.SetToolTip($componentAdjustButton, "Define manualmente o saldo exato do componente selecionado.")
 
 $componentNewButton = New-Object Windows.Forms.Button
-$componentNewButton.Text = "+  Novo componente"
+$componentNewButton.Text = "+  Novo"
 $componentNewButton.Location = New-Object Drawing.Point(349, 9)
 $componentNewButton.Size = New-Object Drawing.Size(165, 34)
 $componentNewButton.Tag = "Secondary"
 $componentBalancesPage.Controls.Add($componentNewButton)
 
 $componentEditButton = New-Object Windows.Forms.Button
-$componentEditButton.Text = "Editar componente"
+$componentEditButton.Text = "Editar"
 $componentEditButton.Location = New-Object Drawing.Point(524, 9)
 $componentEditButton.Size = New-Object Drawing.Size(160, 34)
 $componentEditButton.Tag = "Secondary"
@@ -3243,7 +3269,7 @@ $combineClearButton.Tag = "Secondary"
 $tabCombine.Controls.Add($combineClearButton)
 
 $combineCopyQuantitiesButton = New-Object Windows.Forms.Button
-$combineCopyQuantitiesButton.Text = "Copiar quantidades"
+$combineCopyQuantitiesButton.Text = "Copiar linha"
 $combineCopyQuantitiesButton.Location = New-Object Drawing.Point(624, 78)
 $combineCopyQuantitiesButton.Size = New-Object Drawing.Size(145, 34)
 $combineCopyQuantitiesButton.Tag = "Secondary"
@@ -3251,26 +3277,44 @@ $tabCombine.Controls.Add($combineCopyQuantitiesButton)
 $toolTip.SetToolTip($combineCopyQuantitiesButton, "Copia todas as quantidades da linha selecionada.")
 
 $combinePasteQuantitiesButton = New-Object Windows.Forms.Button
-$combinePasteQuantitiesButton.Text = "Colar quantidades"
+$combinePasteQuantitiesButton.Text = "Colar linha"
 $combinePasteQuantitiesButton.Location = New-Object Drawing.Point(779, 78)
 $combinePasteQuantitiesButton.Size = New-Object Drawing.Size(145, 34)
 $combinePasteQuantitiesButton.Tag = "Secondary"
 $tabCombine.Controls.Add($combinePasteQuantitiesButton)
 $toolTip.SetToolTip($combinePasteQuantitiesButton, "Cola as quantidades copiadas na linha selecionada.")
 
+$combineBalanceCard = New-Object Windows.Forms.Panel
+$combineBalanceCard.Location = New-Object Drawing.Point(18, 118)
+$combineBalanceCard.Size = New-Object Drawing.Size(982, 40)
+$combineBalanceCard.Anchor = "Top,Left,Right"
+$combineBalanceCard.BorderStyle = [Windows.Forms.BorderStyle]::None
+$tabCombine.Controls.Add($combineBalanceCard)
+
 $combineConsumeBalanceCheck = New-Object Windows.Forms.CheckBox
-$combineConsumeBalanceCheck.Text = "Consumir saldo de componentes a faturar"
+$combineConsumeBalanceCheck.Text = "Consumir saldo ao concluir a união"
 $combineConsumeBalanceCheck.Checked = $true
-$combineConsumeBalanceCheck.Location = New-Object Drawing.Point(18, 120)
+$combineConsumeBalanceCheck.Location = New-Object Drawing.Point(12, 8)
 $combineConsumeBalanceCheck.Size = New-Object Drawing.Size(420, 24)
 $combineConsumeBalanceCheck.Font = New-Object Drawing.Font("Segoe UI Semibold", 9.5)
 $combineConsumeBalanceCheck.Anchor = "Top,Left"
-$tabCombine.Controls.Add($combineConsumeBalanceCheck)
+$combineBalanceCard.Controls.Add($combineConsumeBalanceCheck)
 $toolTip.SetToolTip($combineConsumeBalanceCheck, "Marcado: valida os reparos, consulta e baixa o saldo após a união. Desmarcado: não consulta o saldo e permite textos de REPARO não cadastrados, preservando-os na planilha unida.")
 
+$combineBalanceStatus = New-Object Windows.Forms.Label
+$combineBalanceStatus.Text = "SALDO: SERÁ CONSUMIDO"
+$combineBalanceStatus.Font = New-Object Drawing.Font("Segoe UI Semibold", 9.2)
+$combineBalanceStatus.Location = New-Object Drawing.Point(650, 8)
+$combineBalanceStatus.Size = New-Object Drawing.Size(316, 24)
+$combineBalanceStatus.Anchor = "Top,Right"
+$combineBalanceStatus.TextAlign = [Drawing.ContentAlignment]::MiddleRight
+$combineBalanceCard.Controls.Add($combineBalanceStatus)
+$combineBalanceCard.Add_SizeChanged({ Set-GeneratorRoundedRegion $this 9 })
+Set-GeneratorRoundedRegion $combineBalanceCard 9
+
 $combineGrid = New-Object Windows.Forms.DataGridView
-$combineGrid.Location = New-Object Drawing.Point(18, 149)
-$combineGrid.Size = New-Object Drawing.Size(982, 210)
+$combineGrid.Location = New-Object Drawing.Point(18, 166)
+$combineGrid.Size = New-Object Drawing.Size(982, 193)
 $combineGrid.Anchor = "Top,Bottom,Left,Right"
 $combineGrid.AllowUserToAddRows = $false
 $combineGrid.AllowUserToDeleteRows = $false
@@ -3328,7 +3372,7 @@ $combineStatusText.ScrollBars = "Vertical"
 $combineStatusText.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
 $tabCombine.Controls.Add($combineStatusText)
 
-foreach ($roundedPanel in @($masterCard, $destinationCard, $summaryCard, $componentActiveCard, $componentPendingCard, $componentOperationsCard)) {
+foreach ($roundedPanel in @($masterCard, $destinationCard, $summaryCard, $componentActiveCard, $componentPendingCard, $componentOperationsCard, $combineBalanceCard)) {
     $roundedPanel.BorderStyle = [Windows.Forms.BorderStyle]::None
     $roundedPanel.Add_SizeChanged({ Set-GeneratorRoundedRegion $this 10 })
     Set-GeneratorRoundedRegion $roundedPanel 10
