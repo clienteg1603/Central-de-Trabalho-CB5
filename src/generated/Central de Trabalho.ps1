@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.15.2"
+$script:AppVersion = "0.16.0"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -812,16 +812,113 @@ function Apply-AppTheme {
 function Update-ResponsiveLayout {
     if ($null -eq $modulesFlow -or $modulesFlow.ClientSize.Width -le 0) { return }
     try {
-        $available = $modulesFlow.ClientSize.Width - $modulesFlow.Padding.Horizontal - 34
-        if ($available -lt 420) { $available = 420 }
-        $moduleWidth = $available
-        if ($available -ge 860) { $moduleWidth = [int](($available - 22) / 2) }
+        $availableWidth = [Math]::Max(360, $modulesFlow.ClientSize.Width - $modulesFlow.Padding.Horizontal - 34)
+        $availableHeight = [Math]::Max(220, $modulesFlow.ClientSize.Height - $modulesFlow.Padding.Vertical - 12)
+        $twoColumns = ($availableWidth -ge 860)
+
+        if ($twoColumns) {
+            $moduleWidth = [int](($availableWidth - 22) / 2)
+            $moduleHeight = [Math]::Min(252, [Math]::Max(220, $availableHeight - 10))
+        }
+        else {
+            $moduleWidth = $availableWidth
+            $moduleHeight = [Math]::Min(238, [Math]::Max(205, [int](($availableHeight - 26) / 2)))
+        }
+
         foreach ($card in @($generatorCard, $maintenanceCard)) {
             if ($null -ne $card) {
                 $card.Width = $moduleWidth
-                $card.Height = 252
+                $card.Height = $moduleHeight
             }
         }
+
+        $compactCard = ($moduleWidth -lt 560)
+        foreach ($titleLabel in @($generatorTitle, $maintenanceTitle)) {
+            if ($null -ne $titleLabel) {
+                $titleLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", $(if ($compactCard) { 12.5 } else { 14.5 }))
+                $titleLabel.AutoEllipsis = $true
+            }
+        }
+        foreach ($description in @($generatorDescription, $maintenanceDescription, $generatorDetail, $maintenanceDetail)) {
+            if ($null -ne $description) { $description.AutoEllipsis = $true }
+        }
+
+        $openGeneratorButton.Text = if ($moduleWidth -lt 470) { "ABRIR" } else { "ABRIR GERENCIADOR" }
+        $openMaintenanceButton.Text = if ($moduleWidth -lt 470) { "ABRIR" } else { "ABRIR MANUTENÇÃO" }
+
+        foreach ($openButton in @($openGeneratorButton, $openMaintenanceButton)) {
+            try {
+                $buttonHost = $openButton.Parent
+                if ($buttonHost -is [Windows.Forms.TableLayoutPanel] -and $buttonHost.ColumnStyles.Count -ge 2) {
+                    if ($moduleWidth -lt 470) {
+                        $buttonHost.ColumnStyles[0].Width = 66
+                        $buttonHost.ColumnStyles[1].Width = 34
+                    }
+                    else {
+                        $buttonHost.ColumnStyles[0].Width = 72
+                        $buttonHost.ColumnStyles[1].Width = 28
+                    }
+                }
+            } catch {}
+        }
+    } catch {}
+}
+
+function Update-CentralChromeLayout {
+    try {
+        # Cabeçalho principal: título, subtítulo e data nunca disputam o mesmo espaço.
+        if ($null -ne $headerPanel -and $headerPanel.ClientSize.Width -gt 0) {
+            $hw = [int]$headerPanel.ClientSize.Width
+            $right = 26
+            $todayLabel.Visible = ($hw -ge 620)
+            if ($todayLabel.Visible) {
+                $todayLabel.Left = [Math]::Max(330, $hw - $todayLabel.Width - $right)
+                $textRight = $todayLabel.Left - 22
+            }
+            else {
+                $textRight = $hw - $right
+            }
+            $pageTitle.Width = [Math]::Max(210, $textRight - $pageTitle.Left)
+            $pageTitle.AutoEllipsis = $true
+            $pageSubtitle.Width = [Math]::Max(210, $textRight - $pageSubtitle.Left)
+            $pageSubtitle.AutoEllipsis = $true
+        }
+
+        # Cabeçalho dos programas acompanha a largura real do painel.
+        if ($null -ne $programsHeader -and $programsHeader.ClientSize.Width -gt 0) {
+            $programsTitle.Width = [Math]::Max(180, $programsHeader.ClientSize.Width - 20)
+            $programsTitle.AutoEllipsis = $true
+            $programsSubtitle.Width = [Math]::Max(180, $programsHeader.ClientSize.Width - 24)
+            $programsSubtitle.AutoEllipsis = $true
+        }
+
+        # Barra lateral: controles usam a largura interna real, não tamanhos históricos fixos.
+        if ($null -ne $navPanel -and $navPanel.ClientSize.Width -gt 0) {
+            $navWidth = [Math]::Max(118, $navPanel.ClientSize.Width - $navPanel.Padding.Horizontal - 2)
+            foreach ($b in @($navHome,$navUpdates,$navFolder,$navAbout)) {
+                if ($null -ne $b) { $b.Width = $navWidth }
+            }
+        }
+        if ($null -ne $sidebarBottom -and $sidebarBottom.ClientSize.Width -gt 0) {
+            $bottomWidth = [Math]::Max(118, $sidebarBottom.ClientSize.Width - 8)
+            foreach ($c in @($sidebarThemeLabel,$themeCombo,$sidebarStatus,$sidebarVersion)) {
+                if ($null -ne $c) { $c.Width = $bottomWidth }
+            }
+            if ($null -ne $sidebarStatusSub) { $sidebarStatusSub.Width = [Math]::Max(100, $sidebarBottom.ClientSize.Width - 24) }
+        }
+
+        # Toolbar de um módulo integrado: pasta fica presa à direita e textos usam só o espaço restante.
+        if ($null -ne $embeddedToolbar -and $embeddedToolbar.ClientSize.Width -gt 0) {
+            $tw = [int]$embeddedToolbar.ClientSize.Width
+            $embeddedFolderButton.Left = [Math]::Max(260, $tw - $embeddedFolderButton.Width - 12)
+            $textWidth = [Math]::Max(120, $embeddedFolderButton.Left - $embeddedTitle.Left - 12)
+            $embeddedTitle.Width = $textWidth
+            $embeddedTitle.AutoEllipsis = $true
+            $embeddedSubtitle.Width = [Math]::Max(120, $embeddedFolderButton.Left - $embeddedSubtitle.Left - 12)
+            $embeddedSubtitle.AutoEllipsis = $true
+        }
+
+        Update-ResponsiveLayout
     } catch {}
 }
 
@@ -937,8 +1034,8 @@ function Update-CentralAdaptiveLayout {
                 $embeddedLayout.RowStyles[0].Height = [Math]::Max(40, [int]$embeddedToolbar.Height)
             }
         } catch {}
-        try { $embeddedFolderButton.Left = [Math]::Max(380, $embeddedToolbar.ClientSize.Width - $embeddedFolderButton.Width - 12) } catch {}
-        Update-ResponsiveLayout
+        try { $embeddedFolderButton.Left = [Math]::Max(260, $embeddedToolbar.ClientSize.Width - $embeddedFolderButton.Width - 12) } catch {}
+        Update-CentralChromeLayout
     }
     finally { $script:CentralAdaptiveBusy = $false }
 }
@@ -1609,7 +1706,7 @@ $navAbout.Add_Click({
         [Windows.Forms.MessageBoxIcon]::Information
     ) | Out-Null
 })
-$modulesFlow.Add_SizeChanged({ Update-ResponsiveLayout })
+$modulesFlow.Add_SizeChanged({ Update-CentralChromeLayout })
 $form.Add_Shown({ Update-CentralAdaptiveLayout; Update-ResponsiveLayout; Apply-AppTheme })
 $form.Add_SizeChanged({
     try {
