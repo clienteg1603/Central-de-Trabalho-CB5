@@ -1,14 +1,14 @@
 {
-  "version": "0.16.1",
-  "buildRevision": 2,
+  "version": "0.16.2",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Continuação do polimento global com foco em confiabilidade e navegação da Central de Trabalho.",
-    "Foram removidas duas rotinas antigas que ainda restavam do layout anterior e já haviam sido substituídas pelas implementações atuais.",
-    "Os cartões dos módulos agora refletem o estado real dos arquivos instalados: Disponível ou Indisponível, com bloqueio do botão quando o módulo não existe.",
-    "Atualizações também é desabilitado automaticamente se o Atualizador não estiver presente, evitando ações que terminariam apenas em erro.",
-    "A abertura de Gerenciador ou Manutenção passa a bloquear reentrada durante o carregamento, reduzindo risco de dois cliques iniciarem carregamentos concorrentes.",
-    "A ordem de navegação por Tab foi organizada entre menu lateral, aparência e ações dos módulos.",
-    "Alt+Seta para a esquerda passa a retornar ao painel da Central quando um módulo integrado estiver aberto, sem usar Esc e sem interferir em campos ou grades.",
-    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra de dados foi alterada."
+    "Continuação do polimento global com limpeza estrutural e melhoria da transição entre a Central e os módulos integrados.",
+    "A tela inicial deixa de manter controles completos invisíveis de Resumo e Ações rápidas; o layout passa a ter somente as três linhas realmente usadas: cabeçalho, módulos e rodapé.",
+    "Foram removidos estados antigos de Programas e Backup e o selo de status duplicado que permanecia oculto no cabeçalho.",
+    "O feedback de carregamento dos módulos foi corrigido: o aviso Carregando agora permanece visível antes da criação do Gerenciador ou da Manutenção, com cursor de espera e bloqueio temporário dos comandos que poderiam gerar reentrada.",
+    "Durante o carregamento, aparência, navegação e ações concorrentes ficam temporariamente desabilitadas e são restauradas automaticamente no sucesso ou no erro.",
+    "Se um módulo integrado se encerrar por conta própria, a Central agora também libera corretamente o escopo PowerShell correspondente, evitando módulo órfão em memória.",
+    "Atualizações, Pasta da Central e Sobre passam a se comportar visualmente como ações: depois de executadas, Início continua sendo a seção ativa; ao abrir um módulo nenhuma rota lateral fica falsamente destacada.",
+    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra funcional ou de dados foi alterada."
   ]
 }
