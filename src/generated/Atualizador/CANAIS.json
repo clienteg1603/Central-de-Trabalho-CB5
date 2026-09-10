@@ -1,0 +1,17 @@
+﻿{
+  "SchemaVersion": 1,
+  "AppId": "central-de-trabalho",
+  "DefaultChannel": "stable",
+  "Channels": [
+    {
+      "Id": "stable",
+      "Name": "Estável",
+      "ManifestUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/stable.json"
+    },
+    {
+      "Id": "test",
+      "Name": "Teste",
+      "ManifestUrl": "https://raw.githubusercontent.com/clienteg1603/Central-de-Trabalho-CB5/main/updates/test.json"
+    }
+  ]
+}
