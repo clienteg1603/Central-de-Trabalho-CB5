@@ -2,19 +2,18 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.12.3",
+  "Version": "0.12.4",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.12.3.zip",
-  "PackageSha256": "BB2E4F6D864C52A76F12523CC2DDA0FC9AF7213041CC3E4B7E5D955E27CD54FE",
-  "PackageSize": 902971,
-  "PackageRoot": "Central-de-Trabalho-v0.12.3",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.12.4.zip",
+  "PackageSha256": "DCBF1E2F5012EA34AD2B4ACA034B85FC1191F5CF19174DD125AE1469185AE366",
+  "PackageSize": 903005,
+  "PackageRoot": "Central-de-Trabalho-v0.12.4",
   "ReleaseNotes": [
-    "Ajustado o Juntar lotes do Gerenciador de Planilhas para permitir textos de REPARO não cadastrados quando Consumir saldo de componentes a faturar estiver desmarcado.",
-    "Exemplos como ASTEC, TROCADO BANANA deixam de bloquear a conferência e a união no modo sem consumo; o texto original é preservado na planilha unida.",
-    "Com Consumir saldo marcado, a validação continua rigorosa: manutenções e componentes precisam ser reconhecidos para que o saldo possa ser conferido e baixado com segurança.",
-    "A mesma regra foi aplicada a CB5 e TV5 e vale tanto para a conferência quanto para a execução da união.",
-    "As demais validações estruturais das planilhas continuam ativas, incluindo série, lote, NF, versão e demais campos obrigatórios.",
-    "Gerenciador de Planilhas passa para v3.5.2; Central de Manutenção permanece em v0.5.7.",
-    "Nenhum saldo é consumido por textos de REPARO desconhecidos quando a opção de consumo está desmarcada."
+    "Corrigido o campo Série opcional em Apoio ao diagnóstico da Central de Manutenção CB5.",
+    "O antigo MaskedTextBox foi removido para eliminar os caracteres de máscara/linha branca e o comportamento de precisar clicar duas vezes antes de digitar.",
+    "O campo agora é um TextBox comum, nasce realmente vazio, aceita até 8 dígitos e bloqueia caracteres não numéricos digitados.",
+    "A validação de exatamente 8 dígitos continua ativa quando a série é utilizada.",
+    "Central de Manutenção passa para v0.5.8; Gerenciador de Planilhas permanece em v3.5.2.",
+    "Nenhuma regra de manutenção, diagnóstico, histórico, planilhas ou componentes foi alterada além desta correção de entrada."
   ]
 }

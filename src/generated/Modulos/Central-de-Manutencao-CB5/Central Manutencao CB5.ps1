@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.7"
+$script:AppVersion = "0.5.8"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -2407,10 +2407,15 @@ foreach ($item in @(@("Série opcional", 0), @("Versão", 1), @("Defeito reporta
     $label.TextAlign = [Drawing.ContentAlignment]::BottomLeft
     $diagnosisInputLayout.Controls.Add($label, $item[1], 0)
 }
-$diagnosisSerialBox = New-Object Windows.Forms.MaskedTextBox
-$diagnosisSerialBox.Mask = "00000000"
-$diagnosisSerialBox.TextMaskFormat = [Windows.Forms.MaskFormat]::ExcludePromptAndLiterals
+$diagnosisSerialBox = New-Object Windows.Forms.TextBox
+$diagnosisSerialBox.MaxLength = 8
+$diagnosisSerialBox.WordWrap = $false
 $diagnosisSerialBox.Dock = [Windows.Forms.DockStyle]::Fill
+$diagnosisSerialBox.Add_KeyPress({
+    if (-not [char]::IsControl($_.KeyChar) -and -not [char]::IsDigit($_.KeyChar)) {
+        $_.Handled = $true
+    }
+})
 $diagnosisInputLayout.Controls.Add($diagnosisSerialBox, 0, 1)
 $diagnosisVersionCombo = New-Object Windows.Forms.ComboBox
 $diagnosisVersionCombo.Dock = [Windows.Forms.DockStyle]::Fill
