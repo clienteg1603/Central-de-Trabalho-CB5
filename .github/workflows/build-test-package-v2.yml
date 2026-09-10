@@ -88,9 +88,10 @@ jobs:
           cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
           cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
 
-          # Antes de empacotar, bloqueia a release se arquivos, versões ou regras
-          # críticas tiverem sido perdidos durante uma evolução visual/estrutural.
+          # Barreiras antes do empacotamento: integridade, contratos funcionais e sintaxe.
           python3 src/ci/audit_release.py tree "$OUT_ROOT" "$VERSION"
+          python3 src/ci/regression_contracts.py "$OUT_ROOT"
+          pwsh -NoProfile -NonInteractive -File src/ci/parse_powershell.ps1 -Root "$OUT_ROOT"
 
           python3 - "$OUT_ROOT" "$VERSION" <<'PY'
           import hashlib, json, pathlib, sys, zipfile
