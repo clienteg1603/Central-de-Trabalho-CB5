@@ -132,6 +132,17 @@ foreach ($pattern in $forbiddenPatterns) {
     }
 }
 
+foreach ($required in @(
+    'RunspaceFactory.CreateRunspace',
+    '--self-test',
+    'Parser.ParseFile',
+    'Central de Trabalho.ps1'
+)) {
+    if ($sourceText -notmatch [regex]::Escape($required)) {
+        throw "Native host is missing required contract: $required"
+    }
+}
+
 $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($outExe)
 if ($info.FileVersion -ne $fileVersion) {
     throw "EXE version mismatch: $($info.FileVersion) != $fileVersion"
@@ -152,4 +163,4 @@ foreach ($entry in $expectedMetadata.GetEnumerator()) {
     }
 }
 
-Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, in-process PowerShell engine."
+Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, self-test contract, in-process PowerShell engine."
