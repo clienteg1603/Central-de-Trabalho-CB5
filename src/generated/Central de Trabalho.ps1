@@ -33,10 +33,10 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.14.3"
+$script:AppVersion = "0.14.4"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.6.2"
-$script:MaintenanceVersion = "0.5.9"
+$script:MaintenanceVersion = "0.6.0"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -1100,7 +1100,8 @@ if ($themeCombo.SelectedIndex -lt 0) { $themeCombo.SelectedIndex = 0 }
 $themeCombo.Add_DrawItem({
     param($sender, $e)
     try {
-        if ($e.Index -lt 0) { return }
+        $index = [int]$e.Index
+        if ($index -lt 0) { $index = [int]$sender.SelectedIndex }
         $palette = $script:CurrentPalette
         $back = if ($null -ne $palette) { $palette.Input } else { [Drawing.Color]::FromArgb(18,24,27) }
         $fore = if ($null -ne $palette) { $palette.Text } else { [Drawing.Color]::White }
@@ -1112,18 +1113,21 @@ $themeCombo.Add_DrawItem({
         $textBrush = New-Object Drawing.SolidBrush($fore)
         try {
             $e.Graphics.FillRectangle($brush, $e.Bounds)
-            $textRect = [Drawing.Rectangle]::new($e.Bounds.X + 6, $e.Bounds.Y, [Math]::Max(1, $e.Bounds.Width - 8), $e.Bounds.Height)
-            $format = New-Object Drawing.StringFormat
-            try {
-                $format.LineAlignment = [Drawing.StringAlignment]::Center
-                $format.Trimming = [Drawing.StringTrimming]::EllipsisCharacter
-                $e.Graphics.DrawString([string]$sender.Items[$e.Index], $sender.Font, $textBrush, $textRect, $format)
-            } finally { $format.Dispose() }
+            if ($index -ge 0 -and $index -lt $sender.Items.Count) {
+                $textRect = [Drawing.Rectangle]::new($e.Bounds.X + 7, $e.Bounds.Y, [Math]::Max(1, $e.Bounds.Width - 10), $e.Bounds.Height)
+                $format = New-Object Drawing.StringFormat
+                try {
+                    $format.LineAlignment = [Drawing.StringAlignment]::Center
+                    $format.Trimming = [Drawing.StringTrimming]::EllipsisCharacter
+                    $format.FormatFlags = [Drawing.StringFormatFlags]::NoWrap
+                    $e.Graphics.DrawString([string]$sender.Items[$index], $sender.Font, $textBrush, $textRect, $format)
+                } finally { $format.Dispose() }
+            }
         } finally {
             $brush.Dispose()
             $textBrush.Dispose()
         }
-        $e.DrawFocusRectangle()
+        if (($e.State -band [Windows.Forms.DrawItemState]::Focus) -ne 0) { $e.DrawFocusRectangle() }
     } catch {}
 })
 $sidebarBottom.Controls.Add($themeCombo)

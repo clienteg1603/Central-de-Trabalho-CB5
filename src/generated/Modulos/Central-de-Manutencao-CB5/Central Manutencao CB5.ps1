@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.9"
+$script:AppVersion = "0.6.0"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -1604,51 +1604,58 @@ if ($script:IsInProcessHosted) {
         if (-not $script:IsInProcessHosted) { return }
         try {
             $hiddenTabStrip = 31
-            $overviewHeight = 0
-            $sectionNavHeight = 0
-            $isPassage = $false
+            $viewportW = [Math]::Max(1, $tabsViewport.ClientSize.Width)
+            $viewportH = [Math]::Max(1, $tabsViewport.ClientSize.Height)
 
+            $isPassage = $false
             $passageVar = Get-Variable -Name passageTab -ErrorAction SilentlyContinue
             if ($null -ne $passageVar -and $null -ne $passageVar.Value -and $mainTabs.SelectedTab -eq $passageVar.Value) {
                 $isPassage = $true
             }
 
+            $overviewHeight = 0
             if ($null -ne $script:HostedOverviewPanel) {
-                if ($isPassage) {
-                    $script:HostedOverviewPanel.Visible = $false
-                }
-                else {
-                    $introHeight = 56
-                    $cardsHeight = 122
-                    try { $introHeight = [Math]::Max(42, [int]$dashboardRoot.RowStyles[0].Height) } catch {}
-                    try { $cardsHeight = [Math]::Max(96, [int]$dashboardRoot.RowStyles[1].Height) } catch {}
-                    $overviewHeight = $introHeight + $cardsHeight + 16
+                # Em alturas muito baixas escondemos os cartões automaticamente para
+                # nunca sacrificar os campos/botões da tela ativa.
+                if (-not $isPassage -and $viewportH -ge 520) {
+                    $overviewHeight = if ($viewportH -lt 650) { 94 } elseif ($viewportH -lt 820) { 104 } else { 112 }
                     $script:HostedOverviewPanel.Visible = $true
                     $script:HostedOverviewPanel.Location = [Drawing.Point]::new(0, 0)
-                    $script:HostedOverviewPanel.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), $overviewHeight)
-                    if ($null -ne $script:HostedOverviewLayout) {
-                        $script:HostedOverviewLayout.RowStyles[0].Height = $introHeight
-                        $script:HostedOverviewLayout.RowStyles[1].Height = $cardsHeight
+                    $script:HostedOverviewPanel.Size = [Drawing.Size]::new($viewportW, $overviewHeight)
+                }
+                else {
+                    $script:HostedOverviewPanel.Visible = $false
+                }
+            }
+
+            $navHeight = if ($viewportH -lt 600) { 38 } else { 42 }
+            if ($null -ne $script:HostedSectionNavPanel) {
+                $script:HostedSectionNavPanel.Visible = $true
+                $script:HostedSectionNavPanel.Location = [Drawing.Point]::new(0, $overviewHeight)
+                $script:HostedSectionNavPanel.Size = [Drawing.Size]::new($viewportW, $navHeight)
+
+                # Em larguras menores os textos ficam compactos para as seis ações
+                # continuarem numa única linha sem corte.
+                $compactNav = ($viewportW -lt 980)
+                $dashboardNewButton.Text = if ($compactNav) { "+ PASSAGEM" } else { "+ NOVA PASSAGEM" }
+                $navFont = if ($compactNav) { 7.2 } else { 8.0 }
+                foreach ($button in @($dashboardNewButton, $dashboardHistoryButton, $dashboardStatsButton, $dashboardDiagnosisButton, $dashboardSchematicsButton, $dashboardRulesButton)) {
+                    if ($null -ne $button) {
+                        $button.Font = [Drawing.Font]::new("Segoe UI Semibold", $navFont)
+                        $button.Margin = [Windows.Forms.Padding]::new(2, 2, 2, 2)
                     }
                 }
             }
 
-            if ($null -ne $script:HostedSectionNavPanel) {
-                $sectionNavHeight = 46
-                $script:HostedSectionNavPanel.Visible = $true
-                $script:HostedSectionNavPanel.Location = [Drawing.Point]::new(0, $overviewHeight)
-                $script:HostedSectionNavPanel.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), $sectionNavHeight)
-                $script:HostedSectionNavPanel.BringToFront()
-            }
-
-            if ($null -ne $script:InternalNavPanel) { $script:InternalNavPanel.Visible = $false }
-
-            $contentTop = $overviewHeight + $sectionNavHeight
+            $contentTop = $overviewHeight + $navHeight
             $mainTabs.Location = [Drawing.Point]::new(0, $contentTop - $hiddenTabStrip)
             $mainTabs.Size = [Drawing.Size]::new(
-                [Math]::Max(1, $tabsViewport.ClientSize.Width),
-                [Math]::Max(1, $tabsViewport.ClientSize.Height - $contentTop + $hiddenTabStrip)
+                $viewportW,
+                [Math]::Max(1, $viewportH - $contentTop + $hiddenTabStrip)
             )
+
+            if ($null -ne $script:HostedOverviewPanel -and $script:HostedOverviewPanel.Visible) { $script:HostedOverviewPanel.BringToFront() }
+            if ($null -ne $script:HostedSectionNavPanel) { $script:HostedSectionNavPanel.BringToFront() }
         } catch {}
     }
 
@@ -1821,10 +1828,11 @@ $dashboardNavigation.Controls.Add($dashboardSchematicsButton, 3, 0)
 $dashboardNavigation.Controls.Add($dashboardRulesButton, 4, 0)
 
 if ($script:IsInProcessHosted) {
-    # Cabeçalho persistente: visão geral + cartões.
+    # Resumo persistente: somente os quatro cartões. O título/subtítulo antigo da
+    # Visão geral não é repetido dentro do módulo integrado.
     $script:HostedOverviewPanel = New-Object Windows.Forms.Panel
     $script:HostedOverviewPanel.Margin = [Windows.Forms.Padding]::new(0)
-    $script:HostedOverviewPanel.Padding = [Windows.Forms.Padding]::new(8, 6, 8, 4)
+    $script:HostedOverviewPanel.Padding = [Windows.Forms.Padding]::new(8, 5, 8, 5)
     $tabsViewport.Controls.Add($script:HostedOverviewPanel)
 
     $script:HostedOverviewLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1832,34 +1840,53 @@ if ($script:IsInProcessHosted) {
     $script:HostedOverviewLayout.Margin = [Windows.Forms.Padding]::new(0)
     $script:HostedOverviewLayout.Padding = [Windows.Forms.Padding]::new(4, 0, 4, 0)
     $script:HostedOverviewLayout.ColumnCount = 1
-    $script:HostedOverviewLayout.RowCount = 2
+    $script:HostedOverviewLayout.RowCount = 1
     [void]$script:HostedOverviewLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
-    [void]$script:HostedOverviewLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardIntroHeight)))
-    [void]$script:HostedOverviewLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardCardsHeight)))
+    [void]$script:HostedOverviewLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
     $script:HostedOverviewPanel.Controls.Add($script:HostedOverviewLayout)
 
-    try { $dashboardRoot.Controls.Remove($dashboardIntro) } catch {}
     try { $dashboardRoot.Controls.Remove($cardsLayout) } catch {}
-    $dashboardIntro.Dock = [Windows.Forms.DockStyle]::Fill
-    $dashboardIntro.Margin = [Windows.Forms.Padding]::new(0)
     $cardsLayout.Dock = [Windows.Forms.DockStyle]::Fill
     $cardsLayout.Margin = [Windows.Forms.Padding]::new(0)
-    $script:HostedOverviewLayout.Controls.Add($dashboardIntro, 0, 0)
-    $script:HostedOverviewLayout.Controls.Add($cardsLayout, 0, 1)
+    $script:HostedOverviewLayout.Controls.Add($cardsLayout, 0, 0)
 
-    # Os cinco botões viram a navegação fixa da Manutenção.
+    # O cabeçalho antigo continha o título repetido e o botão laranja que estava
+    # sendo cortado. No modo integrado ele deixa de participar do layout.
+    try { $dashboardRoot.Controls.Remove($dashboardIntro) } catch {}
+    $dashboardIntro.Visible = $false
+
+    # Navegação persistente com seis ações: Nova passagem + cinco áreas de consulta.
     $script:HostedSectionNavPanel = New-Object Windows.Forms.Panel
     $script:HostedSectionNavPanel.Margin = [Windows.Forms.Padding]::new(0)
     $script:HostedSectionNavPanel.Padding = [Windows.Forms.Padding]::new(8, 2, 8, 2)
     $tabsViewport.Controls.Add($script:HostedSectionNavPanel)
+
     try { $dashboardRoot.Controls.Remove($dashboardNavigation) } catch {}
     $dashboardNavigation.Dock = [Windows.Forms.DockStyle]::Fill
     $dashboardNavigation.Margin = [Windows.Forms.Padding]::new(0)
+    $dashboardNavigation.ColumnCount = 6
+    try { $dashboardNavigation.ColumnStyles.Clear() } catch {}
+    for ($i = 0; $i -lt 6; $i++) {
+        [void]$dashboardNavigation.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 16.6667)))
+    }
+    try { $dashboardNavigation.SetColumn($dashboardHistoryButton, 1) } catch {}
+    try { $dashboardNavigation.SetColumn($dashboardStatsButton, 2) } catch {}
+    try { $dashboardNavigation.SetColumn($dashboardDiagnosisButton, 3) } catch {}
+    try { $dashboardNavigation.SetColumn($dashboardSchematicsButton, 4) } catch {}
+    try { $dashboardNavigation.SetColumn($dashboardRulesButton, 5) } catch {}
+
+    try { if ($null -ne $dashboardNewButton.Parent) { $dashboardNewButton.Parent.Controls.Remove($dashboardNewButton) } } catch {}
+    $dashboardNewButton.Text = "+ NOVA PASSAGEM"
+    $dashboardNewButton.Dock = [Windows.Forms.DockStyle]::Fill
+    $dashboardNewButton.Margin = [Windows.Forms.Padding]::new(3, 2, 3, 2)
+    $dashboardNewButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.0)
+    $dashboardNavigation.Controls.Add($dashboardNewButton, 0, 0)
     $script:HostedSectionNavPanel.Controls.Add($dashboardNavigation)
 
     if ($null -ne $script:InternalNavPanel) { $script:InternalNavPanel.Visible = $false }
     $script:HostedOverviewPanel.BringToFront()
     $script:HostedSectionNavPanel.BringToFront()
+    Update-MaintenanceHostedViewport
 }
 
 function Update-MaintenanceSectionNavigation {
@@ -3159,6 +3186,7 @@ function Update-MaintenanceInternalNavigation {
         $footerHomeButton.Visible = $false
         if ($null -ne $script:InternalNavPanel) { $script:InternalNavPanel.Visible = $false }
         Update-MaintenanceSectionNavigation
+        Update-MaintenanceHostedViewport
     } catch {}
 }
 
