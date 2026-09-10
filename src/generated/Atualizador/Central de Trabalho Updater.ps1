@@ -315,7 +315,7 @@ function Invoke-UpdateInstallation {
     catch {
         Set-UpdaterStatus "A atualização não foi instalada: $($_.Exception.Message)" "Error"
         [Windows.Forms.MessageBox]::Show(
-            "A atualização não pôde ser concluída.`r`n`r`n$($_.Exception.Message)`r`n`r`nSe a troca de arquivos já havia começado, o backup foi restaurado automaticamente.",
+            "A atualização não pôde ser concluída.`r`n`r`n$($_.Exception.Message)`r`n`r`nO Atualizador tentou restaurar o backup automaticamente. Se a própria mensagem indicar falha na restauração, use o backup anterior antes de tentar novamente.",
             "Falha na atualização",
             [Windows.Forms.MessageBoxButtons]::OK,
             [Windows.Forms.MessageBoxIcon]::Error

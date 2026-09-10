@@ -53,7 +53,7 @@ function Get-CentralUpdateApplicationDataRoot {
     return [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
 }
 
-function Assert-CentralUpdateInstallRoot {
+function Resolve-CentralUpdateInstallRootPath {
     param([Parameter(Mandatory = $true)][string]$InstallRoot)
 
     $fullPath = [IO.Path]::GetFullPath($InstallRoot).TrimEnd(
@@ -67,6 +67,13 @@ function Assert-CentralUpdateInstallRoot {
     if ([string]::IsNullOrWhiteSpace($fullPath) -or $fullPath -eq $driveRoot) {
         throw "A pasta informada não pode ser a raiz de uma unidade."
     }
+    return $fullPath
+}
+
+function Assert-CentralUpdateInstallRoot {
+    param([Parameter(Mandatory = $true)][string]$InstallRoot)
+
+    $fullPath = Resolve-CentralUpdateInstallRootPath -InstallRoot $InstallRoot
 
     foreach ($required in @(
         "Central de Trabalho.ps1",
@@ -79,6 +86,18 @@ function Assert-CentralUpdateInstallRoot {
         }
     }
     return $fullPath
+}
+
+function Clear-CentralUpdateBlockingAttributes {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if (-not [IO.File]::Exists($Path) -and -not [IO.Directory]::Exists($Path)) { return }
+    $attributes = [IO.File]::GetAttributes($Path)
+    $blocking = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::ReadOnly -bor [IO.FileAttributes]::System
+    $updated = $attributes -band (-bnot $blocking)
+    if ($updated -ne $attributes) {
+        [IO.File]::SetAttributes($Path, [IO.FileAttributes]$updated)
+    }
 }
 
 function Write-UpdateJsonAtomic {
@@ -445,7 +464,7 @@ function Test-UpdatePackagePayload {
         if (-not $listed.Add($relative)) { throw "Arquivo duplicado no manifesto interno: $relative" }
         $path = Resolve-SafeUpdateChildPath -Root $PackageRoot -RelativePath $relative
         if (-not [IO.File]::Exists($path)) { throw "Arquivo ausente no pacote: $relative" }
-        if ((Get-Item -LiteralPath $path).Length -ne [long]$file.Size) { throw "Tamanho divergente: $relative" }
+        if (([IO.FileInfo]::new($path)).Length -ne [long]$file.Size) { throw "Tamanho divergente: $relative" }
         if ((Get-UpdateFileSha256 -Path $path) -ne (ConvertTo-UpdateText $file.Sha256).ToUpperInvariant()) {
             throw "SHA-256 divergente: $relative"
         }
@@ -493,6 +512,7 @@ function Copy-UpdateDirectoryContents {
         $target = Resolve-SafeUpdateChildPath -Root $Destination -RelativePath $relative
         $parent = [IO.Path]::GetDirectoryName($target)
         if (-not [IO.Directory]::Exists($parent)) { [void][IO.Directory]::CreateDirectory($parent) }
+        if ([IO.File]::Exists($target)) { Clear-CentralUpdateBlockingAttributes -Path $target }
         [IO.File]::Copy($file, $target, $true)
     }
 }
@@ -573,11 +593,17 @@ function Remove-ManagedPackageFiles {
         $relative = ConvertTo-UpdateText $file.Path
         try {
             $path = Resolve-SafeUpdateChildPath -Root $InstallRoot -RelativePath $relative
-            if ([IO.File]::Exists($path)) { [IO.File]::Delete($path) }
+            if ([IO.File]::Exists($path)) {
+                Clear-CentralUpdateBlockingAttributes -Path $path
+                [IO.File]::Delete($path)
+            }
         }
         catch {}
     }
-    if ([IO.File]::Exists($manifestPath)) { [IO.File]::Delete($manifestPath) }
+    if ([IO.File]::Exists($manifestPath)) {
+        Clear-CentralUpdateBlockingAttributes -Path $manifestPath
+        [IO.File]::Delete($manifestPath)
+    }
 }
 
 function Restore-CentralUpdateBackup {
@@ -587,7 +613,7 @@ function Restore-CentralUpdateBackup {
         [switch]$RestoreData
     )
 
-    $InstallRoot = Assert-CentralUpdateInstallRoot -InstallRoot $InstallRoot
+    $InstallRoot = Resolve-CentralUpdateInstallRootPath -InstallRoot $InstallRoot
     $programSnapshot = ConvertTo-UpdateText $Backup.ProgramSnapshot
     if (-not [IO.Directory]::Exists($programSnapshot)) { throw "A cópia do programa não foi encontrada." }
     [void](Test-UpdatePackagePayload -PackageRoot $programSnapshot -ExpectedVersion (ConvertTo-UpdateText $Backup.CurrentVersion) -AllowExtraFiles)
@@ -639,11 +665,16 @@ function Install-CentralUpdatePayload {
             $destination = Resolve-SafeUpdateChildPath -Root $InstallRoot -RelativePath $relative
             $parent = [IO.Path]::GetDirectoryName($destination)
             if (-not [IO.Directory]::Exists($parent)) { [void][IO.Directory]::CreateDirectory($parent) }
+            if ([IO.File]::Exists($destination)) { Clear-CentralUpdateBlockingAttributes -Path $destination }
             [IO.File]::Copy($source, $destination, $true)
+        }
+        $packageManifestDestination = [IO.Path]::Combine($InstallRoot, "PACOTE-MANIFESTO.json")
+        if ([IO.File]::Exists($packageManifestDestination)) {
+            Clear-CentralUpdateBlockingAttributes -Path $packageManifestDestination
         }
         [IO.File]::Copy(
             ([IO.Path]::Combine($PayloadRoot, "PACOTE-MANIFESTO.json")),
-            ([IO.Path]::Combine($InstallRoot, "PACOTE-MANIFESTO.json")),
+            $packageManifestDestination,
             $true
         )
         [void](Test-UpdatePackagePayload -PackageRoot $InstallRoot -ExpectedVersion $TargetVersion -AllowExtraFiles)
@@ -654,7 +685,10 @@ function Install-CentralUpdatePayload {
         foreach ($relative in $oldPaths) {
             if (-not $newPaths.Contains($relative)) {
                 $oldPath = Resolve-SafeUpdateChildPath -Root $InstallRoot -RelativePath $relative
-                if ([IO.File]::Exists($oldPath)) { [IO.File]::Delete($oldPath) }
+                if ([IO.File]::Exists($oldPath)) {
+                    Clear-CentralUpdateBlockingAttributes -Path $oldPath
+                    [IO.File]::Delete($oldPath)
+                }
             }
         }
 
@@ -664,16 +698,26 @@ function Install-CentralUpdatePayload {
         return $backup
     }
     catch {
+        $originalError = $_
         foreach ($file in @($newManifest.Files)) {
             try {
                 $newPath = Resolve-SafeUpdateChildPath -Root $InstallRoot -RelativePath (ConvertTo-UpdateText $file.Path)
-                if ([IO.File]::Exists($newPath)) { [IO.File]::Delete($newPath) }
+                if ([IO.File]::Exists($newPath)) {
+                    Clear-CentralUpdateBlockingAttributes -Path $newPath
+                    [IO.File]::Delete($newPath)
+                }
             }
             catch {}
         }
+
+        $rollbackError = $null
         try { [void](Restore-CentralUpdateBackup -Backup $backup -InstallRoot $InstallRoot -RestoreData) }
-        catch {}
-        throw
+        catch { $rollbackError = $_ }
+
+        if ($null -ne $rollbackError) {
+            throw "A atualização falhou: $($originalError.Exception.Message) Falha adicional ao restaurar o backup: $($rollbackError.Exception.Message)"
+        }
+        throw $originalError
     }
 }
 
