@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.2"
+$script:AppVersion = "3.7.3"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -3229,7 +3229,7 @@ Set-GridColumnWidth $descriptionsGrid "Note" 200 "Fixed" 160
 $tabDescriptions.Controls.Add($descriptionsGrid)
 
 $combineIntro = New-Object Windows.Forms.Label
-$combineIntro.Text = "Selecione duas ou mais mestres da mesma NF. Cada linha representa um lote e mantém sua própria manutenção."
+$combineIntro.Text = "Selecione uma ou mais mestres. Quando houver mais de uma, elas devem pertencer à mesma NF. Cada linha representa um lote e mantém sua própria manutenção."
 $combineIntro.Location = New-Object Drawing.Point(18, 14)
 $combineIntro.Size = New-Object Drawing.Size(982, 35)
 $combineIntro.Anchor = "Top,Left,Right"
@@ -3946,9 +3946,9 @@ function Update-CombinedProductInterface {
         $combineGrid.Columns[$columnIndex].SortMode = [Windows.Forms.DataGridViewColumnSortMode]::NotSortable
     }
     $tabCombine.Text = "Juntar lotes"
-    $combineIntro.Text = "Selecione duas ou mais mestres $Product da mesma NF. Cada linha representa um lote; informe as manutenções adicionais diretamente na linha correspondente. A ordem abaixo será mantida no arquivo final."
+    $combineIntro.Text = "Selecione uma ou mais mestres $Product. Quando houver mais de uma, elas devem pertencer à mesma NF. Cada linha representa um lote; informe as manutenções adicionais diretamente na linha correspondente. A ordem abaixo será mantida no arquivo final."
     $combineGenerateButton.Text = "✓  Validar e juntar lotes $Product"
-    $combineStatusText.Text = "Adicione pelo menos duas planilhas mestre $Product para conferir ou juntar os lotes."
+    $combineStatusText.Text = "Adicione uma ou mais planilhas mestre $Product para conferir ou juntar os lotes."
     Update-CombineSummary
 }
 
@@ -4791,8 +4791,8 @@ $previewCombineButton.Add_Click({
         $product = $script:CurrentProduct
         $consumeBalance = [bool]$combineConsumeBalanceCheck.Checked
         [void]$combineGrid.EndEdit()
-        if ($combineGrid.Rows.Count -lt 2) {
-            throw "Adicione pelo menos duas planilhas mestres $product para conferir a união."
+        if ($combineGrid.Rows.Count -lt 1) {
+            throw "Adicione pelo menos uma planilha mestre $product para conferir."
         }
 
         $pathSeen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -4978,8 +4978,8 @@ $combineGenerateButton.Add_Click({
         $product = $script:CurrentProduct
         $consumeBalance = [bool]$combineConsumeBalanceCheck.Checked
         [void]$combineGrid.EndEdit()
-        if ($combineGrid.Rows.Count -lt 2) {
-            throw "Adicione pelo menos duas planilhas mestres $product para juntar os lotes."
+        if ($combineGrid.Rows.Count -lt 1) {
+            throw "Adicione pelo menos uma planilha mestre $product para processar os lotes."
         }
 
         $outputDirectory = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
