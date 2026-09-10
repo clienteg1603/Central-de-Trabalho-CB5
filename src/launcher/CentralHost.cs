@@ -27,7 +27,7 @@ internal static class Program
             Directory.SetCurrentDirectory(appRoot);
 
             InitialSessionState state = InitialSessionState.CreateDefault();
-            state.ExecutionPolicy = ExecutionPolicy.Bypass;
+            state.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
 
             using (Runspace runspace = RunspaceFactory.CreateRunspace(state))
             {
