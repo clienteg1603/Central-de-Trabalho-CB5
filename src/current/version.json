@@ -1,6 +1,6 @@
 {
   "version": "0.14.0",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Iniciada a etapa de polimento geral da Central de Trabalho.",
     "A navegação lateral deixa de criar internamente os antigos botões duplicados Programas e Backup/restauração; ficam apenas Início, Atualizações, Pasta da Central e Sobre.",
