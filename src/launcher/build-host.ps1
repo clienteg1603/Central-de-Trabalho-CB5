@@ -57,12 +57,18 @@ if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf) -or (Get-Item -Litera
 $parts = @($Version.Split('.'))
 while ($parts.Count -lt 4) { $parts += '0' }
 $fileVersion = (($parts | Select-Object -First 4) -join '.')
+$productName = "Central de Trabalho"
+$companyName = "Central de Trabalho"
+$fileDescription = "Central de Trabalho"
+$comments = "Aplicativo principal da Central de Trabalho para gerenciamento de planilhas e manutenção."
 @"
 using System.Reflection;
-[assembly: AssemblyTitle("Central de Trabalho")]
-[assembly: AssemblyProduct("Central de Trabalho CB5")]
-[assembly: AssemblyCompany("Central de Trabalho CB5")]
-[assembly: AssemblyDescription("Native graphical host for Central de Trabalho")]
+[assembly: AssemblyTitle("$fileDescription")]
+[assembly: AssemblyProduct("$productName")]
+[assembly: AssemblyCompany("$companyName")]
+[assembly: AssemblyDescription("$comments")]
+[assembly: AssemblyCopyright("Central de Trabalho")]
+[assembly: AssemblyInformationalVersion("$Version")]
 [assembly: AssemblyVersion("$fileVersion")]
 [assembly: AssemblyFileVersion("$fileVersion")]
 "@ | Set-Content -LiteralPath $versionSource -Encoding UTF8
@@ -130,5 +136,20 @@ $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($outExe)
 if ($info.FileVersion -ne $fileVersion) {
     throw "EXE version mismatch: $($info.FileVersion) != $fileVersion"
 }
+$expectedMetadata = [ordered]@{
+    FileDescription = $fileDescription
+    ProductName = $productName
+    CompanyName = $companyName
+    ProductVersion = $Version
+    OriginalFilename = "Central de Trabalho.exe"
+    Comments = $comments
+    LegalCopyright = "Central de Trabalho"
+}
+foreach ($entry in $expectedMetadata.GetEnumerator()) {
+    $actual = [string]$info.($entry.Key)
+    if ($actual -ne [string]$entry.Value) {
+        throw "EXE metadata mismatch for $($entry.Key): '$actual' != '$($entry.Value)'"
+    }
+}
 
-Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, in-process PowerShell engine."
+Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, in-process PowerShell engine."
