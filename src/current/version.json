@@ -1,14 +1,14 @@
 {
-  "version": "0.20.1",
+  "version": "0.20.2",
   "buildRevision": 1,
   "releaseNotes": [
-    "Refina a identidade dos executáveis da Central no Windows sem alterar nenhuma regra funcional.",
-    "Central de Trabalho.exe passa a exibir metadados padronizados em Propriedades > Detalhes: nome do produto, descrição, empresa, versão do produto, nome original do arquivo e identificação da Central.",
-    "Central de Trabalho Updater.exe recebe a mesma padronização, com descrição específica de Atualizador seguro da Central de Trabalho.",
-    "O build agora valida automaticamente esses metadados após compilar os dois EXEs e bloqueia a publicação se algum campo sair diferente do esperado.",
-    "A versão do produto exibida pelo Windows passa a acompanhar diretamente a versão pública da Central, enquanto a versão de arquivo continua no formato de quatro campos exigido pelo executável.",
-    "O ícone CT azul e branco, os hosts nativos, o Atualizador corrigido, a distribuição limpa e o build totalmente baseado no fonte versionado permanecem preservados.",
+    "Candidata final da fase 0.20, criada após a v0.20.0 ter atualizado e reaberto corretamente em uso real.",
+    "Central de Trabalho.exe e Central de Trabalho Updater.exe passam a possuir um modo interno de autoteste silencioso usado somente pelo processo de build e diagnóstico.",
+    "Antes de publicar uma nova versão, o workflow agora monta uma instalação temporária completa no Windows e executa os dois EXEs em modo de smoke test.",
+    "O smoke test confirma a presença dos arquivos operacionais, valida a sintaxe dos scripts pelo parser do próprio Windows PowerShell e abre a engine PowerShell em processo sem exibir a interface gráfica.",
+    "Se o executável principal, o Atualizador, um script obrigatório ou a engine interna falhar nesse teste, a publicação é bloqueada antes da criação do pacote de Teste.",
+    "Os contratos do autoteste também passam a ser verificados durante a compilação dos hosts nativos para impedir que essa barreira desapareça silenciosamente em versões futuras.",
     "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra de planilhas, saldo, REPARO, duplicidade, manutenção, histórico ou dados do usuário foi alterada.",
-    "A versão Estável permanece v0.8.5; a v0.20.1 é publicada somente no canal Teste."
+    "A versão Estável permanece v0.8.5; a v0.20.2 continua exclusivamente no canal Teste até aprovação explícita do usuário."
   ]
 }
