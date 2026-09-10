@@ -7,7 +7,6 @@ import sys
 import zipfile
 
 EXPECTED_FILES = {
-    "ABRIR CENTRAL DE TRABALHO.vbs",
     "Central de Trabalho.exe",
     "Central de Trabalho.ps1",
     "Atualizador/CANAIS.json",
@@ -18,6 +17,10 @@ EXPECTED_FILES = {
     "Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1",
     "Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1",
     "Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1",
+}
+
+LEGACY_LAUNCHERS = {
+    "ABRIR CENTRAL DE TRABALHO.vbs",
 }
 
 
@@ -55,6 +58,10 @@ def audit_tree(root, version):
         errors.append("arquivos obrigatórios ausentes: " + ", ".join(missing))
     if extras:
         errors.append("arquivos inesperados no pacote limpo: " + ", ".join(extras))
+
+    legacy_found = sorted(LEGACY_LAUNCHERS & actual)
+    if legacy_found:
+        errors.append("lançadores legados voltaram ao pacote: " + ", ".join(legacy_found))
 
     for rel in sorted(EXPECTED_FILES & actual):
         path = root / rel
