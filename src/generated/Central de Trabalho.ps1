@@ -1,4 +1,4 @@
-Set-StrictMode -Version Latest
+﻿Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -6,10 +6,10 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.12.1"
+$script:AppVersion = "0.12.2"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.5.0"
-$script:MaintenanceVersion = "0.5.6"
+$script:GeneratorVersion = "3.5.1"
+$script:MaintenanceVersion = "0.5.7"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -349,6 +349,11 @@ function Close-EmbeddedModule {
 
 function Sync-HostedModuleTheme {
     if ($null -eq $script:HostedModule -or [string]::IsNullOrWhiteSpace($script:EmbeddedModule)) { return }
+    if ($null -eq $script:HostedForm) { return }
+    try {
+        if ($script:HostedForm.IsDisposed -or $script:HostedForm.Disposing -or $null -eq $script:HostedForm.Parent) { return }
+    }
+    catch { return }
     $theme = [string]$themeCombo.SelectedItem
     try {
         & $script:HostedModule {
@@ -1547,7 +1552,23 @@ foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$headerSt
 }
 
 # Eventos
-$themeCombo.Add_SelectedIndexChanged({ Apply-AppTheme; Sync-HostedModuleTheme; Save-AppSettings })
+$themeCombo.Add_SelectedIndexChanged({
+    # A aparência da Central deve sempre mudar mesmo que um módulo hospedado
+    # esteja em processo de fechamento. Erro de tema de módulo não pode abrir
+    # a caixa de exceção do WinForms nem interromper a troca de aparência.
+    try {
+        Apply-AppTheme
+        Save-AppSettings
+    }
+    catch {
+        try { Set-StatusMessage "Não foi possível aplicar completamente a aparência da Central." "Error" } catch {}
+        return
+    }
+    try { Sync-HostedModuleTheme }
+    catch {
+        try { Set-StatusMessage "A aparência da Central foi aplicada; o módulo aberto será atualizado ao reabrir." "Warning" } catch {}
+    }
+})
 $openGeneratorButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-GeneratorModule })
 $openMaintenanceButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-MaintenanceModule })
 $openGeneratorFolderButton.Add_Click({ Open-ModuleFolder $script:GeneratorDirectory "Gerenciador de Planilhas" })

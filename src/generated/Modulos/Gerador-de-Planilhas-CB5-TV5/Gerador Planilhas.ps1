@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
     [string]$HostTheme = ""
@@ -78,7 +78,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.5.0"
+$script:AppVersion = "3.5.1"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1783,9 +1783,11 @@ function Set-ButtonTheme {
 
 function Set-GridTheme {
     param($Grid, $Palette)
+    if ($null -eq $Grid -or $null -eq $Palette) { return }
+    try { if ($Grid.IsDisposed -or $Grid.Disposing) { return } } catch { return }
     $Grid.EnableHeadersVisualStyles = $false
     $Grid.BackgroundColor = $Palette.Surface
-    $Grid.GridColor = $Palette.Border
+    try { $Grid.GridColor = $Palette.Border } catch {}
     $Grid.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
     $Grid.ColumnHeadersBorderStyle = [Windows.Forms.DataGridViewHeaderBorderStyle]::Single
     $Grid.ColumnHeadersDefaultCellStyle.BackColor = $Palette.Panel

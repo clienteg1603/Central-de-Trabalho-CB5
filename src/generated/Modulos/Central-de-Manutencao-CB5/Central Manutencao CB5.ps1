@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
     [string]$HostTheme = ""
@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.6"
+$script:AppVersion = "0.5.7"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -348,6 +348,9 @@ function Set-MaintenanceButtonStyle {
 function Apply-ThemeToTree {
     param([Windows.Forms.Control]$Control)
 
+    if ($null -eq $Control) { return }
+    try { if ($Control.IsDisposed -or $Control.Disposing) { return } } catch { return }
+
     if ($Control -is [Windows.Forms.Form] -or $Control -is [Windows.Forms.TabPage]) {
         $Control.BackColor = $script:CurrentPalette.Background
         $Control.ForeColor = $script:CurrentPalette.Text
@@ -376,8 +379,9 @@ function Apply-ThemeToTree {
         Set-MaintenanceButtonStyle $Control
     }
     elseif ($Control -is [Windows.Forms.DataGridView]) {
+        if ($Control.IsDisposed -or $Control.Disposing) { return }
         $Control.BackgroundColor = $script:CurrentPalette.Card
-        $Control.GridColor = $script:CurrentPalette.Border
+        try { $Control.GridColor = $script:CurrentPalette.Border } catch {}
         $Control.DefaultCellStyle.BackColor = $script:CurrentPalette.Card
         $Control.DefaultCellStyle.ForeColor = $script:CurrentPalette.Text
         $Control.DefaultCellStyle.SelectionBackColor = $script:CurrentPalette.Accent

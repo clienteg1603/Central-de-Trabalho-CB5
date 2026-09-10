@@ -2,20 +2,19 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.12.1",
+  "Version": "0.12.2",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.12.1.zip",
-  "PackageSha256": "95EE446EE966BC9DB4C9C50DF7E83FD1D244E97B89714106E3ADE9D614CE6C6F",
-  "PackageSize": 902520,
-  "PackageRoot": "Central-de-Trabalho-v0.12.1",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.12.2.zip",
+  "PackageSha256": "55BAABC4A333ECC6FFFE227408F539DC5CEFB910419EC7E02CF1FE2368D1F792",
+  "PackageSize": 902826,
+  "PackageRoot": "Central-de-Trabalho-v0.12.2",
   "ReleaseNotes": [
-    "Corrigido o painel principal da Central de Manutenção CB5 com foco nos defeitos visíveis encontrados na captura de tela.",
-    "Os títulos dos cartões, o cabeçalho da visão geral e o texto do botão Nova passagem agora recebem contraste explícito para não desaparecerem no tema escuro.",
-    "As subpáginas da Manutenção agora exibem uma barra interna com o botão PAINEL DA MANUTENÇÃO, permitindo voltar rapidamente sem sair para a Central de Trabalho.",
-    "O antigo botão de voltar do rodapé deixa de ocupar espaço; o voltar superior da Central continua retornando para a Central de Trabalho.",
-    "O botão PASTA DO MÓDULO no cabeçalho integrado recebeu largura adequada para não cortar o texto.",
-    "A lateral da Central foi simplificada para evitar cortes: Atualizações, Organização • Controle e 2 módulos disponíveis.",
-    "A versão lateral foi reposicionada alguns pixels para não ficar espremida junto à borda inferior.",
-    "Nenhuma regra de manutenção, histórico, diagnóstico, geração de planilhas ou dados foi alterada."
+    "Corrigida a exceção ao trocar a aparência que citava a propriedade GridColor.",
+    "A Central agora só tenta sincronizar o tema com um módulo realmente vivo e ainda hospedado.",
+    "A troca de aparência da Central não é mais interrompida por uma falha visual temporária de um módulo integrado.",
+    "DataGridViews da Central de Manutenção e do Gerenciador deixam de receber atualização visual quando já estão sendo descartados.",
+    "O setter GridColor foi isolado para evitar a exceção do WinForms durante recriação ou descarte de controles.",
+    "Central de Manutenção passa para v0.5.7 e Gerenciador de Planilhas para v3.5.1.",
+    "Nenhuma regra de manutenção, histórico, diagnóstico, planilhas, componentes ou dados foi alterada."
   ]
 }
