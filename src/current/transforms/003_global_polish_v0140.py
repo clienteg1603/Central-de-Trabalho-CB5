@@ -43,7 +43,6 @@ $navFolder = New-SidebarButton "▣   Pasta da Central"
 $navAbout = New-SidebarButton "ⓘ   Sobre"
 foreach ($button in @($navHome, $navUpdates, $navFolder, $navAbout)) { $navPanel.Controls.Add($button) }'''
 central = replace_once(central, old_nav, new_nav, "navegacao lateral sem duplicatas")
-central = replace_once(central, '$navPanel.Height = 210', '$navPanel.Height = 190', "altura da navegacao lateral")
 
 central = replace_once(
     central,
