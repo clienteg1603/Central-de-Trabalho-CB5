@@ -98,6 +98,15 @@ def main():
     ):
         require(errors, generator, marker, "Gerenciador")
 
+    # JUNTAR LOTES — uma única mestre é uma entrada válida.
+    # A exigência de duas planilhas não pode voltar silenciosamente.
+    if 'combineGrid.Rows.Count -lt 2' in generator:
+        errors.append("Gerenciador / Juntar lotes: voltou a exigir pelo menos duas planilhas")
+    if generator.count('if ($combineGrid.Rows.Count -lt 1)') < 2:
+        errors.append("Gerenciador / Juntar lotes: validação e geração não aceitam de forma consistente uma única planilha")
+    require(errors, generator, 'Selecione uma ou mais mestres $Product.', "Gerenciador / Juntar lotes com uma mestre")
+    require(errors, generator, 'Adicione uma ou mais planilhas mestre $Product para conferir ou juntar os lotes.', "Gerenciador / instrução de uma mestre")
+
     # Regra crítica pedida pelo usuário: texto REPARO livre só sem consumo de saldo.
     require(errors, generator, 'Read-TV5MasterWorkbook $excel $masterPath -AllowUnknownRepair:(-not $consumeBalance)', "Gerenciador / REPARO TV5")
     require(errors, generator, 'Read-MasterWorkbook $excel $masterPath -RequireInvoices -AllowUnknownRepair:(-not $consumeBalance)', "Gerenciador / REPARO CB5")
