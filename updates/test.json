@@ -2,19 +2,19 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.11.0",
+  "Version": "0.11.1",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.0.zip",
-  "PackageSha256": "50B98C31DF5F4AA20F0C4DFE1A92208ADF52F83CA6101139539CAECBBA5BB082",
-  "PackageSize": 899193,
-  "PackageRoot": "Central-de-Trabalho-v0.11.0",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.1.zip",
+  "PackageSha256": "A8D77F4E6A391B726E84403CD62A813CF7041EFACA60068EE9756812217E7306",
+  "PackageSize": 899563,
+  "PackageRoot": "Central-de-Trabalho-v0.11.1",
   "ReleaseNotes": [
-    "Primeiro bloco visual da Etapa 3 focado na Central de Manutenção CB5.",
-    "Integração estável dentro da Central mantida, com as 7 áreas acessíveis.",
-    "Paletas da Central passam a ser herdadas pela Manutenção em modo integrado.",
-    "Adicionada paleta Técnico industrial e identidade teal + laranja para a Manutenção.",
-    "Dashboard da Manutenção recebeu cartões semânticos, cantos arredondados e navegação refinada.",
-    "As abas foram encurtadas e ganharam tooltips para melhorar leitura em diferentes resoluções.",
-    "Nenhuma regra do núcleo de manutenção ou do Gerenciador de Planilhas foi alterada."
+    "Segundo bloco visual da Etapa 3 na Central de Manutenção CB5.",
+    "Visão geral ganhou atalhos diretos para Histórico, Apoio ao diagnóstico e Esquemáticos.",
+    "Tabelas receberam visual mais limpo, linhas alternadas e menos bordas pesadas.",
+    "Grupos e cartões foram refinados para combinar melhor com as paletas da Central.",
+    "Ações da tela de Passagem receberam espaçamento e hierarquia visual melhores.",
+    "Responsividade do dashboard foi ajustada para comportar a nova faixa de atalhos.",
+    "Nenhuma regra de manutenção, histórico ou diagnóstico foi alterada."
   ]
 }
