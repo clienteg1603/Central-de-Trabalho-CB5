@@ -1,6 +1,6 @@
 {
   "version": "0.16.6",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Continuação do fechamento com uma rodada dedicada de regressão funcional antes da etapa do EXE definitivo.",
     "O build passa a validar contratos de fluxo da Central, Gerenciador, Componentes, Central de Manutenção e Atualizador, além das barreiras de integridade já existentes.",
