@@ -6,10 +6,10 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.12.0"
+$script:AppVersion = "0.12.1"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.5.0"
-$script:MaintenanceVersion = "0.5.5"
+$script:MaintenanceVersion = "0.5.6"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -743,7 +743,7 @@ function Apply-AppTheme {
     if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
         Set-StatusMessage "Sistema pronto. Todos os módulos principais foram localizados." "Success"
         $sidebarStatus.Text = "●  Sistema pronto"
-        $sidebarStatusSub.Text = "Todos os módulos disponíveis"
+        $sidebarStatusSub.Text = "2 módulos disponíveis"
     }
     elseif (-not [IO.File]::Exists($script:UpdaterScript)) {
         Set-StatusMessage "O Atualizador da Central de Trabalho não foi encontrado." "Error"
@@ -849,7 +849,7 @@ function Update-CentralAdaptiveLayout {
                 $embeddedTitle.Font = [Drawing.Font]::new("Segoe UI Semibold", 11.5)
                 $embeddedSubtitle.Location = [Drawing.Point]::new(114, 24)
                 $embeddedSubtitle.Font = [Drawing.Font]::new("Segoe UI", 7.3)
-                $embeddedFolderButton.Size = [Drawing.Size]::new(102, 30)
+                $embeddedFolderButton.Size = [Drawing.Size]::new(132, 30)
                 $embeddedFolderButton.Top = 7
             }
             "Balanced" {
@@ -874,7 +874,7 @@ function Update-CentralAdaptiveLayout {
                 $embeddedTitle.Font = [Drawing.Font]::new("Segoe UI Semibold", 12.2)
                 $embeddedSubtitle.Location = [Drawing.Point]::new(122,25)
                 $embeddedSubtitle.Font = [Drawing.Font]::new("Segoe UI",7.7)
-                $embeddedFolderButton.Size = [Drawing.Size]::new(106,31)
+                $embeddedFolderButton.Size = [Drawing.Size]::new(140,31)
                 $embeddedFolderButton.Top = 8
             }
             default {
@@ -899,7 +899,7 @@ function Update-CentralAdaptiveLayout {
                 $embeddedTitle.Font = [Drawing.Font]::new("Segoe UI Semibold",13)
                 $embeddedSubtitle.Location = [Drawing.Point]::new(128,27)
                 $embeddedSubtitle.Font = [Drawing.Font]::new("Segoe UI",8)
-                $embeddedFolderButton.Size = [Drawing.Size]::new(110,32)
+                $embeddedFolderButton.Size = [Drawing.Size]::new(150,32)
                 $embeddedFolderButton.Top = 9
             }
         }
@@ -990,7 +990,7 @@ $brandTitle.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
 $brandPanel.Controls.Add($brandTitle)
 
 $brandSub = New-Object Windows.Forms.Label
-$brandSub.Text = "Organização • Controle • Trabalho"
+$brandSub.Text = "Organização • Controle"
 $brandSub.Location = [Drawing.Point]::new(4, 67)
 $brandSub.Size = [Drawing.Size]::new(190, 26)
 $brandSub.Font = [Drawing.Font]::new("Segoe UI", 8.5)
@@ -1026,7 +1026,7 @@ function New-SidebarButton([string]$Text) {
 $navHome = New-SidebarButton "⌂   Início"
 $navPrograms = New-SidebarButton "▦   Programas"
 $navPrograms.Visible = $false
-$navUpdates = New-SidebarButton "↻   Atualizações / backup"
+$navUpdates = New-SidebarButton "↻   Atualizações"
 $navBackup = New-SidebarButton "⟲   Backup / restauração"
 $navBackup.Visible = $false
 $navFolder = New-SidebarButton "▣   Pasta da Central"
@@ -1062,7 +1062,7 @@ $sidebarStatus.Font = [Drawing.Font]::new("Segoe UI Semibold", 9)
 $sidebarBottom.Controls.Add($sidebarStatus)
 
 $sidebarStatusSub = New-Object Windows.Forms.Label
-$sidebarStatusSub.Text = "Todos os módulos disponíveis"
+$sidebarStatusSub.Text = "2 módulos disponíveis"
 $sidebarStatusSub.Location = [Drawing.Point]::new(20, 98)
 $sidebarStatusSub.Size = [Drawing.Size]::new(170, 20)
 $sidebarStatusSub.Font = [Drawing.Font]::new("Segoe UI", 8)
@@ -1070,7 +1070,7 @@ $sidebarBottom.Controls.Add($sidebarStatusSub)
 
 $sidebarVersion = New-Object Windows.Forms.Label
 $sidebarVersion.Text = "Central v$($script:AppVersion)"
-$sidebarVersion.Location = [Drawing.Point]::new(4, 128)
+$sidebarVersion.Location = [Drawing.Point]::new(4, 123)
 $sidebarVersion.Size = [Drawing.Size]::new(184, 20)
 $sidebarVersion.Font = [Drawing.Font]::new("Segoe UI", 8)
 $sidebarBottom.Controls.Add($sidebarVersion)
@@ -1145,7 +1145,7 @@ $embeddedToolbar.Controls.Add($embeddedSubtitle)
 $embeddedFolderButton = New-Object Windows.Forms.Button
 $embeddedFolderButton.Text = "PASTA DO MÓDULO"
 $embeddedFolderButton.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
-$embeddedFolderButton.Size = [Drawing.Size]::new(110, 32)
+$embeddedFolderButton.Size = [Drawing.Size]::new(150, 32)
 $embeddedFolderButton.Location = [Drawing.Point]::new([Math]::Max(690, $targetWidth - 380), 9)
 $embeddedFolderButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.2)
 $embeddedToolbar.Controls.Add($embeddedFolderButton)

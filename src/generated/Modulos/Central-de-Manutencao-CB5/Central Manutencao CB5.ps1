@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.5"
+$script:AppVersion = "0.5.6"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -134,6 +134,9 @@ $script:FilteredPassages = @()
 $script:CurrentPalette = $null
 $script:IsLoadingForm = $false
 $script:CorrectionMode = $false
+$script:InternalNavPanel = $null
+$script:InternalBackButton = $null
+$script:InternalSectionLabel = $null
 
 try {
     $script:DatabasePath = Initialize-CB5DataStore -DataDirectory $script:DataDirectory
@@ -415,6 +418,30 @@ function Apply-MaintenanceTheme {
         }
         $d.Bar.BackColor = $color
         $d.Value.ForeColor = $color
+        if ($null -ne $d.Label) {
+            $d.Label.ForeColor = $script:CurrentPalette.Muted
+            $d.Label.BackColor = $script:CurrentPalette.Card
+        }
+    }
+    if ($null -ne $dashboardTitle) {
+        $dashboardTitle.ForeColor = $script:CurrentPalette.Text
+        $dashboardTitle.BackColor = $script:CurrentPalette.Background
+    }
+    if ($null -ne $dashboardSubtitle) {
+        $dashboardSubtitle.ForeColor = $script:CurrentPalette.Muted
+        $dashboardSubtitle.BackColor = $script:CurrentPalette.Background
+    }
+    if ($null -ne $dashboardNewButton) {
+        $dashboardNewButton.Text = "+  NOVA PASSAGEM"
+        $dashboardNewButton.BackColor = $script:CurrentPalette.Action
+        $dashboardNewButton.ForeColor = $script:CurrentPalette.ActionText
+        $dashboardNewButton.FlatAppearance.BorderSize = 0
+        $dashboardNewButton.UseVisualStyleBackColor = $false
+    }
+    if ($script:IsInProcessHosted -and $null -ne $script:InternalNavPanel) {
+        $script:InternalNavPanel.BackColor = $script:CurrentPalette.Surface
+        if ($null -ne $script:InternalBackButton) { Set-MaintenanceButtonStyle $script:InternalBackButton }
+        if ($null -ne $script:InternalSectionLabel) { $script:InternalSectionLabel.ForeColor = $script:CurrentPalette.Muted }
     }
     if ($null -ne $dashboardSubtitle) { $dashboardSubtitle.ForeColor = $script:CurrentPalette.Muted }
     if ($null -ne $statisticsSubtitle) { $statisticsSubtitle.ForeColor = $script:CurrentPalette.Muted }
@@ -1532,21 +1559,53 @@ if ($script:IsInProcessHosted) {
     $tabsViewport.AutoScroll = $false
     $rootLayout.Controls.Add($tabsViewport, 0, 1)
 
+    $script:InternalNavPanel = New-Object Windows.Forms.Panel
+    $script:InternalNavPanel.Dock = [Windows.Forms.DockStyle]::Top
+    $script:InternalNavPanel.Height = 38
+    $script:InternalNavPanel.Padding = [Windows.Forms.Padding]::new(8, 4, 8, 4)
+    $script:InternalNavPanel.Visible = $false
+    $tabsViewport.Controls.Add($script:InternalNavPanel)
+
+    $script:InternalBackButton = New-Object Windows.Forms.Button
+    $script:InternalBackButton.Text = "←  PAINEL DA MANUTENÇÃO"
+    $script:InternalBackButton.Dock = [Windows.Forms.DockStyle]::Left
+    $script:InternalBackButton.Width = 205
+    $script:InternalBackButton.Margin = [Windows.Forms.Padding]::new(0)
+    $script:InternalBackButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.6)
+    $script:InternalBackButton.Tag = "Secondary"
+    $script:InternalNavPanel.Controls.Add($script:InternalBackButton)
+
+    $script:InternalSectionLabel = New-Object Windows.Forms.Label
+    $script:InternalSectionLabel.Text = ""
+    $script:InternalSectionLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $script:InternalSectionLabel.Padding = [Windows.Forms.Padding]::new(12, 0, 0, 0)
+    $script:InternalSectionLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $script:InternalSectionLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", 9.2)
+    $script:InternalNavPanel.Controls.Add($script:InternalSectionLabel)
+
     $mainTabs.Dock = [Windows.Forms.DockStyle]::None
     $mainTabs.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Bottom -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
     $tabsViewport.Controls.Add($mainTabs)
-    $tabsViewport.Add_SizeChanged({
+
+    function Update-MaintenanceHostedViewport {
+        if (-not $script:IsInProcessHosted) { return }
         try {
             $hiddenTabStrip = 31
-            $mainTabs.Location = [Drawing.Point]::new(0, -$hiddenTabStrip)
-            $mainTabs.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), [Math]::Max(1, $tabsViewport.ClientSize.Height + $hiddenTabStrip))
+            $navHeight = if ($null -ne $script:InternalNavPanel -and $script:InternalNavPanel.Visible) { 38 } else { 0 }
+            $mainTabs.Location = [Drawing.Point]::new(0, $navHeight - $hiddenTabStrip)
+            $mainTabs.Size = [Drawing.Size]::new(
+                [Math]::Max(1, $tabsViewport.ClientSize.Width),
+                [Math]::Max(1, $tabsViewport.ClientSize.Height - $navHeight + $hiddenTabStrip)
+            )
+            if ($null -ne $script:InternalNavPanel) {
+                $script:InternalNavPanel.Width = [Math]::Max(1, $tabsViewport.ClientSize.Width)
+                $script:InternalNavPanel.BringToFront()
+            }
         } catch {}
-    })
-    try {
-        $hiddenTabStrip = 31
-        $mainTabs.Location = [Drawing.Point]::new(0, -$hiddenTabStrip)
-        $mainTabs.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), [Math]::Max(1, $tabsViewport.ClientSize.Height + $hiddenTabStrip))
-    } catch {}
+    }
+
+    $tabsViewport.Add_SizeChanged({ Update-MaintenanceHostedViewport })
+    Update-MaintenanceHostedViewport
 }
 else {
     $rootLayout.Controls.Add($mainTabs, 0, 1)
@@ -1606,6 +1665,9 @@ $dashboardNewButton.Text = "+  NOVA PASSAGEM"
 $dashboardNewButton.Dock = [Windows.Forms.DockStyle]::Fill
 $dashboardNewButton.Margin = if ($script:IsInProcessHosted) { [Windows.Forms.Padding]::new(8, 7, 0, 7) } else { [Windows.Forms.Padding]::new(8, 10, 0, 10) }
 $dashboardNewButton.Tag = "Action"
+$dashboardNewButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 9.0)
+$dashboardNewButton.TextAlign = [Drawing.ContentAlignment]::MiddleCenter
+$dashboardNewButton.UseVisualStyleBackColor = $false
 $dashboardIntro.Controls.Add($dashboardNewButton, 1, 0)
 
 $cardsLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1659,9 +1721,10 @@ function New-SummaryCard {
     $label.Dock = [Windows.Forms.DockStyle]::Fill
     $label.TextAlign = [Drawing.ContentAlignment]::TopLeft
     $label.AutoEllipsis = $true
+    $label.Font = [Drawing.Font]::new("Segoe UI Semibold", $(if ($script:IsInProcessHosted) { 8.6 } else { 9.0 }))
     $content.Controls.Add($label, 0, 1)
 
-    $script:SummaryCardDecorations += [pscustomobject]@{ Card = $card; Bar = $accentBar; Value = $value; Kind = $Kind }
+    $script:SummaryCardDecorations += [pscustomobject]@{ Card = $card; Bar = $accentBar; Value = $value; Label = $label; Kind = $Kind }
     $card.Add_Resize({ Set-MaintenanceRoundedRegion $this 10 })
     $ValueLabel.Value = $value
     return $card
@@ -2620,7 +2683,7 @@ $footerLayout = New-Object Windows.Forms.TableLayoutPanel
 $footerLayout.Dock = [Windows.Forms.DockStyle]::Fill
 $footerLayout.ColumnCount = 3
 [void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
-[void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 132)))
+[void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 0)))
 [void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 $footerPanel.Controls.Add($footerLayout)
 $statusLabel = New-Object Windows.Forms.Label
@@ -2630,7 +2693,7 @@ $statusLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
 $statusLabel.AutoEllipsis = $true
 $footerLayout.Controls.Add($statusLabel, 0, 0)
 $footerHomeButton = New-Object Windows.Forms.Button
-$footerHomeButton.Text = "← VISÃO GERAL"
+$footerHomeButton.Text = "← PAINEL DA MANUTENÇÃO"
 $footerHomeButton.Dock = [Windows.Forms.DockStyle]::Fill
 $footerHomeButton.Margin = [Windows.Forms.Padding]::new(4, 0, 4, 0)
 $footerHomeButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.0)
@@ -2963,7 +3026,7 @@ $mainTabs.Add_DrawItem({
     finally { $brush.Dispose(); $lineBrush.Dispose() }
 })
 
-$themeCombo.Add_SelectedIndexChanged({ Apply-MaintenanceTheme; Update-MaintenanceResponsiveLayout; Save-MaintenanceSettings })
+$themeCombo.Add_SelectedIndexChanged({ Apply-MaintenanceTheme; Update-MaintenanceResponsiveLayout; Update-MaintenanceInternalNavigation; Save-MaintenanceSettings })
 $dashboardNewButton.Add_Click({ Reset-PassageForm; $mainTabs.SelectedTab = $passageTab })
 $dashboardHistoryButton.Add_Click({ $mainTabs.SelectedTab = $historyTab })
 $dashboardStatsButton.Add_Click({ $mainTabs.SelectedTab = $statisticsTab })
@@ -2971,13 +3034,28 @@ $dashboardDiagnosisButton.Add_Click({ $mainTabs.SelectedTab = $diagnosisTab })
 $dashboardSchematicsButton.Add_Click({ $mainTabs.SelectedTab = $schematicsTab })
 $dashboardRulesButton.Add_Click({ $mainTabs.SelectedTab = $rulesTab })
 $footerHomeButton.Add_Click({ $mainTabs.SelectedTab = $dashboardTab })
-$mainTabs.Add_SelectedIndexChanged({
+if ($script:IsInProcessHosted -and $null -ne $script:InternalBackButton) {
+    $script:InternalBackButton.Add_Click({ $mainTabs.SelectedTab = $dashboardTab })
+}
+
+function Update-MaintenanceInternalNavigation {
+    if (-not $script:IsInProcessHosted) { return }
     try {
-        if ($script:IsInProcessHosted) {
-            $footerHomeButton.Visible = ($mainTabs.SelectedTab -ne $dashboardTab)
+        $showInternalBack = ($mainTabs.SelectedTab -ne $dashboardTab)
+        $footerHomeButton.Visible = $false
+        if ($null -ne $script:InternalNavPanel) {
+            $script:InternalNavPanel.Visible = $showInternalBack
+            if ($showInternalBack -and $null -ne $script:InternalSectionLabel) {
+                $section = [string]$mainTabs.SelectedTab.Text
+                if ($section -eq "Passagem") { $section = "Passagem / manutenção" }
+                $script:InternalSectionLabel.Text = $section
+            }
         }
+        Update-MaintenanceHostedViewport
     } catch {}
-})
+}
+
+$mainTabs.Add_SelectedIndexChanged({ Update-MaintenanceInternalNavigation })
 $recentGrid.Add_CellDoubleClick({ Show-PassageDetails (Get-SelectedRecordFromGrid $recentGrid) })
 $serialBox.Add_KeyPress({
     param($sender, $eventArgs)
