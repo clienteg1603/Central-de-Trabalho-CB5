@@ -1,15 +1,14 @@
 {
-  "version": "0.19.5",
+  "version": "0.19.6",
   "buildRevision": 1,
   "releaseNotes": [
-    "Corrige a falha de atualização observada na passagem da v0.19.3 para a v0.19.4 quando os arquivos internos da Central estão ocultos no Windows.",
-    "O Atualizador passa a remover temporariamente atributos Hidden, ReadOnly e System dos arquivos gerenciados antes de sobrescrever ou excluir esses arquivos, evitando o erro de acesso negado durante a troca da versão.",
-    "A validação de integridade de pacotes e backups deixa de depender de Get-Item para medir arquivos ocultos, permitindo validar corretamente os arquivos internos mantidos fora da visualização padrão do Explorador.",
-    "O rollback foi fortalecido para conseguir restaurar a instalação mesmo se a tentativa de atualização já tiver removido arquivos essenciais como Central de Trabalho.ps1 ou Update.Core.ps1.",
-    "Quando uma atualização falhar, a causa original é preservada; caso a restauração do backup também falhe, o Atualizador passa a informar explicitamente as duas falhas em vez de substituir a mensagem original por um erro genérico de instalação inválida.",
-    "O fonte atual do Atualizador passa a ser versionado junto com o restante da Central e copiado explicitamente pelo build, eliminando a dependência silenciosa do Atualizador herdado do pacote-base v0.8.5.",
-    "Foi criada proteção de regressão para impedir o retorno da incompatibilidade entre arquivos ocultos, sobrescrita, validação e restauração de backup.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional, saldo, histórico ou dado do usuário foi alterado.",
-    "A versão Estável permanece v0.8.5; a v0.19.5 é publicada somente no canal Teste."
+    "Versão de validação final do ciclo de atualização nativo após a correção introduzida na v0.19.5.",
+    "A passagem de v0.19.5 para v0.19.6 é propositalmente neutra em regras funcionais e existe para testar em uso real o fluxo completo pelo próprio Atualizador da Central.",
+    "O teste esperado é: abrir Atualizações dentro da v0.19.5, baixar e instalar a v0.19.6, permitir que a Central feche, substituir os arquivos internos ocultos e reabrir automaticamente Central de Trabalho.exe.",
+    "As proteções novas contra atributos Hidden, ReadOnly e System, a validação de backup com arquivos ocultos e o rollback recuperável permanecem ativas.",
+    "O fonte do Atualizador continua versionado junto da Central e é empacotado explicitamente, sem depender do Atualizador antigo do pacote-base.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra de saldo, REPARO, duplicidade, rollback de planilhas, histórico ou dados do usuário foi alterada.",
+    "A distribuição permanece limpa, sem VBS, BAT ou CMD e sem lançador PowerShell externo.",
+    "A versão Estável permanece v0.8.5; a v0.19.6 é publicada somente no canal Teste."
   ]
 }
