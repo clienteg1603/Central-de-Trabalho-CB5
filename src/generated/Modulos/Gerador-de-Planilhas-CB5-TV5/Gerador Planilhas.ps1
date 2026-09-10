@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.0"
+$script:AppVersion = "3.7.1"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -3086,7 +3086,6 @@ $componentLaunchButton.Location = New-Object Drawing.Point(10, 9)
 $componentLaunchButton.Size = New-Object Drawing.Size(174, 34)
 $componentLaunchButton.Tag = "Primary"
 $componentBalancesPage.Controls.Add($componentLaunchButton)
-$toolTip.SetToolTip($componentLaunchButton, "Registrar no saldo uma quantidade de componente que já foi usada e ainda será faturada.")
 $toolTip.SetToolTip($componentLaunchButton, "Acrescenta ao saldo a faturar a quantidade usada do componente selecionado.")
 
 $componentAdjustButton = New-Object Windows.Forms.Button
@@ -3095,7 +3094,6 @@ $componentAdjustButton.Location = New-Object Drawing.Point(194, 9)
 $componentAdjustButton.Size = New-Object Drawing.Size(145, 34)
 $componentAdjustButton.Tag = "Secondary"
 $componentBalancesPage.Controls.Add($componentAdjustButton)
-$toolTip.SetToolTip($componentAdjustButton, "Corrigir manualmente o saldo atual do componente selecionado.")
 $toolTip.SetToolTip($componentAdjustButton, "Define manualmente o saldo exato do componente selecionado.")
 
 $componentNewButton = New-Object Windows.Forms.Button
@@ -3606,9 +3604,92 @@ function Update-GeneratorResponsiveLayout {
     finally { $script:GeneratorResponsiveBusy = $false }
 }
 
+function Update-GeneratorInternalLayouts {
+    if (-not $script:IsInProcessHosted) { return }
+    try {
+        # Componentes: a barra de pesquisa e as ações da direita passam a usar
+        # o espaço real da página, evitando colisões em DPI e larguras menores.
+        $cw = [Math]::Max(520, [int]$tabComponents.ClientSize.Width)
+        $ch = [Math]::Max(320, [int]$tabComponents.ClientSize.Height)
+        $innerW = [Math]::Max(460, $cw - 36)
+
+        foreach ($control in @($componentsIntro, $componentMetricsLayout, $componentTabs)) {
+            if ($null -ne $control) { $control.Width = $innerW }
+        }
+
+        $actionW = if ($cw -lt 850) { 92 } else { 118 }
+        $gap = 8
+        $right = $cw - 18
+        $componentRestoreButton.Width = $actionW
+        $componentBackupButton.Width = $actionW
+        $componentRestoreButton.Left = [Math]::Max(18, $right - $actionW)
+        $componentBackupButton.Left = [Math]::Max(18, $componentRestoreButton.Left - $gap - $actionW)
+
+        $componentSearchText.Width = if ($cw -lt 760) { 170 } elseif ($cw -lt 980) { 220 } else { 260 }
+        $componentSearchClearButton.Left = $componentSearchText.Right + 8
+        $componentSearchClearButton.Width = if ($cw -lt 760) { 64 } else { 76 }
+        $summaryLeft = $componentSearchClearButton.Right + 12
+        $summaryRight = $componentBackupButton.Left - 10
+        if (($summaryRight - $summaryLeft) -ge 120) {
+            $componentsSummaryLabel.Visible = $true
+            $componentsSummaryLabel.Left = $summaryLeft
+            $componentsSummaryLabel.Width = $summaryRight - $summaryLeft
+        }
+        else {
+            $componentsSummaryLabel.Visible = $false
+        }
+
+        # As três subtelas de Componentes dividem a largura disponível.
+        $componentTabAvailable = [Math]::Max(330, $componentTabs.ClientSize.Width - 8)
+        $componentTabWidth = [Math]::Min(210, [Math]::Max(105, [int][Math]::Floor($componentTabAvailable / 3)))
+        $componentTabs.SizeMode = [Windows.Forms.TabSizeMode]::Fixed
+        $componentTabs.ItemSize = [Drawing.Size]::new($componentTabWidth, $(if ($script:GeneratorResponsiveProfile -eq 'Tight') { 26 } else { 30 }))
+
+        # Juntar lotes: cartão de saldo, grade e resultado acompanham a página real.
+        $jw = [Math]::Max(520, [int]$tabCombine.ClientSize.Width)
+        $jInnerW = [Math]::Max(460, $jw - 36)
+        foreach ($control in @($combineBalanceCard, $combineGrid, $combineStatusText)) {
+            if ($null -ne $control) { $control.Width = $jInnerW }
+        }
+        $combineConsumeBalanceCheck.Width = [Math]::Max(210, [int]($jInnerW * 0.58))
+        $combineBalanceStatus.Width = [Math]::Max(130, $jInnerW - $combineConsumeBalanceCheck.Width - 24)
+        $combineBalanceStatus.Left = [Math]::Max(12, $jInnerW - $combineBalanceStatus.Width - 12)
+        $combineBalanceStatus.AutoEllipsis = $true
+
+        $copyW = if ($jw -lt 760) { 118 } else { 157 }
+        $previewW = if ($jw -lt 760) { 126 } else { 158 }
+        $copyCombineStatusButton.Width = $copyW
+        $previewCombineButton.Width = $previewW
+        $copyCombineStatusButton.Left = [Math]::Max(18, $jw - 18 - $copyW)
+        $previewCombineButton.Left = [Math]::Max(18, $copyCombineStatusButton.Left - 10 - $previewW)
+
+        # Gerar: os dois botões de conferência também evitam se encostar no título.
+        $gw = [Math]::Max(520, [int]$tabGenerate.ClientSize.Width)
+        $copyStatusButton.Width = if ($gw -lt 760) { 118 } else { 157 }
+        $previewMasterButton.Width = if ($gw -lt 760) { 126 } else { 158 }
+        $copyStatusButton.Left = [Math]::Max(18, $gw - 18 - $copyStatusButton.Width)
+        $previewMasterButton.Left = [Math]::Max(18, $copyStatusButton.Left - 10 - $previewMasterButton.Width)
+
+        if ($gw -lt 700) {
+            $previewMasterButton.Text = 'Conferir'
+            $copyStatusButton.Text = 'Copiar'
+            $previewCombineButton.Text = 'Conferir'
+            $copyCombineStatusButton.Text = 'Copiar'
+        }
+        else {
+            $previewMasterButton.Text = 'Conferir primeiro'
+            $copyStatusButton.Text = 'Copiar resultado'
+            $previewCombineButton.Text = 'Conferir primeiro'
+            $copyCombineStatusButton.Text = 'Copiar resultado'
+        }
+    }
+    catch {}
+}
+
 function Update-RootLayout {
     if ($null -eq $form -or $null -eq $headerPanel -or $null -eq $tabs -or $null -eq $footerPanel) { return }
     Update-GeneratorResponsiveLayout
+    Update-GeneratorInternalLayouts
 
     $clientWidth = [Math]::Max(1, $form.ClientSize.Width)
     if ($script:IsInProcessHosted -and $null -ne $script:GeneratorHostedShell) {
@@ -4099,8 +4180,11 @@ $tabs.Add_SelectedIndexChanged({
     elseif ($generateButton.Visible) { $generateButton.BringToFront() }
     if ($updateMasterButton.Visible) { $updateMasterButton.BringToFront() }
     Update-RootLayout
+    Update-GeneratorInternalLayouts
     $tabs.Invalidate()
 })
+
+$componentTabs.Add_SelectedIndexChanged({ Update-GeneratorInternalLayouts; $componentTabs.Invalidate() })
 
 $form.Add_KeyDown({
     param($sender, $eventArgs)

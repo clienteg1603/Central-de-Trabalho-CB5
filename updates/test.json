@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.15.0",
+  "Version": "0.15.1",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.15.0.zip",
-  "PackageSha256": "B76656B74E0D0B8DBFCB0F53C7D4DD9F5B6C266090077E31C2FE89D25BE4CE15",
-  "PackageSize": 905629,
-  "PackageRoot": "Central-de-Trabalho-v0.15.0",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.15.1.zip",
+  "PackageSha256": "23AFA5EDF9FCCAAE9DCDF97162408DD9BACD1C952467E34FB5DE06EF9815FA85",
+  "PackageSize": 906511,
+  "PackageRoot": "Central-de-Trabalho-v0.15.1",
   "ReleaseNotes": [
-    "Retomada do fluxo normal de desenvolvimento após a rodada de manutenção geral.",
-    "O Gerenciador de Planilhas integrado passa a usar um shell real de três áreas: barra de produto, conteúdo e ações de rodapé.",
-    "Header, abas e rodapé deixam de depender de cálculos cruzados de posição e altura quando o Gerenciador está dentro da Central, reduzindo risco de cortes em resolução e escala diferentes.",
-    "As cinco áreas do Gerenciador passam a usar largura de aba calculada pela área disponível, mantendo Gerar, Manutenções, Componentes, Juntar lotes e Códigos mais estáveis durante redimensionamento.",
-    "O rodapé continua contextual: ações de gerar, atualizar mestre e juntar lotes aparecem somente onde fazem sentido.",
-    "Gerenciador de Planilhas passa para v3.7.0; Central de Manutenção permanece em v0.6.1.",
-    "Mantidas as correções recentes de aparência, navegação da Manutenção e união de lotes sem consumo de saldo.",
-    "Nenhuma regra de geração, manutenção, componentes, saldo, união ou dados foi alterada."
+    "Continuação do fluxo com refinamento interno do Gerenciador de Planilhas.",
+    "A tela Componentes passa a reorganizar pesquisa, resumo, Backup e Restaurar conforme a largura real disponível, evitando sobreposição em resoluções menores.",
+    "As subtelas Saldos, Movimentações e Uniões processadas agora dividem dinamicamente a largura do painel de Componentes.",
+    "Juntar lotes passa a recalcular cartão de consumo de saldo, grade e botões de conferência/cópia conforme a área real da página.",
+    "Na tela Gerar, Conferir primeiro e Copiar resultado também passam a se reposicionar e compactar texto quando necessário.",
+    "Foram removidos tooltips duplicados acumulados em ações de componentes.",
+    "Gerenciador de Planilhas passa para v3.7.1; Central de Manutenção permanece em v0.6.1.",
+    "Nenhuma regra de geração, componentes, saldo, união, manutenção ou dados foi alterada."
   ]
 }
