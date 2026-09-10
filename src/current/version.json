@@ -1,14 +1,14 @@
 {
-  "version": "0.18.2",
-  "buildRevision": 2,
+  "version": "0.19.0",
+  "buildRevision": 1,
   "releaseNotes": [
-    "A função Juntar lotes do Gerenciador de Planilhas agora aceita também uma única planilha mestre como entrada válida.",
-    "Foi removida a antiga exigência de selecionar pelo menos duas planilhas tanto na conferência quanto na geração do arquivo final.",
-    "Quando houver mais de uma planilha, permanece a regra existente de pertencerem à mesma NF; com apenas uma, o fluxo segue normalmente sem exigir uma segunda mestre artificial.",
-    "Os textos da interface do Juntar lotes foram atualizados para informar que uma ou mais planilhas podem ser selecionadas.",
-    "O Gerenciador de Planilhas passa para v3.7.3 e ganhou uma proteção de regressão para impedir que a exigência mínima de duas planilhas volte em versões futuras.",
-    "A arquitetura de executáveis nativos da Central e do Atualizador introduzida nas versões 0.18.x permanece inalterada e continua sem powershell.exe ou pwsh.exe como lançador externo.",
-    "Central de Manutenção permanece em v0.6.1; nenhuma regra de saldo, REPARO, duplicidade, rollback ou dados do usuário foi alterada.",
-    "A versão Estável permanece v0.8.5; a v0.18.2 é publicada somente no canal Teste."
+    "Início da limpeza final da distribuição após a validação dos hosts nativos da Central e do Atualizador.",
+    "O arquivo legado ABRIR CENTRAL DE TRABALHO.vbs foi removido do pacote de instalação; o ponto de entrada oficial passa a ser somente Central de Trabalho.exe.",
+    "Ao iniciar com sucesso após a atualização, a Central remove de forma silenciosa uma cópia antiga do VBS que ainda possa ter permanecido na pasta de uma instalação anterior.",
+    "A remoção do VBS acontece somente depois que a nova Central já iniciou, evitando eliminar o fallback antigo antes de uma atualização concluída com sucesso.",
+    "O pipeline agora rejeita pacotes que tragam de volta arquivos VBS, BAT ou CMD na distribuição limpa e a auditoria considera somente os dez arquivos operacionais necessários, além do manifesto interno.",
+    "Central e Atualizador continuam como executáveis gráficos nativos, sem powershell.exe ou pwsh.exe como lançador externo.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional, saldo, histórico ou dado do usuário foi alterado.",
+    "A versão Estável permanece v0.8.5; a v0.19.0 é publicada somente no canal Teste."
   ]
 }
