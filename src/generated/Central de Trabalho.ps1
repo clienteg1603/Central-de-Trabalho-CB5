@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.16.2"
+$script:AppVersion = "0.16.3"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -64,6 +64,8 @@ $script:HostedForm = $null
 $script:EmbeddedModule = ""
 $script:EmbeddedClosing = $false
 $script:ModuleLoading = $false
+$script:UpdaterProcess = $null
+$script:LastAvailabilitySignature = ""
 
 $script:SingleInstanceMutex = $null
 $script:OwnsSingleInstanceMutex = $false
@@ -452,6 +454,17 @@ function Start-MaintenanceModule {
 }
 
 function Start-UpdaterModule {
+    if ($null -ne $script:UpdaterProcess) {
+        try {
+            if (-not $script:UpdaterProcess.HasExited) {
+                Set-StatusMessage "A tela de atualizações já está aberta." "Normal"
+                return
+            }
+        } catch {}
+        try { $script:UpdaterProcess.Dispose() } catch {}
+        $script:UpdaterProcess = $null
+    }
+
     if (-not [IO.File]::Exists($script:UpdaterScript)) {
         Set-StatusMessage "Não foi possível abrir: arquivo do Atualizador ausente." "Error"
         [Windows.Forms.MessageBox]::Show(
@@ -478,7 +491,7 @@ function Start-UpdaterModule {
         $startInfo.WorkingDirectory = $script:UpdaterDirectory
         $startInfo.Arguments = '-NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Hidden -File "' + $script:UpdaterScript + '" -InstallRoot "' + $script:RootPath + '" -CurrentVersion "' + $script:AppVersion + '" -ParentProcessId ' + $PID
         $startInfo.UseShellExecute = $true
-        [void][Diagnostics.Process]::Start($startInfo)
+        $script:UpdaterProcess = [Diagnostics.Process]::Start($startInfo)
         Set-StatusMessage "Tela de atualizações aberta em uma nova janela." "Success"
     }
     catch {
@@ -626,22 +639,46 @@ function Update-CentralAvailabilityState {
         $generatorAvailable = [IO.File]::Exists($script:GeneratorScript)
         $maintenanceAvailable = [IO.File]::Exists($script:MaintenanceScript)
         $updaterAvailable = [IO.File]::Exists($script:UpdaterScript)
+        $generatorFolderAvailable = [IO.Directory]::Exists($script:GeneratorDirectory)
+        $maintenanceFolderAvailable = [IO.Directory]::Exists($script:MaintenanceDirectory)
+        $moduleCount = ([int]$generatorAvailable + [int]$maintenanceAvailable)
 
-        $busy = [bool]$script:ModuleLoading
-        if ($null -ne $openGeneratorButton) { $openGeneratorButton.Enabled = ($generatorAvailable -and -not $busy) }
-        if ($null -ne $openMaintenanceButton) { $openMaintenanceButton.Enabled = ($maintenanceAvailable -and -not $busy) }
-        if ($null -ne $openGeneratorFolderButton) { $openGeneratorFolderButton.Enabled = ([IO.Directory]::Exists($script:GeneratorDirectory) -and -not $busy) }
-        if ($null -ne $openMaintenanceFolderButton) { $openMaintenanceFolderButton.Enabled = ([IO.Directory]::Exists($script:MaintenanceDirectory) -and -not $busy) }
-        if ($null -ne $navHome) { $navHome.Enabled = -not $busy }
-        if ($null -ne $navUpdates) { $navUpdates.Enabled = ($updaterAvailable -and -not $busy) }
-        if ($null -ne $navFolder) { $navFolder.Enabled = -not $busy }
-        if ($null -ne $navAbout) { $navAbout.Enabled = -not $busy }
-        if ($null -ne $themeCombo) { $themeCombo.Enabled = -not $busy }
-        if ($null -ne $embeddedBackButton) { $embeddedBackButton.Enabled = -not $busy }
-        if ($null -ne $embeddedFolderButton) {
-            $moduleFolderAvailable = if ($script:EmbeddedModule -eq "Generator") { [IO.Directory]::Exists($script:GeneratorDirectory) } elseif ($script:EmbeddedModule -eq "Maintenance") { [IO.Directory]::Exists($script:MaintenanceDirectory) } else { $false }
-            $embeddedFolderButton.Enabled = ($moduleFolderAvailable -and -not $busy)
+        if ($null -ne $script:UpdaterProcess) {
+            try {
+                if ($script:UpdaterProcess.HasExited) {
+                    try { $script:UpdaterProcess.Dispose() } catch {}
+                    $script:UpdaterProcess = $null
+                }
+            } catch { $script:UpdaterProcess = $null }
         }
+
+        if ($null -ne $openGeneratorButton) {
+            $openGeneratorButton.Enabled = ($generatorAvailable -and -not $script:ModuleLoading)
+            $openGeneratorButton.Cursor = if ($openGeneratorButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+        }
+        if ($null -ne $openMaintenanceButton) {
+            $openMaintenanceButton.Enabled = ($maintenanceAvailable -and -not $script:ModuleLoading)
+            $openMaintenanceButton.Cursor = if ($openMaintenanceButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+        }
+        if ($null -ne $openGeneratorFolderButton) {
+            $openGeneratorFolderButton.Enabled = ($generatorFolderAvailable -and -not $script:ModuleLoading)
+            $openGeneratorFolderButton.Cursor = if ($openGeneratorFolderButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+        }
+        if ($null -ne $openMaintenanceFolderButton) {
+            $openMaintenanceFolderButton.Enabled = ($maintenanceFolderAvailable -and -not $script:ModuleLoading)
+            $openMaintenanceFolderButton.Cursor = if ($openMaintenanceFolderButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+        }
+        if ($null -ne $navUpdates) {
+            $navUpdates.Enabled = ($updaterAvailable -and -not $script:ModuleLoading)
+            $navUpdates.Cursor = if ($navUpdates.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+        }
+        foreach ($navAction in @($navHome,$navFolder,$navAbout)) {
+            if ($null -ne $navAction) {
+                $navAction.Enabled = (-not $script:ModuleLoading)
+                $navAction.Cursor = if ($navAction.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+            }
+        }
+        if ($null -ne $themeCombo) { $themeCombo.Enabled = (-not $script:ModuleLoading) }
 
         if ($null -ne $generatorStatus) {
             $generatorStatus.Text = if ($generatorAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
@@ -652,6 +689,35 @@ function Update-CentralAvailabilityState {
             $maintenanceStatus.Text = if ($maintenanceAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
             $maintenanceStatus.BackColor = if ($maintenanceAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
             $maintenanceStatus.ForeColor = if ($maintenanceAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
+        }
+
+        if ($null -ne $sidebarStatus -and $null -ne $sidebarStatusSub) {
+            if ($generatorAvailable -and $maintenanceAvailable -and $updaterAvailable) {
+                $sidebarStatus.Text = "●  Sistema pronto"
+                $sidebarStatusSub.Text = "2 módulos disponíveis"
+                $sidebarStatus.ForeColor = $script:CurrentPalette.Success
+            }
+            else {
+                $sidebarStatus.Text = "●  Atenção"
+                if ($moduleCount -lt 2) {
+                    $sidebarStatusSub.Text = "$moduleCount de 2 módulos disponíveis"
+                }
+                elseif (-not $updaterAvailable) {
+                    $sidebarStatusSub.Text = "Atualizador não localizado"
+                }
+                else {
+                    $sidebarStatusSub.Text = "Verifique a instalação"
+                }
+                $sidebarStatus.ForeColor = $script:CurrentPalette.Planned
+            }
+        }
+        if ($null -ne $sidebarVersion) { $sidebarVersion.Text = "Central v$($script:AppVersion)" }
+        if ($null -ne $todayLabel) { $todayLabel.Text = (Get-Date).ToString("dd/MM/yyyy") }
+
+        $signature = "$generatorAvailable|$maintenanceAvailable|$updaterAvailable|$generatorFolderAvailable|$maintenanceFolderAvailable|$($script:ModuleLoading)"
+        if ($script:LastAvailabilitySignature -ne $signature) {
+            $script:LastAvailabilitySignature = $signature
+            try { $form.Invalidate($false) } catch {}
         }
     } catch {}
 }
@@ -738,27 +804,6 @@ function Apply-AppTheme {
         $headerAccent.BackColor = $script:CurrentPalette.Accent
         if ($null -ne $embeddedAccentLine) {
             $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } else { $script:CurrentPalette.Accent }
-        }
-    } catch {}
-    try {
-        if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
-            $sidebarStatus.Text = "●  Sistema pronto"
-            $sidebarStatusSub.Text = "2 módulos disponíveis"
-        }
-        elseif (-not [IO.File]::Exists($script:UpdaterScript)) {
-            Set-StatusMessage "O Atualizador da Central de Trabalho não foi encontrado." "Error"
-            $sidebarStatus.Text = "●  Atenção"
-            $sidebarStatusSub.Text = "Atualizador não localizado"
-        }
-        elseif (-not [IO.File]::Exists($script:MaintenanceScript)) {
-            Set-StatusMessage "O módulo Central de Manutenção CB5 não foi encontrado." "Error"
-            $sidebarStatus.Text = "●  Atenção"
-            $sidebarStatusSub.Text = "Manutenção não localizada"
-        }
-        else {
-            Set-StatusMessage "O módulo Gerenciador de Planilhas não foi encontrado." "Error"
-            $sidebarStatus.Text = "●  Atenção"
-            $sidebarStatusSub.Text = "Gerenciador não localizado"
         }
     } catch {}
     try { Update-CentralAvailabilityState } catch {}
@@ -1268,6 +1313,13 @@ $embeddedWatchTimer.Add_Tick({
 })
 $embeddedWatchTimer.Start()
 
+$centralHealthTimer = New-Object Windows.Forms.Timer
+$centralHealthTimer.Interval = 3000
+$centralHealthTimer.Add_Tick({
+    try { Update-CentralAvailabilityState } catch {}
+})
+$centralHealthTimer.Start()
+
 $headerPanel = New-Object Windows.Forms.Panel
 $headerPanel.Dock = [Windows.Forms.DockStyle]::Fill
 $headerPanel.Padding = [Windows.Forms.Padding]::new(28, 13, 26, 8)
@@ -1536,7 +1588,7 @@ $navAbout.Add_Click({
     Set-ActiveNavigation "Home"
 })
 $modulesFlow.Add_SizeChanged({ Update-CentralChromeLayout })
-$form.Add_Shown({ Update-CentralAdaptiveLayout; Update-ResponsiveLayout; Apply-AppTheme })
+$form.Add_Shown({ Update-CentralAdaptiveLayout; Update-ResponsiveLayout; Apply-AppTheme; Update-CentralAvailabilityState })
 $form.Add_SizeChanged({
     try { Update-CentralAdaptiveLayout } catch {}
 })
@@ -1600,6 +1652,8 @@ catch {
 finally {
     if ($null -ne $themeCombo) { Save-AppSettings }
     try { if ($null -ne $embeddedWatchTimer) { $embeddedWatchTimer.Stop(); $embeddedWatchTimer.Dispose() } } catch {}
+    try { if ($null -ne $centralHealthTimer) { $centralHealthTimer.Stop(); $centralHealthTimer.Dispose() } } catch {}
+    try { if ($null -ne $script:UpdaterProcess -and $script:UpdaterProcess.HasExited) { $script:UpdaterProcess.Dispose() } } catch {}
     try { Close-EmbeddedModule -Force } catch {}
     if ($null -ne $form) { $form.Dispose() }
     Close-CentralSingleInstanceMutex
