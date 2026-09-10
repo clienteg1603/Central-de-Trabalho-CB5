@@ -66,7 +66,7 @@ def main():
     for marker in (
         "New-Module -Name $dynamicName",
         "$hostedForm.Dock = [Windows.Forms.DockStyle]::Fill",
-        "$script:HostedControlExport",
+        "Get-Variable -Name HostedControlExport",
         "CentralDeTrabalho_Central",
         "Componentes.Core.ps1",
         "Manutencao.Core.ps1",
@@ -162,11 +162,8 @@ def main():
     for marker in ("PackageSha256", "PackageSize", "PACOTE-MANIFESTO.json"):
         if marker not in updater and marker not in updater_core:
             errors.append(f"Atualizador: contrato ausente entre script e Core: {marker}")
-    for fn in ("Get-",):
-        # O Core precisa continuar sendo substancial; funções específicas variam por revisão.
-        if not re.search(r"function\s+[A-Za-z0-9_-]+", updater_core, re.I):
-            errors.append("Atualizador: Update.Core.ps1 não contém funções executáveis")
-            break
+    if not re.search(r"function\s+[A-Za-z0-9_-]+", updater_core, re.I):
+        errors.append("Atualizador: Update.Core.ps1 não contém funções executáveis")
 
     fail(errors)
     print("REGRESSÃO FUNCIONAL: OK — contratos de Central, Gerenciador, Componentes, Manutenção e Atualizador preservados.")
