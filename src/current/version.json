@@ -1,6 +1,6 @@
 {
   "version": "0.17.0",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Primeira etapa do executável Windows definitivo da Central de Trabalho.",
     "Central de Trabalho.exe deixa de ser apenas um lançador de powershell.exe e passa a hospedar o motor do Windows PowerShell dentro do próprio processo gráfico.",
