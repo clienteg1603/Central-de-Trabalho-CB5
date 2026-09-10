@@ -9,13 +9,58 @@ permissions:
   contents: write
 
 jobs:
+  build-native-host:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build native Windows host
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = (Get-Content -LiteralPath "src/current/version.json" -Raw | ConvertFrom-Json).version
+          $work = Join-Path $env:RUNNER_TEMP "central-native-host"
+          if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+
+          $baseZip = Join-Path $work "base.zip"
+          $baseUrl = "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.8.5.zip"
+          Invoke-WebRequest -UseBasicParsing -Uri $baseUrl -OutFile $baseZip
+          Expand-Archive -LiteralPath $baseZip -DestinationPath (Join-Path $work "base") -Force
+
+          $referenceExe = Join-Path $work "base\Central-de-Trabalho-v0.8.5\Central de Trabalho.exe"
+          $outDir = Join-Path $work "out"
+          & ".\src\launcher\build-host.ps1" -Version $version -OutputDirectory $outDir -ReferenceExe $referenceExe
+
+          $hostExe = Join-Path $outDir "Central de Trabalho.exe"
+          if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { throw "Host nativo não foi gerado." }
+          Write-Host "Host nativo pronto: $hostExe"
+
+      - name: Upload native host
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-native-host
+          path: ${{ runner.temp }}/central-native-host/out/Central de Trabalho.exe
+          if-no-files-found: error
+          retention-days: 1
+
   build-test-package:
+    needs: build-native-host
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Download native host
+        uses: actions/download-artifact@v4
+        with:
+          name: central-native-host
+          path: ${{ runner.temp }}/central-native-host
 
       - name: Build clean package
         shell: bash
@@ -25,9 +70,11 @@ jobs:
           BASE_VERSION="0.8.5"
           BASE_URL="https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v${BASE_VERSION}.zip"
           BUILD_DIR="$RUNNER_TEMP/central-build"
+          NATIVE_HOST="$RUNNER_TEMP/central-native-host/Central de Trabalho.exe"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
 
+          test -f "$NATIVE_HOST"
           curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 \
             -o "$BUILD_DIR/base.zip" "$BASE_URL"
           unzip -q "$BUILD_DIR/base.zip" -d "$BUILD_DIR/base"
@@ -77,7 +124,7 @@ jobs:
                    "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5"
 
           cp "$BASE_ROOT/ABRIR CENTRAL DE TRABALHO.vbs" "$OUT_ROOT/"
-          cp "$BASE_ROOT/Central de Trabalho.exe" "$OUT_ROOT/"
+          cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
           cp "$BASE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
           cp "$BASE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
           cp "$BASE_ROOT/Atualizador/Central de Trabalho Updater.exe" "$OUT_ROOT/Atualizador/"
