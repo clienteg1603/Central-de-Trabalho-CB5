@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.19.3",
+  "Version": "0.19.4",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.19.3.zip",
-  "PackageSha256": "ABBC440284785FAEADA799C80AA989B12AA626F240C554C9E0F4BD7FBC75418C",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.19.4.zip",
+  "PackageSha256": "DA0A5822A9F214265A465B677DEB5FC7A83F67BA793D65A566806F7F52A79B64",
   "PackageSize": 130623,
-  "PackageRoot": "Central-de-Trabalho-v0.19.3",
+  "PackageRoot": "Central-de-Trabalho-v0.19.4",
   "ReleaseNotes": [
-    "Continuação da limpeza final da distribuição: a pasta de instalação fica visualmente mais simples no Explorador, mostrando por padrão somente Central de Trabalho.exe.",
-    "Os itens internos Central de Trabalho.ps1, PACOTE-MANIFESTO.json, Atualizador e Modulos passam a receber o atributo Hidden do Windows depois que a Central inicia com sucesso.",
-    "Nenhum arquivo interno foi removido ou deslocado nesta etapa; a mudança é apenas visual para preservar compatibilidade com o host nativo, módulos e Atualizador.",
-    "Mesmo ocultos no Explorador, os módulos e o Atualizador continuam sendo encontrados pelos mesmos caminhos e permanecem sujeitos às auditorias de integridade e regressão do pacote.",
-    "A nova marca CT azul e branca da v0.19.2 permanece aplicada ao Central de Trabalho.exe e ao Central de Trabalho Updater.exe.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional, saldo, histórico ou dado do usuário foi alterado.",
-    "A distribuição continua sem VBS, BAT ou CMD e sem lançador PowerShell externo.",
-    "A versão Estável permanece v0.8.5; a v0.19.3 é publicada somente no canal Teste."
+    "Versão dedicada à validação final do ciclo de atualização com a arquitetura atual da Central.",
+    "A passagem de v0.19.3 para v0.19.4 deve validar em uso real o fluxo completo: abrir o Atualizador nativo, baixar, validar, fechar a Central, substituir os arquivos internos ocultos e reabrir Central de Trabalho.exe.",
+    "Nenhuma regra funcional do Gerenciador de Planilhas, da Central de Manutenção, de Componentes ou dos dados do usuário foi alterada nesta versão.",
+    "O comportamento de Juntar lotes com uma única planilha mestre permanece preservado no Gerenciador v3.7.3.",
+    "A marca CT azul e branca permanece aplicada ao Central de Trabalho.exe e ao Central de Trabalho Updater.exe.",
+    "A distribuição continua limpa, sem VBS, BAT ou CMD e sem lançador PowerShell externo; os arquivos internos permanecem ocultos apenas visualmente no Windows.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1.",
+    "A versão Estável permanece v0.8.5; a v0.19.4 é publicada somente no canal Teste."
   ]
 }
