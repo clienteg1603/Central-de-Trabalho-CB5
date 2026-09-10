@@ -1,14 +1,14 @@
 {
-  "version": "0.19.1",
-  "buildRevision": 4,
+  "version": "0.19.2",
+  "buildRevision": 1,
   "releaseNotes": [
-    "A Central de Trabalho passa a usar oficialmente a nova identidade visual CT criada para o programa.",
-    "A arte CT foi preparada em uma versão compacta própria para ícone e é validada como imagem 64x64 antes de ser convertida durante o build para o formato usado pelo executável Windows.",
-    "A janela principal também passa a carregar o ícone gravado no próprio executável, mantendo a mesma identidade no Explorador, barra de tarefas, Alt+Tab e título da aplicação.",
-    "O Central de Trabalho Updater.exe recebe a mesma identidade visual CT para manter consistência entre a Central e o Atualizador.",
-    "O build dos hosts nativos deixou de baixar a antiga v0.8.5 apenas para reaproveitar seus ícones; os executáveis agora são construídos diretamente a partir do ativo visual oficial do projeto.",
-    "Permanece a distribuição limpa iniciada na v0.19.0, sem VBS, BAT ou CMD e com Central de Trabalho.exe como único ponto de entrada do usuário.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional, saldo, histórico ou dado do usuário foi alterado.",
-    "A versão Estável permanece v0.8.5; a v0.19.1 é publicada somente no canal Teste."
+    "O ícone da Central de Trabalho foi simplificado para a nova marca CT azul e branca aprovada para uso no executável.",
+    "A nova arte foi preparada especificamente para leitura em tamanho pequeno no Explorador e na barra de tarefas, reduzindo detalhes que desapareciam ou ficavam pesados no ícone anterior.",
+    "O ativo usado no build permanece em 64x64, compatível com a conversão atual para o ícone incorporado ao Central de Trabalho.exe e ao Central de Trabalho Updater.exe.",
+    "A janela principal continua carregando o ícone gravado no próprio executável, preservando a mesma identidade no Explorador, barra de tarefas e Alt+Tab.",
+    "Nenhuma função do Gerenciador de Planilhas, da Central de Manutenção, do Atualizador ou dos dados do usuário foi alterada nesta versão.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1.",
+    "A distribuição continua limpa, sem VBS, BAT ou CMD, com Central de Trabalho.exe como ponto de entrada principal.",
+    "A versão Estável permanece v0.8.5; a v0.19.2 é publicada somente no canal Teste."
   ]
 }
