@@ -87,6 +87,9 @@ jobs:
           test -f "src/generated/Central de Trabalho.ps1"
           test -f "src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
           test -f "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
+          test -f "src/generated/Atualizador/Central de Trabalho Updater.ps1"
+          test -f "src/generated/Atualizador/Update.Core.ps1"
+          test -f "src/generated/Atualizador/CANAIS.json"
 
           # Evoluções incrementais ficam em transforms somente até serem aplicadas.
           # Depois do build, o fonte montado vira a nova base e a transformação é removida.
@@ -103,6 +106,12 @@ jobs:
              "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
           cp "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" \
              "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
+          cp "src/generated/Atualizador/Central de Trabalho Updater.ps1" \
+             "$BASE_ROOT/Atualizador/Central de Trabalho Updater.ps1"
+          cp "src/generated/Atualizador/Update.Core.ps1" \
+             "$BASE_ROOT/Atualizador/Update.Core.ps1"
+          cp "src/generated/Atualizador/CANAIS.json" \
+             "$BASE_ROOT/Atualizador/CANAIS.json"
 
           # Windows PowerShell lê estes scripts de forma mais segura com UTF-8 BOM.
           python3 - "$BASE_ROOT" <<'PY'
@@ -110,6 +119,8 @@ jobs:
           root = pathlib.Path(sys.argv[1])
           paths = [
               root / 'Central de Trabalho.ps1',
+              root / 'Atualizador/Central de Trabalho Updater.ps1',
+              root / 'Atualizador/Update.Core.ps1',
               root / 'Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1',
               root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1',
           ]
