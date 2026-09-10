@@ -1,5 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
@@ -39,8 +38,9 @@ internal static class Program
                 using (PowerShell ps = PowerShell.Create())
                 {
                     ps.Runspace = runspace;
-                    ps.AddCommand(scriptPath);
-                    Collection<PSObject> output = ps.Invoke();
+                    string escapedScriptPath = scriptPath.Replace("'", "''");
+                    ps.AddScript("& '" + escapedScriptPath + "'");
+                    ps.Invoke();
 
                     if (ps.InvocationStateInfo != null && ps.InvocationStateInfo.State == PSInvocationState.Failed)
                     {
