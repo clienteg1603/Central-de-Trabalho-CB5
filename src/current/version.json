@@ -1,14 +1,14 @@
 {
-  "version": "0.18.1",
+  "version": "0.18.2",
   "buildRevision": 1,
   "releaseNotes": [
-    "Rodada controlada de validação do ciclo completo de atualização usando o novo Atualizador nativo introduzido na v0.18.0.",
-    "Esta versão mantém a lógica funcional da Central, Gerenciador e Manutenção inalterada para que o teste isole exatamente o caminho de atualização 0.18.0 -> 0.18.1.",
-    "Ao iniciar Atualizações na v0.18.0, a Central deve abrir diretamente Central de Trabalho Updater.exe, sem powershell.exe ou pwsh.exe como processo sustentando a interface.",
-    "Durante a instalação, o Atualizador executa a partir do runtime temporário, aguarda o fechamento da Central, substitui inclusive o próprio executável instalado e preserva as verificações de integridade, backup e restauração.",
-    "Ao concluir, a reabertura deve ocorrer diretamente por Central de Trabalho.exe, já na v0.18.1.",
-    "O pipeline continua bloqueando qualquer pacote em que a Central ou o Atualizador volte a usar um executável PowerShell externo como lançador.",
-    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; esta rodada não altera regras operacionais nem dados do usuário.",
-    "A versão Estável permanece v0.8.5; a v0.18.1 é publicada somente no canal Teste para validação real do novo ciclo de atualização."
+    "A função Juntar lotes do Gerenciador de Planilhas agora aceita também uma única planilha mestre como entrada válida.",
+    "Foi removida a antiga exigência de selecionar pelo menos duas planilhas tanto na conferência quanto na geração do arquivo final.",
+    "Quando houver mais de uma planilha, permanece a regra existente de pertencerem à mesma NF; com apenas uma, o fluxo segue normalmente sem exigir uma segunda mestre artificial.",
+    "Os textos da interface do Juntar lotes foram atualizados para informar que uma ou mais planilhas podem ser selecionadas.",
+    "O Gerenciador de Planilhas passa para v3.7.3 e ganhou uma proteção de regressão para impedir que a exigência mínima de duas planilhas volte em versões futuras.",
+    "A arquitetura de executáveis nativos da Central e do Atualizador introduzida nas versões 0.18.x permanece inalterada e continua sem powershell.exe ou pwsh.exe como lançador externo.",
+    "Central de Manutenção permanece em v0.6.1; nenhuma regra de saldo, REPARO, duplicidade, rollback ou dados do usuário foi alterada.",
+    "A versão Estável permanece v0.8.5; a v0.18.2 é publicada somente no canal Teste."
   ]
 }
