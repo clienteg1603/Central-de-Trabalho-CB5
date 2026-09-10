@@ -1,13 +1,14 @@
 {
-  "version": "0.12.0",
-  "buildRevision": 2,
+  "version": "0.12.1",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 4 começa pelo Gerenciador de Planilhas CB5/TV5 com uma correção estrutural da integração.",
-    "Dentro da Central, o Gerenciador deixa de ser uma janela Form dimensionada pelo monitor e passa a ser um UserControl nativo encaixado diretamente na área disponível.",
-    "A responsividade do Gerenciador integrado agora usa as dimensões reais fornecidas pela Central, sem uma segunda redução indevida pelo DPI.",
-    "Corrigido o contrato de integração para o Gerenciador receber o tema atual da Central e acompanhar mudanças de aparência enquanto está aberto.",
-    "Adicionada a aparência Técnico industrial ao Gerenciador, mantendo CB5 e TV5 com seus destaques próprios.",
-    "O modo independente do Gerenciador continua disponível como janela normal.",
-    "Nenhuma regra de leitura ou geração do Excel, manutenção adicional, faturamento, baixa de componentes ou união de lotes foi alterada."
+    "Corrigido o painel principal da Central de Manutenção CB5 com foco nos defeitos visíveis encontrados na captura de tela.",
+    "Os títulos dos cartões, o cabeçalho da visão geral e o texto do botão Nova passagem agora recebem contraste explícito para não desaparecerem no tema escuro.",
+    "As subpáginas da Manutenção agora exibem uma barra interna com o botão PAINEL DA MANUTENÇÃO, permitindo voltar rapidamente sem sair para a Central de Trabalho.",
+    "O antigo botão de voltar do rodapé deixa de ocupar espaço; o voltar superior da Central continua retornando para a Central de Trabalho.",
+    "O botão PASTA DO MÓDULO no cabeçalho integrado recebeu largura adequada para não cortar o texto.",
+    "A lateral da Central foi simplificada para evitar cortes: Atualizações, Organização • Controle e 2 módulos disponíveis.",
+    "A versão lateral foi reposicionada alguns pixels para não ficar espremida junto à borda inferior.",
+    "Nenhuma regra de manutenção, histórico, diagnóstico, geração de planilhas ou dados foi alterada."
   ]
 }
