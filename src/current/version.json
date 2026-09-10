@@ -1,0 +1,12 @@
+{
+  "version": "0.11.0",
+  "releaseNotes": [
+    "Primeiro bloco visual da Etapa 3 focado na Central de Manutenção CB5.",
+    "Integração estável dentro da Central mantida, com as 7 áreas acessíveis.",
+    "Paletas da Central passam a ser herdadas pela Manutenção em modo integrado.",
+    "Adicionada paleta Técnico industrial e identidade teal + laranja para a Manutenção.",
+    "Dashboard da Manutenção recebeu cartões semânticos, cantos arredondados e navegação refinada.",
+    "As abas foram encurtadas e ganharam tooltips para melhorar leitura em diferentes resoluções.",
+    "Nenhuma regra do núcleo de manutenção ou do Gerenciador de Planilhas foi alterada."
+  ]
+}
