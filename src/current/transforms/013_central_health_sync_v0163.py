@@ -21,11 +21,13 @@ def replace_once(text, old, new, label):
 
 central = read(CENTRAL)
 central = replace_once(central, '$script:AppVersion = "0.16.2"', '$script:AppVersion = "0.16.3"', 'versao Central')
-central = replace_once(
-    central,
-    '$script:ModuleLoading = $false',
+state_marker = '$script:ModuleLoading = $false'
+if state_marker not in central:
+    raise RuntimeError('estado global da Central nao localizado')
+central = central.replace(
+    state_marker,
     '$script:ModuleLoading = $false\n$script:UpdaterProcess = $null\n$script:LastAvailabilitySignature = ""',
-    'estado global da Central'
+    1
 )
 
 old_availability_start = central.find('function Update-CentralAvailabilityState {\n')
@@ -123,7 +125,6 @@ new_availability = r'''function Update-CentralAvailabilityState {
 '''
 central = central[:old_availability_start] + new_availability + central[old_availability_end:]
 
-# Remove o bloco duplicado que recalculava o status lateral dentro do tema.
 old_status_block = r'''    try {
         if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
             $sidebarStatus.Text = "●  Sistema pronto"
@@ -148,7 +149,6 @@ old_status_block = r'''    try {
     try { Update-CentralAvailabilityState } catch {}'''
 central = replace_once(central, old_status_block, '    try { Update-CentralAvailabilityState } catch {}', 'estado duplicado no tema')
 
-# Evita abrir várias janelas do Atualizador por clique repetido.
 updater_guard = r'''function Start-UpdaterModule {
     if (-not [IO.File]::Exists($script:UpdaterScript)) {'''
 updater_guard_new = r'''function Start-UpdaterModule {
@@ -172,7 +172,6 @@ central = replace_once(
     'captura do processo do Atualizador'
 )
 
-# Verificação leve e periódica: mantém data, módulos e Atualizador sincronizados sem exigir troca de tema.
 watch_marker = '$embeddedWatchTimer.Start()\n'
 if central.count(watch_marker) != 1:
     raise RuntimeError('timer de modulo nao localizado')
@@ -186,7 +185,6 @@ $centralHealthTimer.Start()
 '''
 central = central.replace(watch_marker, watch_marker + health_timer, 1)
 
-# Depois que a janela aparecer, força uma primeira sincronização explícita.
 central = replace_once(
     central,
     '$form.Add_Shown({ Update-CentralAdaptiveLayout; Update-ResponsiveLayout; Apply-AppTheme })',
@@ -194,7 +192,6 @@ central = replace_once(
     'sincronizacao no Shown'
 )
 
-# Fecha também o timer novo e qualquer referência de processo já encerrada.
 central = replace_once(
     central,
     'try { if ($null -ne $embeddedWatchTimer) { $embeddedWatchTimer.Stop(); $embeddedWatchTimer.Dispose() } } catch {}',
