@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.18.2"
+$script:AppVersion = "0.19.0"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.3"
 $script:MaintenanceVersion = "0.6.1"
@@ -62,6 +62,23 @@ $script:SettingsDirectory = [IO.Path]::Combine(
     "CentralDeTrabalho"
 )
 $script:SettingsPath = [IO.Path]::Combine($script:SettingsDirectory, "preferencias.json")
+
+# Desde a linha 0.17.x a Central possui um host Windows gráfico próprio. O VBS antigo
+# deixou de participar da inicialização e é removido somente depois que a nova Central
+# já conseguiu iniciar, evitando apagar o fallback antes de uma atualização concluída.
+function Remove-LegacyLauncherArtifact {
+    try {
+        $legacyLauncher = [IO.Path]::Combine($script:RootPath, "ABRIR CENTRAL DE TRABALHO.vbs")
+        if ([IO.File]::Exists($legacyLauncher)) {
+            [IO.File]::Delete($legacyLauncher)
+        }
+    }
+    catch {
+        # A limpeza é auxiliar e nunca deve impedir a Central de abrir.
+    }
+}
+Remove-LegacyLauncherArtifact
+
 $script:CurrentPalette = $null
 $script:ActiveNavName = "Home"
 $script:HostedModule = $null
