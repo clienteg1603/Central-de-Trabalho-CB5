@@ -21,7 +21,12 @@ def replace_once(text, old, new, label):
 
 central = read(CENTRAL)
 central = replace_once(central, '$script:AppVersion = "0.16.0"', '$script:AppVersion = "0.16.1"', 'versao Central')
-central = replace_once(central, '$script:EmbeddedClosing = $false', '$script:EmbeddedClosing = $false\n$script:ModuleLoading = $false', 'estado de carregamento')
+central = replace_once(
+    central,
+    '$script:EmbeddedModule = ""\n$script:EmbeddedClosing = $false',
+    '$script:EmbeddedModule = ""\n$script:EmbeddedClosing = $false\n$script:ModuleLoading = $false',
+    'estado inicial de carregamento'
+)
 
 # Remove duas funções antigas que sobreviveram ao redesenho. A segunda Apply-AppTheme,
 # mais abaixo, é a implementação atual; Update-CardLayout foi substituída por Update-ResponsiveLayout.
