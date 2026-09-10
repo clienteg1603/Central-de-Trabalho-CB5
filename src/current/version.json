@@ -1,6 +1,6 @@
 {
   "version": "0.14.5",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Segunda rodada de manutenção geral antes de retomar novas evoluções.",
     "Corrigido o seletor Aparência da Central: o desenho customizado que podia deixar o campo vazio foi removido e o texto volta a ser exibido de forma nativa e confiável.",
