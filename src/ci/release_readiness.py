@@ -2,7 +2,6 @@
 import hashlib
 import json
 import pathlib
-import re
 import sys
 import zipfile
 
@@ -60,7 +59,7 @@ def validate_channel(channel, expected_channel):
     return errors
 
 
-def validate_package(root, channel, label):
+def validate_package(root, channel, label, strict_layout):
     errors = []
     version = channel.get("Version")
     try:
@@ -92,6 +91,9 @@ def validate_package(root, channel, label):
             prefix = expected_root + "/"
             if any(not n.startswith(prefix) for n in file_names):
                 errors.append(f"{label}: ZIP contém arquivo fora da raiz esperada")
+
+            if not strict_layout:
+                return errors
 
             rel_files = {n[len(prefix):].replace("\\", "/") for n in file_names if n.startswith(prefix)}
             expected_all = EXPECTED_RUNTIME_FILES | {"PACOTE-MANIFESTO.json"}
@@ -169,8 +171,10 @@ def main():
     if current.get("version") != test.get("Version"):
         errors.append(f"src/current/version.json ({current.get('version')}) diverge do canal Teste ({test.get('Version')})")
 
-    errors.extend(validate_package(root, test, "Teste"))
-    errors.extend(validate_package(root, stable, "Estável atual"))
+    # A candidata deve obedecer ao layout atual completo. A Estável antiga é validada
+    # apenas quanto a canal, pacote, hash, tamanho, raiz e CRC, pois pode ter arquitetura legada.
+    errors.extend(validate_package(root, test, "Teste", strict_layout=True))
+    errors.extend(validate_package(root, stable, "Estável atual", strict_layout=False))
 
     if errors:
         print("RELEASE READINESS: FALHOU")
@@ -181,7 +185,8 @@ def main():
     print("RELEASE READINESS: OK")
     print(f"  Candidata: v{test['Version']}")
     print(f"  Estável atual: v{stable['Version']}")
-    print("  Pacotes, hashes, manifesto, lista de arquivos e canais estão consistentes.")
+    print("  Candidata, pacote, hashes, manifesto e lista de arquivos estão consistentes.")
+    print("  A Estável atual também foi preservada e conferida sem exigir o layout novo.")
     print("  Nenhuma promoção foi executada; a mudança do canal Estável continua dependendo de aprovação explícita.")
 
 
