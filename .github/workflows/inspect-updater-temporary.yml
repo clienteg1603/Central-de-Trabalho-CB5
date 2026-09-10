@@ -25,7 +25,8 @@ jobs:
 
           $oldZip = Join-Path $work 'old.zip'
           $newZip = Join-Path $PWD 'updates\packages\Central-de-Trabalho-v0.19.4.zip'
-          git show ae5e2c8:updates/packages/Central-de-Trabalho-v0.19.3.zip > $oldZip
+          $env:OLD_ZIP = $oldZip
+          python -c "import os,subprocess,pathlib; pathlib.Path(os.environ['OLD_ZIP']).write_bytes(subprocess.check_output(['git','show','ae5e2c8:updates/packages/Central-de-Trabalho-v0.19.3.zip']))"
           if (-not (Test-Path $oldZip)) { throw 'Could not recover v0.19.3 package' }
 
           $oldExtract = Join-Path $work 'old'
