@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.1"
+$script:AppVersion = "3.7.2"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -2388,6 +2388,9 @@ function Apply-AppTheme {
     $extraSelectionLabel.ForeColor = $palette.Text
     $componentsIntro.BackColor = $palette.Info
     $componentsIntro.ForeColor = $palette.Text
+    $descriptionsIntro.BackColor = $palette.Info
+    $descriptionsIntro.ForeColor = $palette.Text
+    Set-GeneratorRoundedRegion $descriptionsIntro 9
     $combineBalanceCard.BackColor = $palette.Surface
     foreach ($textBox in @($masterText, $statusText, $combineStatusText, $componentSearchText)) {
         $textBox.BackColor = $palette.Input
@@ -3198,13 +3201,17 @@ $componentOperationsPage.Controls.Add($componentOperationsGrid)
 
 $descriptionsIntro = New-Object Windows.Forms.Label
 $descriptionsIntro.Text = "Legenda completa usada nos arquivos gerados. Esta área é somente para consulta."
-$descriptionsIntro.Location = New-Object Drawing.Point(18, 16)
-$descriptionsIntro.Size = New-Object Drawing.Size(982, 30)
+$descriptionsIntro.Location = New-Object Drawing.Point(18, 12)
+$descriptionsIntro.Size = New-Object Drawing.Size(982, 38)
 $descriptionsIntro.Anchor = "Top,Left,Right"
+$descriptionsIntro.Font = New-Object Drawing.Font("Segoe UI Semibold", 9.1)
+$descriptionsIntro.Padding = New-Object Windows.Forms.Padding(12, 7, 12, 6)
+$descriptionsIntro.BorderStyle = [Windows.Forms.BorderStyle]::None
+$descriptionsIntro.Add_SizeChanged({ Set-GeneratorRoundedRegion $this 9 })
 $tabDescriptions.Controls.Add($descriptionsIntro)
 
 $descriptionsGrid = New-Object Windows.Forms.DataGridView
-$descriptionsGrid.Location = New-Object Drawing.Point(18, 52)
+$descriptionsGrid.Location = New-Object Drawing.Point(18, 58)
 $descriptionsGrid.Size = New-Object Drawing.Size(982, 435)
 $descriptionsGrid.Anchor = "Top,Bottom,Left,Right"
 $descriptionsGrid.AllowUserToAddRows = $false
@@ -3686,10 +3693,127 @@ function Update-GeneratorInternalLayouts {
     catch {}
 }
 
+function Update-GeneratorRemainingLayouts {
+    if (-not $script:IsInProcessHosted) { return }
+    try {
+        # GERAR: cartões e controles internos respeitam a largura real da página.
+        $gw = [Math]::Max(520, [int]$tabGenerate.ClientSize.Width)
+        $gh = [Math]::Max(330, [int]$tabGenerate.ClientSize.Height)
+        $gInnerW = [Math]::Max(460, $gw - 36)
+        foreach ($control in @($masterCard, $destinationCard, $summaryCard, $infoBox, $statusText)) {
+            if ($null -ne $control) { $control.Width = $gInnerW }
+        }
+        $summaryLayout.Width = [Math]::Max(420, $summaryCard.ClientSize.Width - 20)
+        $openDestinationCardButton.Left = [Math]::Max(220, $destinationCard.ClientSize.Width - $openDestinationCardButton.Width - 14)
+        $outputInfo.Width = [Math]::Max(150, $openDestinationCardButton.Left - $outputInfo.Left - 12)
+        $statusText.Height = [Math]::Max(82, $gh - $statusText.Top - 14)
+        Update-MasterCardLayout
+
+        # MANUTENÇÕES: instrução, resumo e grade permanecem alinhados em qualquer largura.
+        $ew = [Math]::Max(520, [int]$tabExtra.ClientSize.Width)
+        $eh = [Math]::Max(300, [int]$tabExtra.ClientSize.Height)
+        $eInnerW = [Math]::Max(460, $ew - 36)
+        $extraIntro.Width = $eInnerW
+        $extraSelectionLabel.Width = $eInnerW
+        $extraGrid.Width = $eInnerW
+        $extraGrid.Height = [Math]::Max(150, $eh - $extraGrid.Top - 14)
+        if ($ew -lt 720) {
+            $extraGrid.Columns[0].Width = 88
+            $extraGrid.Columns[1].Width = 126
+            $extraGrid.Columns[3].Width = 138
+        }
+        else {
+            $extraGrid.Columns[0].Width = 105
+            $extraGrid.Columns[1].Width = 145
+            $extraGrid.Columns[3].Width = 190
+        }
+
+        # CÓDIGOS: a grade usa todo o espaço restante e a coluna de observação encolhe primeiro.
+        $dw = [Math]::Max(520, [int]$tabDescriptions.ClientSize.Width)
+        $dh = [Math]::Max(300, [int]$tabDescriptions.ClientSize.Height)
+        $dInnerW = [Math]::Max(460, $dw - 36)
+        $descriptionsIntro.Width = $dInnerW
+        $descriptionsGrid.Width = $dInnerW
+        $descriptionsGrid.Height = [Math]::Max(170, $dh - $descriptionsGrid.Top - 14)
+        $descriptionsGrid.Columns[0].Width = if ($dw -lt 720) { 86 } else { 100 }
+        $descriptionsGrid.Columns[2].Width = if ($dw -lt 720) { 132 } elseif ($dw -lt 900) { 160 } else { 200 }
+
+        # JUNTAR LOTES: a barra de ações de topo deixa de depender de 982 px fixos.
+        $jw = [Math]::Max(520, [int]$tabCombine.ClientSize.Width)
+        $jh = [Math]::Max(340, [int]$tabCombine.ClientSize.Height)
+        $jInnerW = [Math]::Max(460, $jw - 36)
+        $gap = if ($jw -lt 650) { 6 } else { 8 }
+
+        if ($jw -ge 930) {
+            $specs = @(
+                @($combineAddButton, 172), @($combineRemoveButton, 100), @($combineUpButton, 86),
+                @($combineDownButton, 86), @($combineClearButton, 112), @($combineCopyQuantitiesButton, 145), @($combinePasteQuantitiesButton, 145)
+            )
+            $x = 18
+            foreach ($spec in $specs) {
+                $b = $spec[0]; $w = [int]$spec[1]
+                $b.Top = 78; $b.Left = $x; $b.Width = $w; $b.Height = 34
+                $x += $w + $gap
+            }
+            $combineAddButton.Text = "+  Adicionar planilhas..."
+            $combineRemoveButton.Text = "−  Remover"
+            $combineUpButton.Text = "↑  Subir"
+            $combineDownButton.Text = "↓  Descer"
+            $combineClearButton.Text = "×  Limpar lista"
+            $balanceTop = 118
+        }
+        else {
+            $small = ($jw -lt 650)
+            $addW = if ($small) { 120 } else { 150 }
+            $removeW = if ($small) { 76 } else { 90 }
+            $upW = if ($small) { 60 } else { 72 }
+            $downW = if ($small) { 68 } else { 78 }
+            $clearW = if ($small) { 82 } else { 100 }
+            $x = 18
+            foreach ($pair in @(
+                @($combineAddButton,$addW), @($combineRemoveButton,$removeW), @($combineUpButton,$upW),
+                @($combineDownButton,$downW), @($combineClearButton,$clearW)
+            )) {
+                $b=$pair[0]; $w=[int]$pair[1]
+                $b.Top=78; $b.Left=$x; $b.Width=$w; $b.Height=32
+                $x += $w + $gap
+            }
+            $combineAddButton.Text = if ($small) { "+ Adicionar" } else { "+  Adicionar planilhas" }
+            $combineRemoveButton.Text = "Remover"
+            $combineUpButton.Text = "Subir"
+            $combineDownButton.Text = "Descer"
+            $combineClearButton.Text = "Limpar"
+
+            $copyW = if ($small) { 104 } else { 120 }
+            $pasteW = $copyW
+            $combineCopyQuantitiesButton.Top = 116; $combineCopyQuantitiesButton.Left = 18; $combineCopyQuantitiesButton.Width = $copyW; $combineCopyQuantitiesButton.Height = 32
+            $combinePasteQuantitiesButton.Top = 116; $combinePasteQuantitiesButton.Left = 18 + $copyW + $gap; $combinePasteQuantitiesButton.Width = $pasteW; $combinePasteQuantitiesButton.Height = 32
+            $balanceTop = 154
+        }
+
+        $combineBalanceCard.Top = $balanceTop
+        $combineBalanceCard.Width = $jInnerW
+        $gridTop = $balanceTop + 48
+        $combineGrid.Top = $gridTop
+        $combineGrid.Width = $jInnerW
+
+        $resultTop = [Math]::Max($gridTop + 105, $jh - 118)
+        $combineStatusLabel.Top = $resultTop
+        $previewCombineButton.Top = [Math]::Max($gridTop + 72, $resultTop - 9)
+        $copyCombineStatusButton.Top = $previewCombineButton.Top
+        $combineGrid.Height = [Math]::Max(90, $resultTop - $gridTop - 10)
+        $combineStatusText.Top = $resultTop + 24
+        $combineStatusText.Width = $jInnerW
+        $combineStatusText.Height = [Math]::Max(58, $jh - $combineStatusText.Top - 12)
+    }
+    catch {}
+}
+
 function Update-RootLayout {
     if ($null -eq $form -or $null -eq $headerPanel -or $null -eq $tabs -or $null -eq $footerPanel) { return }
     Update-GeneratorResponsiveLayout
     Update-GeneratorInternalLayouts
+    Update-GeneratorRemainingLayouts
 
     $clientWidth = [Math]::Max(1, $form.ClientSize.Width)
     if ($script:IsInProcessHosted -and $null -ne $script:GeneratorHostedShell) {
@@ -4181,8 +4305,14 @@ $tabs.Add_SelectedIndexChanged({
     if ($updateMasterButton.Visible) { $updateMasterButton.BringToFront() }
     Update-RootLayout
     Update-GeneratorInternalLayouts
+    Update-GeneratorRemainingLayouts
     $tabs.Invalidate()
 })
+
+$tabGenerate.Add_SizeChanged({ Update-GeneratorRemainingLayouts })
+$tabExtra.Add_SizeChanged({ Update-GeneratorRemainingLayouts })
+$tabDescriptions.Add_SizeChanged({ Update-GeneratorRemainingLayouts })
+$tabCombine.Add_SizeChanged({ Update-GeneratorRemainingLayouts })
 
 $componentTabs.Add_SelectedIndexChanged({ Update-GeneratorInternalLayouts; $componentTabs.Invalidate() })
 

@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.15.1",
+  "Version": "0.15.2",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.15.1.zip",
-  "PackageSha256": "23AFA5EDF9FCCAAE9DCDF97162408DD9BACD1C952467E34FB5DE06EF9815FA85",
-  "PackageSize": 906511,
-  "PackageRoot": "Central-de-Trabalho-v0.15.1",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.15.2.zip",
+  "PackageSha256": "3F5E549E7C7C8093825B34D9D2F49CBC826DD78221CA89F47FB820E74467CCFF",
+  "PackageSize": 907756,
+  "PackageRoot": "Central-de-Trabalho-v0.15.2",
   "ReleaseNotes": [
-    "Continuação do fluxo com refinamento interno do Gerenciador de Planilhas.",
-    "A tela Componentes passa a reorganizar pesquisa, resumo, Backup e Restaurar conforme a largura real disponível, evitando sobreposição em resoluções menores.",
-    "As subtelas Saldos, Movimentações e Uniões processadas agora dividem dinamicamente a largura do painel de Componentes.",
-    "Juntar lotes passa a recalcular cartão de consumo de saldo, grade e botões de conferência/cópia conforme a área real da página.",
-    "Na tela Gerar, Conferir primeiro e Copiar resultado também passam a se reposicionar e compactar texto quando necessário.",
-    "Foram removidos tooltips duplicados acumulados em ações de componentes.",
-    "Gerenciador de Planilhas passa para v3.7.1; Central de Manutenção permanece em v0.6.1.",
-    "Nenhuma regra de geração, componentes, saldo, união, manutenção ou dados foi alterada."
+    "Continuação do fluxo com acabamento das áreas restantes do Gerenciador de Planilhas.",
+    "Gerar passa a recalcular cartões, destino, resumo e resultado pela largura e altura reais da página, evitando sobreposição interna.",
+    "Manutenções passa a ajustar instrução, resumo, grade e larguras de colunas conforme o espaço disponível.",
+    "Códigos ganha bloco informativo no mesmo padrão visual das demais áreas e grade responsiva até a parte inferior da página.",
+    "Juntar lotes passa a reorganizar também a barra superior de ações: em larguras menores os comandos se dividem em duas linhas, sem remover funções.",
+    "A área de resultado do Juntar lotes passa a reposicionar grade, conferência, cópia e texto final conforme a altura real disponível.",
+    "Gerenciador de Planilhas passa para v3.7.2; Central de Manutenção permanece em v0.6.1.",
+    "Nenhuma regra de geração, manutenção, componentes, saldo, união ou dados foi alterada."
   ]
 }
