@@ -35,7 +35,7 @@ if ($imageSha -ne 'A4F954FAD5A3226B726214010B9C8B1C14D254ADE638A53FF23D6EEF6546E
 }
 
 Add-Type -AssemblyName System.Drawing
-$memory = [IO.MemoryStream]::new(,$imageBytes)
+$memory = [IO.MemoryStream]::new($imageBytes)
 $bitmap = $null
 $icon = $null
 $fileStream = $null
