@@ -86,6 +86,14 @@ $bytes = [IO.File]::ReadAllBytes($outExe)
 if ($bytes.Length -lt 1024 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) {
     throw "O host compilado não é um executável PE válido."
 }
+$peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+if ($peOffset -lt 0 -or ($peOffset + 96) -ge $bytes.Length) { throw "Cabeçalho PE do host nativo é inválido." }
+if ($bytes[$peOffset] -ne 0x50 -or $bytes[$peOffset + 1] -ne 0x45 -or $bytes[$peOffset + 2] -ne 0 -or $bytes[$peOffset + 3] -ne 0) {
+    throw "Assinatura PE do host nativo é inválida."
+}
+$optionalHeader = $peOffset + 24
+$subsystem = [BitConverter]::ToUInt16($bytes, $optionalHeader + 68)
+if ($subsystem -ne 2) { throw "O executável foi compilado com subsistema incorreto ($subsystem). Esperado Windows GUI (2)." }
 
 $sourceText = Get-Content -LiteralPath $sourcePath -Raw
 foreach ($forbidden in @('Process.Start(', 'powershell.exe', 'pwsh.exe', 'WScript.Shell')) {
@@ -99,4 +107,4 @@ if ($info.FileVersion -ne $fileVersion) {
     throw "Versão do EXE divergente: $($info.FileVersion) != $fileVersion"
 }
 
-Write-Host "HOST NATIVO: OK — Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, PowerShell hospedado no próprio processo."
+Write-Host "HOST NATIVO: OK — Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, subsistema Windows GUI, PowerShell hospedado no próprio processo."
