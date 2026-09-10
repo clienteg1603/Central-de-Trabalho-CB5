@@ -135,7 +135,7 @@ jobs:
                    "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5" \
                    "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5"
 
-          cp "$BASE_ROOT/ABRIR CENTRAL DE TRABALHO.vbs" "$OUT_ROOT/"
+          # Distribuição 0.19+: somente o EXE nativo é ponto de entrada da Central.
           cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
           cp "$BASE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
           cp "$BASE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
@@ -146,6 +146,12 @@ jobs:
           cp "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
           cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
           cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
+
+          if find "$OUT_ROOT" -type f \( -iname '*.vbs' -o -iname '*.bat' -o -iname '*.cmd' \) | grep -q .; then
+            echo "ERRO: lançador/script legado encontrado no pacote limpo."
+            find "$OUT_ROOT" -type f \( -iname '*.vbs' -o -iname '*.bat' -o -iname '*.cmd' \) -print
+            exit 1
+          fi
 
           # Barreiras antes do empacotamento: integridade, contratos funcionais e sintaxe.
           python3 src/ci/audit_release.py tree "$OUT_ROOT" "$VERSION"
