@@ -259,10 +259,10 @@ stats_draw = '''$statsTabs.Add_DrawItem({
 ''' + draw_anchor
 text = rep(text, draw_anchor, stats_draw, 'desenho abas Estatísticas')
 
-# Marca idempotente antes da inicialização final.
-final_anchor = '# UI_DEDUP_V0113\n'
+# Marca idempotente em um ponto estável da área de eventos.
+final_anchor = '$schemaAddButton.Add_Click({ Add-SchematicFromForm })\n'
 if final_anchor not in text:
-    raise RuntimeError('marcador UI_DEDUP_V0113 não encontrado')
+    raise RuntimeError('âncora final da área de esquemáticos não encontrada')
 text = text.replace(final_anchor, final_anchor + marker + '\n', 1)
 
 central_path.write_text(central, encoding='utf-8', newline='')
