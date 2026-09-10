@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.4"
+$script:AppVersion = "0.5.5"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -420,10 +420,23 @@ function Apply-MaintenanceTheme {
     if ($null -ne $statisticsSubtitle) { $statisticsSubtitle.ForeColor = $script:CurrentPalette.Muted }
     $versionBadge.BackColor = $script:CurrentPalette.SuccessBack
     $versionBadge.ForeColor = $script:CurrentPalette.Success
+    $modePanel.BackColor = $script:CurrentPalette.Surface
+    $formModeLabel.ForeColor = $script:CurrentPalette.Accent
+    Set-MaintenanceRoundedRegion $modePanel 9
+    $automaticFlowLabel.BackColor = $script:CurrentPalette.Surface
+    $automaticFlowLabel.ForeColor = $script:CurrentPalette.Muted
+    Set-MaintenanceRoundedRegion $automaticFlowLabel 8
+    $finalResultHelp.BackColor = $script:CurrentPalette.Surface
+    Set-MaintenanceRoundedRegion $finalResultHelp 8
     $recordBanner.BackColor = $script:CurrentPalette.SuccessBack
     $recordBanner.ForeColor = $script:CurrentPalette.Success
+    Set-MaintenanceRoundedRegion $recordBanner 9
     $updateInfo.BackColor = $script:CurrentPalette.WarningBack
     $updateInfo.ForeColor = $script:CurrentPalette.Warning
+    Set-MaintenanceRoundedRegion $updateInfo 8
+    $codeRuleLabel.BackColor = $script:CurrentPalette.Surface
+    $codeRuleLabel.ForeColor = $script:CurrentPalette.Muted
+    Set-MaintenanceRoundedRegion $codeRuleLabel 8
     $seriesHistoryStateLabel.ForeColor = $script:CurrentPalette.Muted
     $hypothesisNotice.BackColor = $script:CurrentPalette.WarningBack
     $hypothesisNotice.ForeColor = $script:CurrentPalette.Warning
@@ -734,7 +747,6 @@ function Update-CodeRuleUI {
     else {
         "Código ${code}: somente pode ser trabalhado entre os dias 1 e 20."
     }
-    $codeRuleLabel.ForeColor = $script:CurrentPalette.Muted
     Update-FinalResultUI
 }
 
@@ -1741,9 +1753,13 @@ $passageScroll.Controls.Add($passageContent)
 $modePanel = New-Object Windows.Forms.Panel
 $modePanel.Dock = [Windows.Forms.DockStyle]::Top
 $modePanel.Height = 48
+$modePanel.Margin = [Windows.Forms.Padding]::new(0, 0, 0, 6)
+$modePanel.Padding = [Windows.Forms.Padding]::new(10, 0, 10, 0)
+$modePanel.Add_SizeChanged({ Set-MaintenanceRoundedRegion $this 9 })
 $formModeLabel = New-Object Windows.Forms.Label
 $formModeLabel.Text = "NOVA PASSAGEM"
 $formModeLabel.Dock = [Windows.Forms.DockStyle]::Fill
+$formModeLabel.Padding = [Windows.Forms.Padding]::new(4, 0, 4, 0)
 $formModeLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
 if ($script:IsInProcessHosted) {
     $formModeLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", 13.5)
@@ -1755,7 +1771,7 @@ $modePanel.Controls.Add($formModeLabel)
 $passageContent.Controls.Add($modePanel, 0, 0)
 
 $identityGroup = New-Object Windows.Forms.GroupBox
-$identityGroup.Text = "1. Identificação da peça"
+$identityGroup.Text = "1. Identificação"
 $identityGroup.Dock = [Windows.Forms.DockStyle]::Top
 $identityGroup.Height = 205
 $identityGroup.Padding = [Windows.Forms.Padding]::new(12, 22, 12, 10)
@@ -1825,16 +1841,18 @@ $identityLayout.Controls.Add($outputVersionCombo, 0, 3)
 $identityLayout.SetColumnSpan($outputVersionCombo, 2)
 
 $automaticFlowLabel = New-Object Windows.Forms.Label
-$automaticFlowLabel.Text = "A passagem permanece aberta até você concluir como Aprovado ou PT."
+$automaticFlowLabel.Text = "A passagem fica aberta até a conclusão como Aprovado ou PT."
 $automaticFlowLabel.Dock = [Windows.Forms.DockStyle]::Fill
-$automaticFlowLabel.Padding = [Windows.Forms.Padding]::new(12, 3, 3, 3)
+$automaticFlowLabel.Margin = [Windows.Forms.Padding]::new(8, 2, 0, 2)
+$automaticFlowLabel.Padding = [Windows.Forms.Padding]::new(10, 3, 8, 3)
 $automaticFlowLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+$automaticFlowLabel.Add_SizeChanged({ Set-MaintenanceRoundedRegion $this 8 })
 $identityLayout.Controls.Add($automaticFlowLabel, 2, 2)
 $identityLayout.SetColumnSpan($automaticFlowLabel, 2)
 $identityLayout.SetRowSpan($automaticFlowLabel, 2)
 
 $defectsGroup = New-Object Windows.Forms.GroupBox
-$defectsGroup.Text = "2. Defeitos"
+$defectsGroup.Text = "2. Defeitos e diagnóstico"
 $defectsGroup.Dock = [Windows.Forms.DockStyle]::Top
 $defectsGroup.Height = 245
 $defectsGroup.Padding = [Windows.Forms.Padding]::new(12, 22, 12, 10)
@@ -1877,7 +1895,7 @@ $otherDefectsBox.Margin = [Windows.Forms.Padding]::new(7, 3, 3, 3)
 $defectsLayout.Controls.Add($otherDefectsBox, 2, 1)
 
 $maintenanceGroup = New-Object Windows.Forms.GroupBox
-$maintenanceGroup.Text = "3. Manutenção"
+$maintenanceGroup.Text = "3. Manutenção realizada"
 $maintenanceGroup.Dock = [Windows.Forms.DockStyle]::Top
 $maintenanceGroup.Height = 205
 $maintenanceGroup.Padding = [Windows.Forms.Padding]::new(12, 22, 12, 10)
@@ -1904,7 +1922,7 @@ $maintenanceBox.Dock = [Windows.Forms.DockStyle]::Fill
 $maintenanceLayout.Controls.Add($maintenanceBox, 0, 1)
 
 $finalResultGroup = New-Object Windows.Forms.GroupBox
-$finalResultGroup.Text = "4. Resultado final"
+$finalResultGroup.Text = "4. Conclusão"
 $finalResultGroup.Dock = [Windows.Forms.DockStyle]::Top
 $finalResultGroup.Height = 150
 $finalResultGroup.Padding = [Windows.Forms.Padding]::new(12, 22, 12, 10)
@@ -1936,9 +1954,11 @@ $finalResultLayout.Controls.Add($finalResultCombo, 0, 1)
 
 $finalResultHelp = New-Object Windows.Forms.Label
 $finalResultHelp.Dock = [Windows.Forms.DockStyle]::Fill
-$finalResultHelp.Padding = [Windows.Forms.Padding]::new(14, 6, 4, 4)
+$finalResultHelp.Margin = [Windows.Forms.Padding]::new(10, 2, 0, 2)
+$finalResultHelp.Padding = [Windows.Forms.Padding]::new(10, 4, 8, 4)
 $finalResultHelp.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
 $finalResultHelp.Text = "Escolha o resultado somente ao finalizar."
+$finalResultHelp.Add_SizeChanged({ Set-MaintenanceRoundedRegion $this 8 })
 $finalResultLayout.Controls.Add($finalResultHelp, 1, 0)
 $finalResultLayout.SetRowSpan($finalResultHelp, 2)
 
@@ -1970,13 +1990,15 @@ $passageRoot.Controls.Add($passageSide, 1, 0)
 
 $recordBanner = New-Object Windows.Forms.Label
 $recordBanner.Dock = [Windows.Forms.DockStyle]::Fill
-$recordBanner.Padding = [Windows.Forms.Padding]::new(12)
+$recordBanner.Margin = [Windows.Forms.Padding]::new(0, 0, 0, 6)
+$recordBanner.Padding = [Windows.Forms.Padding]::new(11, 7, 11, 7)
 $recordBanner.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+$recordBanner.Add_SizeChanged({ Set-MaintenanceRoundedRegion $this 9 })
 $recordBanner.Font = [Drawing.Font]::new("Segoe UI Semibold", 9.5)
 $passageSide.Controls.Add($recordBanner, 0, 0)
 
 $updateGroup = New-Object Windows.Forms.GroupBox
-$updateGroup.Text = "Atualização de versão"
+$updateGroup.Text = "Atualização / próxima etapa"
 $updateGroup.Dock = [Windows.Forms.DockStyle]::Fill
 $updateGroup.Padding = [Windows.Forms.Padding]::new(10, 22, 10, 10)
 $passageSide.Controls.Add($updateGroup, 0, 1)
@@ -1988,19 +2010,23 @@ $updateLayout.ColumnCount = 1
 $updateGroup.Controls.Add($updateLayout)
 $updateInfo = New-Object Windows.Forms.Label
 $updateInfo.Dock = [Windows.Forms.DockStyle]::Fill
-$updateInfo.Padding = [Windows.Forms.Padding]::new(10)
+$updateInfo.Margin = [Windows.Forms.Padding]::new(0, 0, 0, 2)
+$updateInfo.Padding = [Windows.Forms.Padding]::new(9, 6, 9, 6)
 $updateInfo.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
 $updateInfo.AutoEllipsis = $false
+$updateInfo.Add_SizeChanged({ Set-MaintenanceRoundedRegion $this 8 })
 $updateLayout.Controls.Add($updateInfo, 0, 0)
 
 $codeRuleLabel = New-Object Windows.Forms.Label
 $codeRuleLabel.Dock = [Windows.Forms.DockStyle]::Fill
-$codeRuleLabel.Padding = [Windows.Forms.Padding]::new(10)
+$codeRuleLabel.Margin = [Windows.Forms.Padding]::new(0, 4, 0, 4)
+$codeRuleLabel.Padding = [Windows.Forms.Padding]::new(9, 4, 9, 4)
 $codeRuleLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+$codeRuleLabel.Add_SizeChanged({ Set-MaintenanceRoundedRegion $this 8 })
 $passageSide.Controls.Add($codeRuleLabel, 0, 2)
 
 $seriesHistoryGroup = New-Object Windows.Forms.GroupBox
-$seriesHistoryGroup.Text = "Histórico automático da série"
+$seriesHistoryGroup.Text = "Histórico da série"
 $seriesHistoryGroup.Dock = [Windows.Forms.DockStyle]::Fill
 $seriesHistoryGroup.Padding = [Windows.Forms.Padding]::new(8, 20, 8, 8)
 $passageSide.Controls.Add($seriesHistoryGroup, 0, 3)
@@ -2071,7 +2097,7 @@ $actionsLayout.ColumnCount = 1
 for ($i = 0; $i -lt 3; $i++) { [void]$actionsLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 33.333))) }
 $passageSide.Controls.Add($actionsLayout, 0, 5)
 $newPassageButton = New-Object Windows.Forms.Button
-$newPassageButton.Text = "LIMPAR / NOVA PASSAGEM"
+$newPassageButton.Text = "NOVA / LIMPAR"
 $newPassageButton.Dock = [Windows.Forms.DockStyle]::Fill
 $newPassageButton.Margin = [Windows.Forms.Padding]::new(0, 2, 0, 2)
 $newPassageButton.Tag = "Secondary"
@@ -2088,6 +2114,19 @@ $completePassageButton.Dock = [Windows.Forms.DockStyle]::Fill
 $completePassageButton.Margin = [Windows.Forms.Padding]::new(0, 2, 0, 0)
 $completePassageButton.Tag = "Action"
 $actionsLayout.Controls.Add($completePassageButton, 0, 2)
+
+$passageToolTip = New-Object Windows.Forms.ToolTip
+$passageToolTip.AutoPopDelay = 5000
+$passageToolTip.InitialDelay = 350
+$passageToolTip.ReshowDelay = 100
+$passageToolTip.SetToolTip($serialBox, "Série obrigatória com exatamente 8 dígitos")
+$passageToolTip.SetToolTip($inputVersionCombo, "Versão recebida nesta passagem")
+$passageToolTip.SetToolTip($outputVersionCombo, "Versão que ficará registrada ao final da passagem")
+$passageToolTip.SetToolTip($newPassageButton, "Limpa os campos e inicia uma nova passagem")
+$passageToolTip.SetToolTip($savePassageButton, "Salva o andamento sem concluir a passagem")
+$passageToolTip.SetToolTip($completePassageButton, "Conclui a passagem com o resultado selecionado")
+$passageToolTip.SetToolTip($seriesHistoryDetailsButton, "Mostra os detalhes da passagem selecionada")
+$passageToolTip.SetToolTip($seriesHistoryFullButton, "Abre o histórico completo desta série")
 
 $historyTab = New-Object Windows.Forms.TabPage
 $historyTab.Text = "Histórico"
@@ -2680,7 +2719,7 @@ function Update-MaintenanceResponsiveLayout {
             "Tight" {
                 $baseFont = 7.75; $titleFont = 11.3; $serialFont = 9.0
                 $passagePadding = 4; $rightWidth = 300
-                $modeH = 29; $identityH = 110; $defectsH = 120; $maintH = 88; $finalH = 70; $notesH = 70; $gap = 4
+                $modeH = 30; $identityH = 124; $defectsH = 122; $maintH = 90; $finalH = 82; $notesH = 74; $gap = 4
                 $side = @(48, 94, 30, 30, 84)
                 $groupPadTop = 16; $gridHeader = 23; $gridRow = 21
                 $dashIntro = 42
@@ -2688,7 +2727,7 @@ function Update-MaintenanceResponsiveLayout {
             "Compact" {
                 $baseFont = 8.15; $titleFont = 12.0; $serialFont = 9.5
                 $passagePadding = 6; $rightWidth = 322
-                $modeH = 31; $identityH = 118; $defectsH = 130; $maintH = 96; $finalH = 76; $notesH = 76; $gap = 5
+                $modeH = 32; $identityH = 132; $defectsH = 132; $maintH = 98; $finalH = 88; $notesH = 78; $gap = 5
                 $side = @(52, 102, 34, 34, 94)
                 $groupPadTop = 17; $gridHeader = 24; $gridRow = 22
                 $dashIntro = 46
@@ -2696,7 +2735,7 @@ function Update-MaintenanceResponsiveLayout {
             default {
                 $baseFont = 8.8; $titleFont = 13.0; $serialFont = 10.3
                 $passagePadding = 8; $rightWidth = 350
-                $modeH = 34; $identityH = 132; $defectsH = 150; $maintH = 112; $finalH = 86; $notesH = 86; $gap = 6
+                $modeH = 35; $identityH = 142; $defectsH = 150; $maintH = 112; $finalH = 96; $notesH = 86; $gap = 6
                 $side = @(58, 112, 38, 38, 104)
                 $groupPadTop = 19; $gridHeader = 26; $gridRow = 23
                 $dashIntro = 50
@@ -2712,6 +2751,33 @@ function Update-MaintenanceResponsiveLayout {
             $codeRuleLabel.Font = [Drawing.Font]::new("Segoe UI", [Math]::Max(7.2, $baseFont - 0.15))
             $seriesHistoryStateLabel.Font = [Drawing.Font]::new("Segoe UI", [Math]::Max(7.2, $baseFont - 0.15))
         }
+
+        # Passagem: as linhas internas também precisam caber dentro das alturas externas.
+        if ($profile -eq "Tight") {
+            $identityLayout.RowStyles[0].Height = 18
+            $identityLayout.RowStyles[1].Height = 28
+            $identityLayout.RowStyles[2].Height = 18
+            $identityLayout.RowStyles[3].Height = 28
+            $finalResultLayout.RowStyles[0].Height = 18
+        }
+        elseif ($profile -eq "Compact") {
+            $identityLayout.RowStyles[0].Height = 20
+            $identityLayout.RowStyles[1].Height = 30
+            $identityLayout.RowStyles[2].Height = 20
+            $identityLayout.RowStyles[3].Height = 30
+            $finalResultLayout.RowStyles[0].Height = 20
+        }
+        else {
+            $identityLayout.RowStyles[0].Height = 22
+            $identityLayout.RowStyles[1].Height = 32
+            $identityLayout.RowStyles[2].Height = 22
+            $identityLayout.RowStyles[3].Height = 32
+            $finalResultLayout.RowStyles[0].Height = 22
+        }
+        $identityGroup.Padding = [Windows.Forms.Padding]::new([Math]::Max(7,$passagePadding + 3), [Math]::Max(17,$groupPadTop), [Math]::Max(7,$passagePadding + 3), [Math]::Max(5,$passagePadding))
+        $finalResultGroup.Padding = [Windows.Forms.Padding]::new([Math]::Max(7,$passagePadding + 3), [Math]::Max(17,$groupPadTop), [Math]::Max(7,$passagePadding + 3), [Math]::Max(5,$passagePadding))
+        $automaticFlowLabel.Font = [Drawing.Font]::new("Segoe UI", [Math]::Max(7.2, $baseFont - 0.1))
+        $finalResultHelp.Font = [Drawing.Font]::new("Segoe UI", [Math]::Max(7.2, $baseFont - 0.05))
 
         # Telas técnicas também acompanham o perfil da área real hospedada.
         $technicalPadding = if ($profile -eq "Tight") { 7 } elseif ($profile -eq "Compact") { 10 } else { 14 }
@@ -2835,6 +2901,7 @@ function Update-MaintenanceResponsiveLayout {
             $mainTabs.Padding = if ($profile -eq "Tight") { [Drawing.Point]::new(6,2) } elseif ($profile -eq "Compact") { [Drawing.Point]::new(7,3) } else { [Drawing.Point]::new(9,4) }
         }
 
+# PASSAGE_POLISH_V0115
         # Scroll é fallback, nunca o mecanismo principal de encaixe.
         $passageScroll.AutoScroll = $true
         $passageTab.AutoScroll = $false
