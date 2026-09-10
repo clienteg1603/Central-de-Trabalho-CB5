@@ -2,19 +2,19 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.14.2",
+  "Version": "0.14.3",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.14.2.zip",
-  "PackageSha256": "73E889262C70098A7453AB58F0C991F953A681B627F80E39213F657965D4C8FC",
-  "PackageSize": 904943,
-  "PackageRoot": "Central-de-Trabalho-v0.14.2",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.14.3.zip",
+  "PackageSha256": "751D017E79359121EF6ABA7892BC5DE42789B11A8E1CD8EAAA9506FECC5A69DD",
+  "PackageSize": 905669,
+  "PackageRoot": "Central-de-Trabalho-v0.14.3",
   "ReleaseNotes": [
-    "Continuado o polimento geral da Central de Trabalho.",
-    "O seletor Aparência agora é desenhado pela própria Central e acompanha corretamente os temas escuros, sem manter aquele fundo branco do ComboBox nativo.",
-    "A barra de título do Windows passa a acompanhar os temas escuros quando o sistema oferecer suporte, mantendo modo claro no tema Claro corporativo.",
-    "A barra superior dos módulos integrados ganhou uma linha fina com a identidade visual do programa aberto.",
-    "O rodapé deixa de repetir permanentemente o estado Sistema pronto; esse estado permanece na lateral e o rodapé fica reservado para ações, avisos e erros.",
-    "Gerenciador de Planilhas permanece em v3.6.2 e Central de Manutenção em v0.5.8.",
-    "Nenhuma regra de geração, união, saldo, manutenção ou dados foi alterada."
+    "A Central de Manutenção ganha navegação interna persistente no modo integrado.",
+    "Histórico passa a ser a seção padrão real abaixo do resumo, exibindo imediatamente suas ações de visualizar, editar/corrigir, registrar retorno e exportar.",
+    "Os botões Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras/Dados permanecem visíveis enquanto o conteúdo abaixo troca de seção.",
+    "O antigo botão Painel da manutenção deixa de ser necessário e fica removido do fluxo integrado.",
+    "Ao abrir Nova passagem, a faixa das cinco seções permanece disponível para retorno rápido, enquanto o resumo superior é recolhido para preservar espaço vertical.",
+    "Central de Manutenção passa para v0.5.9; Gerenciador permanece em v3.6.2.",
+    "Nenhuma regra de manutenção, histórico, diagnóstico, dados ou geração foi alterada."
   ]
 }

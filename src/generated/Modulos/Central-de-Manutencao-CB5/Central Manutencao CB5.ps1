@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.8"
+$script:AppVersion = "0.5.9"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -137,6 +137,9 @@ $script:CorrectionMode = $false
 $script:InternalNavPanel = $null
 $script:InternalBackButton = $null
 $script:InternalSectionLabel = $null
+$script:HostedOverviewPanel = $null
+$script:HostedOverviewLayout = $null
+$script:HostedSectionNavPanel = $null
 
 try {
     $script:DatabasePath = Initialize-CB5DataStore -DataDirectory $script:DataDirectory
@@ -446,6 +449,12 @@ function Apply-MaintenanceTheme {
         $script:InternalNavPanel.BackColor = $script:CurrentPalette.Surface
         if ($null -ne $script:InternalBackButton) { Set-MaintenanceButtonStyle $script:InternalBackButton }
         if ($null -ne $script:InternalSectionLabel) { $script:InternalSectionLabel.ForeColor = $script:CurrentPalette.Muted }
+    }
+    if ($script:IsInProcessHosted) {
+        if ($null -ne $script:HostedOverviewPanel) { $script:HostedOverviewPanel.BackColor = $script:CurrentPalette.Background }
+        if ($null -ne $script:HostedOverviewLayout) { $script:HostedOverviewLayout.BackColor = $script:CurrentPalette.Background }
+        if ($null -ne $script:HostedSectionNavPanel) { $script:HostedSectionNavPanel.BackColor = $script:CurrentPalette.Background }
+        try { Update-MaintenanceSectionNavigation } catch {}
     }
     if ($null -ne $dashboardSubtitle) { $dashboardSubtitle.ForeColor = $script:CurrentPalette.Muted }
     if ($null -ne $statisticsSubtitle) { $statisticsSubtitle.ForeColor = $script:CurrentPalette.Muted }
@@ -1595,16 +1604,51 @@ if ($script:IsInProcessHosted) {
         if (-not $script:IsInProcessHosted) { return }
         try {
             $hiddenTabStrip = 31
-            $navHeight = if ($null -ne $script:InternalNavPanel -and $script:InternalNavPanel.Visible) { 38 } else { 0 }
-            $mainTabs.Location = [Drawing.Point]::new(0, $navHeight - $hiddenTabStrip)
+            $overviewHeight = 0
+            $sectionNavHeight = 0
+            $isPassage = $false
+
+            $passageVar = Get-Variable -Name passageTab -ErrorAction SilentlyContinue
+            if ($null -ne $passageVar -and $null -ne $passageVar.Value -and $mainTabs.SelectedTab -eq $passageVar.Value) {
+                $isPassage = $true
+            }
+
+            if ($null -ne $script:HostedOverviewPanel) {
+                if ($isPassage) {
+                    $script:HostedOverviewPanel.Visible = $false
+                }
+                else {
+                    $introHeight = 56
+                    $cardsHeight = 122
+                    try { $introHeight = [Math]::Max(42, [int]$dashboardRoot.RowStyles[0].Height) } catch {}
+                    try { $cardsHeight = [Math]::Max(96, [int]$dashboardRoot.RowStyles[1].Height) } catch {}
+                    $overviewHeight = $introHeight + $cardsHeight + 16
+                    $script:HostedOverviewPanel.Visible = $true
+                    $script:HostedOverviewPanel.Location = [Drawing.Point]::new(0, 0)
+                    $script:HostedOverviewPanel.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), $overviewHeight)
+                    if ($null -ne $script:HostedOverviewLayout) {
+                        $script:HostedOverviewLayout.RowStyles[0].Height = $introHeight
+                        $script:HostedOverviewLayout.RowStyles[1].Height = $cardsHeight
+                    }
+                }
+            }
+
+            if ($null -ne $script:HostedSectionNavPanel) {
+                $sectionNavHeight = 46
+                $script:HostedSectionNavPanel.Visible = $true
+                $script:HostedSectionNavPanel.Location = [Drawing.Point]::new(0, $overviewHeight)
+                $script:HostedSectionNavPanel.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), $sectionNavHeight)
+                $script:HostedSectionNavPanel.BringToFront()
+            }
+
+            if ($null -ne $script:InternalNavPanel) { $script:InternalNavPanel.Visible = $false }
+
+            $contentTop = $overviewHeight + $sectionNavHeight
+            $mainTabs.Location = [Drawing.Point]::new(0, $contentTop - $hiddenTabStrip)
             $mainTabs.Size = [Drawing.Size]::new(
                 [Math]::Max(1, $tabsViewport.ClientSize.Width),
-                [Math]::Max(1, $tabsViewport.ClientSize.Height - $navHeight + $hiddenTabStrip)
+                [Math]::Max(1, $tabsViewport.ClientSize.Height - $contentTop + $hiddenTabStrip)
             )
-            if ($null -ne $script:InternalNavPanel) {
-                $script:InternalNavPanel.Width = [Math]::Max(1, $tabsViewport.ClientSize.Width)
-                $script:InternalNavPanel.BringToFront()
-            }
         } catch {}
     }
 
@@ -1775,6 +1819,68 @@ $dashboardNavigation.Controls.Add($dashboardStatsButton, 1, 0)
 $dashboardNavigation.Controls.Add($dashboardDiagnosisButton, 2, 0)
 $dashboardNavigation.Controls.Add($dashboardSchematicsButton, 3, 0)
 $dashboardNavigation.Controls.Add($dashboardRulesButton, 4, 0)
+
+if ($script:IsInProcessHosted) {
+    # Cabeçalho persistente: visão geral + cartões.
+    $script:HostedOverviewPanel = New-Object Windows.Forms.Panel
+    $script:HostedOverviewPanel.Margin = [Windows.Forms.Padding]::new(0)
+    $script:HostedOverviewPanel.Padding = [Windows.Forms.Padding]::new(8, 6, 8, 4)
+    $tabsViewport.Controls.Add($script:HostedOverviewPanel)
+
+    $script:HostedOverviewLayout = New-Object Windows.Forms.TableLayoutPanel
+    $script:HostedOverviewLayout.Dock = [Windows.Forms.DockStyle]::Fill
+    $script:HostedOverviewLayout.Margin = [Windows.Forms.Padding]::new(0)
+    $script:HostedOverviewLayout.Padding = [Windows.Forms.Padding]::new(4, 0, 4, 0)
+    $script:HostedOverviewLayout.ColumnCount = 1
+    $script:HostedOverviewLayout.RowCount = 2
+    [void]$script:HostedOverviewLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
+    [void]$script:HostedOverviewLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardIntroHeight)))
+    [void]$script:HostedOverviewLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardCardsHeight)))
+    $script:HostedOverviewPanel.Controls.Add($script:HostedOverviewLayout)
+
+    try { $dashboardRoot.Controls.Remove($dashboardIntro) } catch {}
+    try { $dashboardRoot.Controls.Remove($cardsLayout) } catch {}
+    $dashboardIntro.Dock = [Windows.Forms.DockStyle]::Fill
+    $dashboardIntro.Margin = [Windows.Forms.Padding]::new(0)
+    $cardsLayout.Dock = [Windows.Forms.DockStyle]::Fill
+    $cardsLayout.Margin = [Windows.Forms.Padding]::new(0)
+    $script:HostedOverviewLayout.Controls.Add($dashboardIntro, 0, 0)
+    $script:HostedOverviewLayout.Controls.Add($cardsLayout, 0, 1)
+
+    # Os cinco botões viram a navegação fixa da Manutenção.
+    $script:HostedSectionNavPanel = New-Object Windows.Forms.Panel
+    $script:HostedSectionNavPanel.Margin = [Windows.Forms.Padding]::new(0)
+    $script:HostedSectionNavPanel.Padding = [Windows.Forms.Padding]::new(8, 2, 8, 2)
+    $tabsViewport.Controls.Add($script:HostedSectionNavPanel)
+    try { $dashboardRoot.Controls.Remove($dashboardNavigation) } catch {}
+    $dashboardNavigation.Dock = [Windows.Forms.DockStyle]::Fill
+    $dashboardNavigation.Margin = [Windows.Forms.Padding]::new(0)
+    $script:HostedSectionNavPanel.Controls.Add($dashboardNavigation)
+
+    if ($null -ne $script:InternalNavPanel) { $script:InternalNavPanel.Visible = $false }
+    $script:HostedOverviewPanel.BringToFront()
+    $script:HostedSectionNavPanel.BringToFront()
+}
+
+function Update-MaintenanceSectionNavigation {
+    if (-not $script:IsInProcessHosted) { return }
+    try {
+        $pairs = @(
+            @($dashboardHistoryButton, $historyTab),
+            @($dashboardStatsButton, $statisticsTab),
+            @($dashboardDiagnosisButton, $diagnosisTab),
+            @($dashboardSchematicsButton, $schematicsTab),
+            @($dashboardRulesButton, $rulesTab)
+        )
+        foreach ($pair in $pairs) {
+            $button = $pair[0]
+            $page = $pair[1]
+            $button.Tag = if ($mainTabs.SelectedTab -eq $page) { "Primary" } else { "Secondary" }
+            Set-MaintenanceButtonStyle $button
+        }
+        Update-MaintenanceHostedViewport
+    } catch {}
+}
 
 $recentGroup = New-Object Windows.Forms.GroupBox
 $recentGroup.Text = "Atividade recente"
@@ -3050,21 +3156,13 @@ if ($script:IsInProcessHosted -and $null -ne $script:InternalBackButton) {
 function Update-MaintenanceInternalNavigation {
     if (-not $script:IsInProcessHosted) { return }
     try {
-        $showInternalBack = ($mainTabs.SelectedTab -ne $dashboardTab)
         $footerHomeButton.Visible = $false
-        if ($null -ne $script:InternalNavPanel) {
-            $script:InternalNavPanel.Visible = $showInternalBack
-            if ($showInternalBack -and $null -ne $script:InternalSectionLabel) {
-                $section = [string]$mainTabs.SelectedTab.Text
-                if ($section -eq "Passagem") { $section = "Passagem / manutenção" }
-                $script:InternalSectionLabel.Text = $section
-            }
-        }
-        Update-MaintenanceHostedViewport
+        if ($null -ne $script:InternalNavPanel) { $script:InternalNavPanel.Visible = $false }
+        Update-MaintenanceSectionNavigation
     } catch {}
 }
 
-$mainTabs.Add_SelectedIndexChanged({ Update-MaintenanceInternalNavigation })
+$mainTabs.Add_SelectedIndexChanged({ Update-MaintenanceInternalNavigation; Update-MaintenanceSectionNavigation })
 $recentGrid.Add_CellDoubleClick({ Show-PassageDetails (Get-SelectedRecordFromGrid $recentGrid) })
 $serialBox.Add_KeyPress({
     param($sender, $eventArgs)
@@ -3188,7 +3286,9 @@ if ($script:IsInProcessHosted) {
     Apply-MaintenanceTheme
     Reset-PassageForm
     Refresh-AllViews
+    $mainTabs.SelectedTab = $historyTab
     Update-MaintenanceResponsiveLayout
+    Update-MaintenanceSectionNavigation
 
     $form.Add_Disposed({
         try { Save-MaintenanceSettings } catch {}
