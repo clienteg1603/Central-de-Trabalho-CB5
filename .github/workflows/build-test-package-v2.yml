@@ -26,24 +26,15 @@ jobs:
           if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $work | Out-Null
 
-          $baseZip = Join-Path $work "base.zip"
-          $baseUrl = "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.8.5.zip"
-          Invoke-WebRequest -UseBasicParsing -Uri $baseUrl -OutFile $baseZip
-          Expand-Archive -LiteralPath $baseZip -DestinationPath (Join-Path $work "base") -Force
-
-          $baseRoot = Join-Path $work "base\Central-de-Trabalho-v0.8.5"
-          $referenceExe = Join-Path $baseRoot "Central de Trabalho.exe"
-          $referenceUpdaterExe = Join-Path $baseRoot "Atualizador\Central de Trabalho Updater.exe"
           $outDir = Join-Path $work "out"
-
-          & ".\src\launcher\build-host.ps1" -Version $version -OutputDirectory $outDir -ReferenceExe $referenceExe
-          & ".\src\launcher\build-updater-host.ps1" -Version $version -OutputDirectory $outDir -ReferenceExe $referenceUpdaterExe
+          & ".\src\launcher\build-host.ps1" -Version $version -OutputDirectory $outDir
+          & ".\src\launcher\build-updater-host.ps1" -Version $version -OutputDirectory $outDir
 
           $hostExe = Join-Path $outDir "Central de Trabalho.exe"
           $updaterExe = Join-Path $outDir "Central de Trabalho Updater.exe"
           if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { throw "Host nativo da Central não foi gerado." }
           if (-not (Test-Path -LiteralPath $updaterExe -PathType Leaf)) { throw "Host nativo do Atualizador não foi gerado." }
-          Write-Host "Hosts nativos prontos:"
+          Write-Host "Hosts nativos prontos com identidade visual CT:"
           Write-Host "  $hostExe"
           Write-Host "  $updaterExe"
 
