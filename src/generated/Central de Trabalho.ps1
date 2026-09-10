@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.17.1"
+$script:AppVersion = "0.18.0"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -53,6 +53,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
 $script:UpdaterDirectory = [IO.Path]::Combine($script:RootPath, "Atualizador")
+$script:UpdaterExecutable = [IO.Path]::Combine($script:UpdaterDirectory, "Central de Trabalho Updater.exe")
 $script:UpdaterScript = [IO.Path]::Combine($script:UpdaterDirectory, "Central de Trabalho Updater.ps1")
 $script:UpdaterCore = [IO.Path]::Combine($script:UpdaterDirectory, "Update.Core.ps1")
 $script:UpdaterChannels = [IO.Path]::Combine($script:UpdaterDirectory, "CANAIS.json")
@@ -261,7 +262,7 @@ function Set-StatusMessage {
 function Get-CentralHealthSnapshot {
     $generatorRequired = @($script:GeneratorScript, $script:GeneratorCore)
     $maintenanceRequired = @($script:MaintenanceScript, $script:MaintenanceCore)
-    $updaterRequired = @($script:UpdaterScript, $script:UpdaterCore, $script:UpdaterChannels)
+    $updaterRequired = @($script:UpdaterExecutable, $script:UpdaterScript, $script:UpdaterCore, $script:UpdaterChannels)
 
     $generatorMissing = @($generatorRequired | Where-Object { -not [IO.File]::Exists($_) })
     $maintenanceMissing = @($maintenanceRequired | Where-Object { -not [IO.File]::Exists($_) })
@@ -513,22 +514,13 @@ function Start-UpdaterModule {
     }
 
     try {
-        $powershellPath = [IO.Path]::Combine(
-            [Environment]::GetFolderPath([Environment+SpecialFolder]::Windows),
-            "System32",
-            "WindowsPowerShell",
-            "v1.0",
-            "powershell.exe"
-        )
-        if (-not [IO.File]::Exists($powershellPath)) { $powershellPath = "powershell.exe" }
-
         $startInfo = New-Object Diagnostics.ProcessStartInfo
-        $startInfo.FileName = $powershellPath
+        $startInfo.FileName = $script:UpdaterExecutable
         $startInfo.WorkingDirectory = $script:UpdaterDirectory
-        $startInfo.Arguments = '-NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Hidden -File "' + $script:UpdaterScript + '" -InstallRoot "' + $script:RootPath + '" -CurrentVersion "' + $script:AppVersion + '" -ParentProcessId ' + $PID
+        $startInfo.Arguments = '-InstallRoot "' + $script:RootPath + '" -CurrentVersion "' + $script:AppVersion + '" -ParentProcessId ' + $PID
         $startInfo.UseShellExecute = $true
         $script:UpdaterProcess = [Diagnostics.Process]::Start($startInfo)
-        Set-StatusMessage "Tela de atualizações aberta em uma nova janela." "Success"
+        Set-StatusMessage "Tela de atualizações aberta pelo Atualizador nativo." "Success"
     }
     catch {
         Set-StatusMessage "Falha ao iniciar o Atualizador." "Error"
