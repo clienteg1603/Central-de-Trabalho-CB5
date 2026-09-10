@@ -26,7 +26,7 @@ jobs:
           BASE_URL="https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v${BASE_VERSION}.zip"
           BUILD_DIR="$RUNNER_TEMP/central-build"
           rm -rf "$BUILD_DIR"
-          mkdir -p "$BUILD_DIR/patches"
+          mkdir -p "$BUILD_DIR"
 
           curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 \
             -o "$BUILD_DIR/base.zip" "$BASE_URL"
@@ -34,48 +34,26 @@ jobs:
           BASE_ROOT="$BUILD_DIR/base/Central-de-Trabalho-v${BASE_VERSION}"
           test -d "$BASE_ROOT"
 
-          cat src/current/patches/central-trabalho.patch.gz.b64.part* \
-            | base64 -d | gzip -d > "$BUILD_DIR/patches/central-trabalho.patch"
-          for NAME in manutencao-cb5 gerador-planilhas; do
-            base64 -d "src/current/patches/${NAME}.patch.gz.b64" \
-              | gzip -d > "$BUILD_DIR/patches/${NAME}.patch"
-          done
+          # A partir da v0.11.x, os fontes montados ficam no próprio repositório.
+          # Isso elimina o ciclo frágil de patches grandes e facilita evoluções pequenas.
+          test -f "src/generated/Central de Trabalho.ps1"
+          test -f "src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
+          test -f "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
 
-          python3 - "$BASE_ROOT" <<'PY'
-          import pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          paths = [
-              root / 'Central de Trabalho.ps1',
-              root / 'Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1',
-              root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1',
-          ]
-          for p in paths:
-              p.write_text(p.read_text(encoding='utf-8-sig'), encoding='utf-8', newline='')
-          PY
+          if compgen -G "src/current/transforms/*.py" > /dev/null; then
+            for transform in src/current/transforms/*.py; do
+              echo "Aplicando transformação: $transform"
+              python3 "$transform"
+            done
+          fi
 
-          patch --batch "$BASE_ROOT/Central de Trabalho.ps1" \
-            < "$BUILD_DIR/patches/central-trabalho.patch"
-          patch --batch "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" \
-            < "$BUILD_DIR/patches/manutencao-cb5.patch"
-          patch --batch "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" \
-            < "$BUILD_DIR/patches/gerador-planilhas.patch"
+          cp "src/generated/Central de Trabalho.ps1" "$BASE_ROOT/Central de Trabalho.ps1"
+          cp "src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" \
+             "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
+          cp "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" \
+             "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
 
-          # Salva snapshots de texto da versão montada para facilitar as próximas evoluções.
-          mkdir -p src/generated/Modulos/Central-de-Manutencao-CB5 \
-                   src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5
-          python3 - "$BASE_ROOT" <<'PY'
-          import pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          copies = [
-              (root / 'Central de Trabalho.ps1', pathlib.Path('src/generated/Central de Trabalho.ps1')),
-              (root / 'Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1', pathlib.Path('src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1')),
-              (root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1', pathlib.Path('src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1')),
-          ]
-          for src, dst in copies:
-              dst.parent.mkdir(parents=True, exist_ok=True)
-              dst.write_text(src.read_text(encoding='utf-8-sig'), encoding='utf-8', newline='')
-          PY
-
+          # Windows PowerShell trabalha de forma mais segura com estes scripts em UTF-8 BOM.
           python3 - "$BASE_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
@@ -87,7 +65,8 @@ jobs:
           bom = b'\xef\xbb\xbf'
           for p in paths:
               raw = p.read_bytes()
-              if raw.startswith(bom): raw = raw[len(bom):]
+              if raw.startswith(bom):
+                  raw = raw[len(bom):]
               p.write_bytes(bom + raw)
           PY
 
