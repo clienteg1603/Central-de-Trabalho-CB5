@@ -63,14 +63,13 @@ jobs:
           name: central-native-host
           path: ${{ runner.temp }}/central-native-host
 
-      - name: Build clean package
+      - name: Build clean package from versioned source
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
-          BASE_VERSION="0.8.5"
-          BASE_URL="https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v${BASE_VERSION}.zip"
           BUILD_DIR="$RUNNER_TEMP/central-build"
+          SOURCE_ROOT="src/generated"
           NATIVE_HOST="$RUNNER_TEMP/central-native-host/Central de Trabalho.exe"
           NATIVE_UPDATER_HOST="$RUNNER_TEMP/central-native-host/Central de Trabalho Updater.exe"
           rm -rf "$BUILD_DIR"
@@ -78,18 +77,22 @@ jobs:
 
           test -f "$NATIVE_HOST"
           test -f "$NATIVE_UPDATER_HOST"
-          curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 \
-            -o "$BUILD_DIR/base.zip" "$BASE_URL"
-          unzip -q "$BUILD_DIR/base.zip" -d "$BUILD_DIR/base"
-          BASE_ROOT="$BUILD_DIR/base/Central-de-Trabalho-v${BASE_VERSION}"
-          test -d "$BASE_ROOT"
 
-          test -f "src/generated/Central de Trabalho.ps1"
-          test -f "src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
-          test -f "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
-          test -f "src/generated/Atualizador/Central de Trabalho Updater.ps1"
-          test -f "src/generated/Atualizador/Update.Core.ps1"
-          test -f "src/generated/Atualizador/CANAIS.json"
+          # Todos os arquivos operacionais de texto devem existir no próprio fonte atual.
+          # O build não pode depender de baixar ou reaproveitar uma versão Estável antiga.
+          required_sources=(
+            "$SOURCE_ROOT/Central de Trabalho.ps1"
+            "$SOURCE_ROOT/Atualizador/CANAIS.json"
+            "$SOURCE_ROOT/Atualizador/Central de Trabalho Updater.ps1"
+            "$SOURCE_ROOT/Atualizador/Update.Core.ps1"
+            "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
+            "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1"
+            "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
+            "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1"
+          )
+          for source in "${required_sources[@]}"; do
+            test -s "$source" || { echo "ERRO: fonte runtime ausente ou vazio: $source"; exit 1; }
+          done
 
           # Evoluções incrementais ficam em transforms somente até serem aplicadas.
           # Depois do build, o fonte montado vira a nova base e a transformação é removida.
@@ -101,20 +104,25 @@ jobs:
             rm -f src/current/transforms/*.py
           fi
 
-          cp "src/generated/Central de Trabalho.ps1" "$BASE_ROOT/Central de Trabalho.ps1"
-          cp "src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" \
-             "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
-          cp "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" \
-             "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
-          cp "src/generated/Atualizador/Central de Trabalho Updater.ps1" \
-             "$BASE_ROOT/Atualizador/Central de Trabalho Updater.ps1"
-          cp "src/generated/Atualizador/Update.Core.ps1" \
-             "$BASE_ROOT/Atualizador/Update.Core.ps1"
-          cp "src/generated/Atualizador/CANAIS.json" \
-             "$BASE_ROOT/Atualizador/CANAIS.json"
+          OUT_ROOT="$BUILD_DIR/Central-de-Trabalho-v${VERSION}"
+          mkdir -p "$OUT_ROOT/Atualizador" \
+                   "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5" \
+                   "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5"
+
+          # Distribuição 0.20+: todo runtime vem diretamente do fonte versionado atual.
+          cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
+          cp "$SOURCE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
+          cp "$SOURCE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
+          cp "$NATIVE_UPDATER_HOST" "$OUT_ROOT/Atualizador/Central de Trabalho Updater.exe"
+          cp "$SOURCE_ROOT/Atualizador/Central de Trabalho Updater.ps1" "$OUT_ROOT/Atualizador/"
+          cp "$SOURCE_ROOT/Atualizador/Update.Core.ps1" "$OUT_ROOT/Atualizador/"
+          cp "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
+          cp "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
+          cp "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
+          cp "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
 
           # Windows PowerShell lê estes scripts de forma mais segura com UTF-8 BOM.
-          python3 - "$BASE_ROOT" <<'PY'
+          python3 - "$OUT_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
           paths = [
@@ -122,7 +130,9 @@ jobs:
               root / 'Atualizador/Central de Trabalho Updater.ps1',
               root / 'Atualizador/Update.Core.ps1',
               root / 'Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1',
+              root / 'Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1',
               root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1',
+              root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1',
           ]
           bom = b'\xef\xbb\xbf'
           for p in paths:
@@ -131,23 +141,6 @@ jobs:
                   raw = raw[len(bom):]
               p.write_bytes(bom + raw)
           PY
-
-          OUT_ROOT="$BUILD_DIR/Central-de-Trabalho-v${VERSION}"
-          mkdir -p "$OUT_ROOT/Atualizador" \
-                   "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5" \
-                   "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5"
-
-          # Distribuição 0.19+: somente o EXE nativo é ponto de entrada da Central.
-          cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
-          cp "$BASE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
-          cp "$BASE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
-          cp "$NATIVE_UPDATER_HOST" "$OUT_ROOT/Atualizador/Central de Trabalho Updater.exe"
-          cp "$BASE_ROOT/Atualizador/Central de Trabalho Updater.ps1" "$OUT_ROOT/Atualizador/"
-          cp "$BASE_ROOT/Atualizador/Update.Core.ps1" "$OUT_ROOT/Atualizador/"
-          cp "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
-          cp "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
-          cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
-          cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
 
           if find "$OUT_ROOT" -type f \( -iname '*.vbs' -o -iname '*.bat' -o -iname '*.cmd' \) | grep -q .; then
             echo "ERRO: lançador/script legado encontrado no pacote limpo."
@@ -160,7 +153,7 @@ jobs:
           python3 src/ci/regression_contracts.py "$OUT_ROOT"
           pwsh -NoProfile -NonInteractive -File src/ci/parse_powershell.ps1 -Root "$OUT_ROOT"
 
-          # O pacote de Teste não pode voltar a carregar um lançador de PowerShell no Atualizador.
+          # O pacote de Teste não pode voltar a carregar um lançador de PowerShell externo.
           python3 - "$OUT_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
