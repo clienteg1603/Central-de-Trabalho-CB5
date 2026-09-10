@@ -37,8 +37,8 @@ maint = rep(maint, '$script:AppVersion = "0.5.5"', '$script:AppVersion = "0.5.6"
 # Variáveis sempre definidas para o StrictMode, inclusive no modo independente.
 maint = rep(
     maint,
-    '$script:CorrectionMode = $false\n',
-    '$script:CorrectionMode = $false\n$script:InternalNavPanel = $null\n$script:InternalBackButton = $null\n$script:InternalSectionLabel = $null\n',
+    '$script:IsLoadingForm = $false\n$script:CorrectionMode = $false\n',
+    '$script:IsLoadingForm = $false\n$script:CorrectionMode = $false\n$script:InternalNavPanel = $null\n$script:InternalBackButton = $null\n$script:InternalSectionLabel = $null\n',
     'estado da navegação interna'
 )
 
@@ -215,7 +215,6 @@ maint = rep(
     'evento do tema'
 )
 
-# Checagens estáticas do que motivou esta versão.
 checks = [
     ('$script:AppVersion = "0.12.1"' in central, 'Central não ficou em 0.12.1'),
     ('$script:MaintenanceVersion = "0.5.6"' in central, 'Central não referencia Manutenção 0.5.6'),
