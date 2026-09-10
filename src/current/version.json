@@ -1,6 +1,6 @@
 {
   "version": "0.19.1",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "A Central de Trabalho passa a usar oficialmente a nova identidade visual CT criada para o programa.",
     "A arte CT foi preparada em uma versão compacta própria para ícone e é convertida durante o build para o formato usado pelo executável Windows.",
