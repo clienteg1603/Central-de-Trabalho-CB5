@@ -96,9 +96,15 @@ $subsystem = [BitConverter]::ToUInt16($bytes, $optionalHeader + 68)
 if ($subsystem -ne 2) { throw "Wrong executable subsystem ($subsystem). Expected Windows GUI (2)." }
 
 $sourceText = Get-Content -LiteralPath $sourcePath -Raw
-foreach ($forbidden in @('Process.Start(', 'powershell.exe', 'pwsh.exe', 'WScript.Shell')) {
-    if ($sourceText.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-        throw "Native host contains forbidden external process call: $forbidden"
+$forbiddenPatterns = @(
+    '(?i)\bProcess\.Start\s*\(',
+    '(?i)(?<![A-Za-z0-9_.-])powershell\.exe(?![A-Za-z0-9_.-])',
+    '(?i)(?<![A-Za-z0-9_.-])pwsh\.exe(?![A-Za-z0-9_.-])',
+    '(?i)WScript\.Shell'
+)
+foreach ($pattern in $forbiddenPatterns) {
+    if ([regex]::IsMatch($sourceText, $pattern)) {
+        throw "Native host contains a forbidden external process launcher pattern: $pattern"
     }
 }
 
