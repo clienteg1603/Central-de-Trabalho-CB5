@@ -60,6 +60,22 @@ jobs:
           patch --batch "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" \
             < "$BUILD_DIR/patches/gerador-planilhas.patch"
 
+          # Salva snapshots de texto da versão montada para facilitar as próximas evoluções.
+          mkdir -p src/generated/Modulos/Central-de-Manutencao-CB5 \
+                   src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5
+          python3 - "$BASE_ROOT" <<'PY'
+          import pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          copies = [
+              (root / 'Central de Trabalho.ps1', pathlib.Path('src/generated/Central de Trabalho.ps1')),
+              (root / 'Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1', pathlib.Path('src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1')),
+              (root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1', pathlib.Path('src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1')),
+          ]
+          for src, dst in copies:
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              dst.write_text(src.read_text(encoding='utf-8-sig'), encoding='utf-8', newline='')
+          PY
+
           python3 - "$BASE_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
@@ -135,7 +151,7 @@ jobs:
           VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
           git config user.name "Central de Trabalho Builder"
           git config user.email "actions@users.noreply.github.com"
-          git add "updates/packages/Central-de-Trabalho-v${VERSION}.zip" updates/test.json
+          git add "updates/packages/Central-de-Trabalho-v${VERSION}.zip" updates/test.json src/generated
           if git diff --cached --quiet; then
             echo "Nada novo para publicar."
             exit 0
