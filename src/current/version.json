@@ -1,6 +1,6 @@
 {
   "version": "0.12.1",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Corrigido o painel principal da Central de Manutenção CB5 com foco nos defeitos visíveis encontrados na captura de tela.",
     "Os títulos dos cartões, o cabeçalho da visão geral e o texto do botão Nova passagem agora recebem contraste explícito para não desaparecerem no tema escuro.",
