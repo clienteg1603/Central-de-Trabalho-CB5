@@ -1,5 +1,6 @@
 name: Inspect updater temporary
 
+# rerun after backup validation fix
 on:
   push:
     paths:
