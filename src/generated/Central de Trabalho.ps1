@@ -6,9 +6,9 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.13.1"
+$script:AppVersion = "0.14.0"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.6.1"
+$script:GeneratorVersion = "3.6.2"
 $script:MaintenanceVersion = "0.5.8"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
@@ -1029,14 +1029,14 @@ function New-SidebarButton([string]$Text) {
 }
 
 $navHome = New-SidebarButton "⌂   Início"
-$navPrograms = New-SidebarButton "▦   Programas"
-$navPrograms.Visible = $false
+# Programas e Backup deixaram de ser botões próprios: eram rotas duplicadas.
+# Mantemos as variáveis nulas para compatibilidade com o estado interno de navegação.
+$navPrograms = $null
 $navUpdates = New-SidebarButton "↻   Atualizações"
-$navBackup = New-SidebarButton "⟲   Backup / restauração"
-$navBackup.Visible = $false
+$navBackup = $null
 $navFolder = New-SidebarButton "▣   Pasta da Central"
 $navAbout = New-SidebarButton "ⓘ   Sobre"
-foreach ($button in @($navHome, $navPrograms, $navUpdates, $navBackup, $navFolder, $navAbout)) { $navPanel.Controls.Add($button) }
+foreach ($button in @($navHome, $navUpdates, $navFolder, $navAbout)) { $navPanel.Controls.Add($button) }
 
 $sidebarBottom = New-Object Windows.Forms.Panel
 $sidebarBottom.Dock = [Windows.Forms.DockStyle]::Bottom
@@ -1127,7 +1127,7 @@ $embeddedToolbar.Padding = [Windows.Forms.Padding]::new(12, 6, 12, 6)
 $embeddedLayout.Controls.Add($embeddedToolbar, 0, 0)
 
 $embeddedBackButton = New-Object Windows.Forms.Button
-$embeddedBackButton.Text = "←  VOLTAR"
+$embeddedBackButton.Text = "←  CENTRAL"
 $embeddedBackButton.Location = [Drawing.Point]::new(12, 9)
 $embeddedBackButton.Size = [Drawing.Size]::new(100, 32)
 $embeddedBackButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.7)
@@ -1198,7 +1198,7 @@ $pageTitle.Font = [Drawing.Font]::new("Segoe UI Semibold", 21)
 $headerPanel.Controls.Add($pageTitle)
 
 $pageSubtitle = New-Object Windows.Forms.Label
-$pageSubtitle.Text = "Painel principal para acessar módulos, acompanhar o sistema e chegar rápido ao que precisa."
+$pageSubtitle.Text = "Acesse seus programas e acompanhe o estado da Central em um só lugar."
 $pageSubtitle.Location = [Drawing.Point]::new(31, 51)
 $pageSubtitle.Size = [Drawing.Size]::new(720, 28)
 $pageSubtitle.Font = [Drawing.Font]::new("Segoe UI", 10.5)
@@ -1429,9 +1429,9 @@ function New-ModuleCard {
     return @($card,$outer,$layout,$accent,$icon,$status,$titleLabel,$desc,$detailLabel,$button,$folderButton)
 }
 
-$g = New-ModuleCard "XLS" "Gerenciador de Planilhas" "Prepara mestres CB5 e TV5, gera e junta planilhas e acompanha componentes ainda pendentes de faturamento." "Versão integrada: $($script:GeneratorVersion)   •   Requer Microsoft Excel" "ABRIR NA CENTRAL"
+$g = New-ModuleCard "XLS" "Gerenciador de Planilhas" "Prepara mestres CB5 e TV5, gera e junta planilhas e acompanha componentes ainda pendentes de faturamento." "Versão integrada: $($script:GeneratorVersion)   •   Requer Microsoft Excel" "ABRIR GERENCIADOR"
 $generatorCard=$g[0]; $generatorOuter=$g[1]; $generatorLayout=$g[2]; $generatorAccentBar=$g[3]; $generatorIcon=$g[4]; $generatorStatus=$g[5]; $generatorTitle=$g[6]; $generatorDescription=$g[7]; $generatorDetail=$g[8]; $openGeneratorButton=$g[9]; $openGeneratorFolderButton=$g[10]
-$m = New-ModuleCard "CB5" "Central de Manutenção CB5" "Cadastro de peças por código, histórico automático por série, correção auditada, relatórios e apoio ao diagnóstico." "Versão integrada: $($script:MaintenanceVersion)   •   Histórico local por série" "ABRIR NA CENTRAL"
+$m = New-ModuleCard "CB5" "Central de Manutenção CB5" "Cadastro de peças por código, histórico automático por série, correção auditada, relatórios e apoio ao diagnóstico." "Versão integrada: $($script:MaintenanceVersion)   •   Histórico local por série" "ABRIR MANUTENÇÃO"
 $maintenanceCard=$m[0]; $maintenanceOuter=$m[1]; $maintenanceLayout=$m[2]; $maintenanceAccentBar=$m[3]; $maintenanceIcon=$m[4]; $maintenanceStatus=$m[5]; $maintenanceTitle=$m[6]; $maintenanceDescription=$m[7]; $maintenanceDetail=$m[8]; $openMaintenanceButton=$m[9]; $openMaintenanceFolderButton=$m[10]
 $modulesFlow.Controls.Add($generatorCard)
 $modulesFlow.Controls.Add($maintenanceCard)
@@ -1542,6 +1542,8 @@ $toolTip.SetToolTip($openGeneratorFolderButton, "Abrir a pasta do Gerenciador")
 $toolTip.SetToolTip($openMaintenanceButton, "Abrir a Central de Manutenção CB5 dentro da Central")
 $toolTip.SetToolTip($openMaintenanceFolderButton, "Abrir a pasta da Manutenção CB5")
 $toolTip.SetToolTip($quickUpdatesButton, "Abrir atualização, backup e restauração")
+$toolTip.SetToolTip($embeddedBackButton, "Voltar para a tela inicial da Central de Trabalho")
+$toolTip.SetToolTip($embeddedFolderButton, "Abrir a pasta do módulo que está em uso")
 
 foreach ($roundedPanel in @($summaryCard1,$summaryCard2,$summaryCard3,$generatorCard,$maintenanceCard,$updatesQuickCard,$folderQuickCard)) {
     Enable-RoundedControl $roundedPanel 12
@@ -1574,21 +1576,14 @@ $openMaintenanceButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-Mainte
 $openGeneratorFolderButton.Add_Click({ Open-ModuleFolder $script:GeneratorDirectory "Gerenciador de Planilhas" })
 $openMaintenanceFolderButton.Add_Click({ Open-ModuleFolder $script:MaintenanceDirectory "Central de Manutenção CB5" })
 $navUpdates.Add_Click({ Set-ActiveNavigation "Updates"; Start-UpdaterModule })
-$navBackup.Add_Click({ Set-ActiveNavigation "Backup"; Start-UpdaterModule })
 $quickUpdatesButton.Add_Click({ Start-UpdaterModule })
 $navFolder.Add_Click({ Set-ActiveNavigation "Folder"; Open-RootFolder })
 $quickFolderButton.Add_Click({ Open-RootFolder })
-$navPrograms.Add_Click({
-    Show-Dashboard
-    Set-ActiveNavigation "Programs"
-    try { $modulesFlow.ScrollControlIntoView($generatorCard) } catch {}
-    Set-StatusMessage "Escolha um programa para abri-lo dentro da Central." "Normal"
-})
 $navHome.Add_Click({ Show-Dashboard })
 $navAbout.Add_Click({
     Set-ActiveNavigation "About"
     [Windows.Forms.MessageBox]::Show(
-        "Central de Trabalho v$($script:AppVersion)`r`n`r`nIntegra o Gerenciador de Planilhas, a Central de Manutenção CB5 e o sistema de atualização.`r`n`r`nEtapa 3: integração visual e evolução da Central de Manutenção CB5.",
+        "Central de Trabalho v$($script:AppVersion)`r`n`r`nIntegra o Gerenciador de Planilhas, a Central de Manutenção CB5 e o sistema de atualização.`r`n`r`nInterface integrada e responsiva para os módulos de trabalho, manutenção e atualização.",
         "Sobre a Central de Trabalho",
         [Windows.Forms.MessageBoxButtons]::OK,
         [Windows.Forms.MessageBoxIcon]::Information

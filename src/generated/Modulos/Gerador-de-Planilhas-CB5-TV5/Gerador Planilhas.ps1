@@ -78,7 +78,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.6.1"
+$script:AppVersion = "3.6.2"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1978,8 +1978,8 @@ function Update-CombineSummary {
         if ($rowHasMaintenance) { $withMaintenance++ }
     }
     $invalidText = if ($invalidFields -gt 0) { "  •  $invalidFields quantidade(s) inválida(s)" } else { "" }
-    $balanceText = if ($combineConsumeBalanceCheck.Checked) { "consumir saldo" } else { "não consumir saldo" }
-    $combineSelectionLabel.Text = "$($combineGrid.Rows.Count) lote(s) selecionado(s)  •  $withMaintenance mestre(s) serão atualizadas  •  $balanceText$invalidText"
+    # O estado de consumo já possui um cartão próprio logo abaixo; não repetimos a mesma informação no resumo.
+    $combineSelectionLabel.Text = "$($combineGrid.Rows.Count) lote(s) selecionado(s)  •  $withMaintenance mestre(s) serão atualizadas$invalidText"
     $combineBalanceStatus.Text = if ($combineConsumeBalanceCheck.Checked) { "SALDO: SERÁ CONSUMIDO" } else { "SALDO: NÃO SERÁ CONSUMIDO" }
     if ($null -ne $script:CurrentPalette) {
         $combineSelectionLabel.ForeColor = if ($invalidFields -gt 0) { $script:CurrentPalette.Error } else { $script:CurrentPalette.Text }
@@ -2392,7 +2392,7 @@ function Apply-AppTheme {
         $textBox.BackColor = $palette.Input
         $textBox.ForeColor = $palette.Text
     }
-    $combineConsumeBalanceCheck.BackColor = $palette.Background
+    $combineConsumeBalanceCheck.BackColor = $palette.Surface
     $combineConsumeBalanceCheck.ForeColor = $palette.Text
     foreach ($button in @($masterButton, $openDestinationCardButton, $previewMasterButton, $copyStatusButton, $componentSearchClearButton, $componentLaunchButton, $componentAdjustButton, $componentNewButton, $componentEditButton, $componentBackupButton, $componentRestoreButton, $combineAddButton, $combineRemoveButton, $combineUpButton, $combineDownButton, $combineClearButton, $combineCopyQuantitiesButton, $combinePasteQuantitiesButton, $previewCombineButton, $copyCombineStatusButton, $openFolderButton, $updateMasterButton, $generateButton, $combineGenerateButton)) {
         Set-ButtonTheme $button $palette
@@ -2941,7 +2941,7 @@ $extraGrid.Columns[1].ToolTipText = "Digite a quantidade de peças; zero ou vazi
 $tabExtra.Controls.Add($extraGrid)
 
 $componentsIntro = New-Object Windows.Forms.Label
-$componentsIntro.Text = "Saldo a faturar: quantidades já usadas nas manutenções e ainda não enviadas ao faturamento. A baixa automática acontece somente após Juntar lotes terminar com sucesso."
+$componentsIntro.Text = "Saldo a faturar reúne componentes já usados e ainda não enviados ao faturamento. A baixa automática ocorre somente após Juntar lotes concluir com sucesso."
 $componentsIntro.Location = New-Object Drawing.Point(18, 10)
 $componentsIntro.Size = New-Object Drawing.Size(982, 38)
 $componentsIntro.Anchor = "Top,Left,Right"
@@ -3085,6 +3085,7 @@ $componentLaunchButton.Location = New-Object Drawing.Point(10, 9)
 $componentLaunchButton.Size = New-Object Drawing.Size(174, 34)
 $componentLaunchButton.Tag = "Primary"
 $componentBalancesPage.Controls.Add($componentLaunchButton)
+$toolTip.SetToolTip($componentLaunchButton, "Registrar no saldo uma quantidade de componente que já foi usada e ainda será faturada.")
 $toolTip.SetToolTip($componentLaunchButton, "Acrescenta ao saldo a faturar a quantidade usada do componente selecionado.")
 
 $componentAdjustButton = New-Object Windows.Forms.Button
@@ -3093,6 +3094,7 @@ $componentAdjustButton.Location = New-Object Drawing.Point(194, 9)
 $componentAdjustButton.Size = New-Object Drawing.Size(145, 34)
 $componentAdjustButton.Tag = "Secondary"
 $componentBalancesPage.Controls.Add($componentAdjustButton)
+$toolTip.SetToolTip($componentAdjustButton, "Corrigir manualmente o saldo atual do componente selecionado.")
 $toolTip.SetToolTip($componentAdjustButton, "Define manualmente o saldo exato do componente selecionado.")
 
 $componentNewButton = New-Object Windows.Forms.Button
@@ -3101,6 +3103,7 @@ $componentNewButton.Location = New-Object Drawing.Point(349, 9)
 $componentNewButton.Size = New-Object Drawing.Size(165, 34)
 $componentNewButton.Tag = "Secondary"
 $componentBalancesPage.Controls.Add($componentNewButton)
+$toolTip.SetToolTip($componentNewButton, "Cadastrar um novo componente para reconhecimento e controle de faturamento.")
 
 $componentEditButton = New-Object Windows.Forms.Button
 $componentEditButton.Text = "Editar"
@@ -3108,6 +3111,7 @@ $componentEditButton.Location = New-Object Drawing.Point(524, 9)
 $componentEditButton.Size = New-Object Drawing.Size(160, 34)
 $componentEditButton.Tag = "Secondary"
 $componentBalancesPage.Controls.Add($componentEditButton)
+$toolTip.SetToolTip($componentEditButton, "Editar nome, códigos, texto de reparo, apelidos ou estado do componente selecionado.")
 
 $componentGrid = New-Object Windows.Forms.DataGridView
 $componentGrid.Location = New-Object Drawing.Point(10, 51)
