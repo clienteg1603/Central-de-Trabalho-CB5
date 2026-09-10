@@ -1,6 +1,6 @@
 {
   "version": "0.12.0",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 4 começa pelo Gerenciador de Planilhas CB5/TV5 com uma correção estrutural da integração.",
     "Dentro da Central, o Gerenciador deixa de ser uma janela Form dimensionada pelo monitor e passa a ser um UserControl nativo encaixado diretamente na área disponível.",
