@@ -2,21 +2,18 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.14.0",
+  "Version": "0.14.1",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.14.0.zip",
-  "PackageSha256": "54F683CBF0A4BC20D994CDCD8FED83F0C9700A7E646F8EF2D7AC7924027E5957",
-  "PackageSize": 904128,
-  "PackageRoot": "Central-de-Trabalho-v0.14.0",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.14.1.zip",
+  "PackageSha256": "B44FFBDD44B99D4FD93F14F57E514CD379513A7269D58B5213A468139607C99C",
+  "PackageSize": 904121,
+  "PackageRoot": "Central-de-Trabalho-v0.14.1",
   "ReleaseNotes": [
-    "Iniciada a etapa de polimento geral da Central de Trabalho.",
-    "A navegação lateral deixa de criar internamente os antigos botões duplicados Programas e Backup/restauração; ficam apenas Início, Atualizações, Pasta da Central e Sobre.",
-    "Ao abrir um módulo, o botão superior passa a dizer ← CENTRAL, deixando mais clara a diferença entre voltar para a Central e voltar ao painel interno da Manutenção.",
-    "Os cartões principais agora usam ações mais diretas: ABRIR GERENCIADOR e ABRIR MANUTENÇÃO.",
-    "O texto da Visão geral e da tela Sobre foi atualizado para refletir a fase atual do programa.",
-    "No Juntar lotes, o estado de consumo de saldo deixa de aparecer duas vezes: ele permanece apenas no cartão próprio SALDO SERÁ/NÃO SERÁ CONSUMIDO.",
-    "O bloco de Componentes recebeu texto de contexto mais curto e tooltips nas ações de lançar uso, ajustar saldo, criar e editar componente.",
-    "Gerenciador de Planilhas passa para v3.6.2; Central de Manutenção permanece em v0.5.8.",
-    "Nenhuma regra de geração, união, saldo, manutenção ou dados foi alterada nesta atualização."
+    "Hotfix da Central de Trabalho após a v0.14.0.",
+    "Corrigida a exceção de inicialização 'A propriedade Width não foi encontrada neste objeto'.",
+    "A causa era o layout responsivo ainda tentar redimensionar os antigos botões Programas e Backup/restauração depois que eles foram removidos da navegação.",
+    "Os três perfis responsivos agora trabalham somente com os quatro controles que realmente existem: Início, Atualizações, Pasta da Central e Sobre.",
+    "Gerenciador de Planilhas permanece em v3.6.2 e Central de Manutenção em v0.5.8.",
+    "Nenhuma regra de geração, união, saldo, manutenção ou dados foi alterada."
   ]
 }

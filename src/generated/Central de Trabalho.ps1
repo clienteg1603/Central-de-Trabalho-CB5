@@ -6,7 +6,7 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.14.0"
+$script:AppVersion = "0.14.1"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.6.2"
 $script:MaintenanceVersion = "0.5.8"
@@ -845,7 +845,7 @@ function Update-CentralAdaptiveLayout {
                 $brandSub.Font = [Drawing.Font]::new("Segoe UI", 7.5)
                 $sidebarSection.Height = 25
                 $navPanel.Height = 180
-                foreach ($b in @($navHome,$navPrograms,$navUpdates,$navBackup,$navFolder,$navAbout)) { $b.Width = 154; $b.Height = 35; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,4); $b.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.2) }
+                foreach ($b in @($navHome,$navUpdates,$navFolder,$navAbout)) { $b.Width = 154; $b.Height = 35; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,4); $b.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.2) }
                 $sidebarBottom.Height = 137
                 $embeddedToolbar.Height = 44
                 $embeddedBackButton.Size = [Drawing.Size]::new(92, 30)
@@ -870,7 +870,7 @@ function Update-CentralAdaptiveLayout {
                 $brandSub.Font = [Drawing.Font]::new("Segoe UI", 8)
                 $sidebarSection.Height = 28
                 $navPanel.Height = 195
-                foreach ($b in @($navHome,$navPrograms,$navUpdates,$navBackup,$navFolder,$navAbout)) { $b.Width = 164; $b.Height = 38; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,5); $b.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.6) }
+                foreach ($b in @($navHome,$navUpdates,$navFolder,$navAbout)) { $b.Width = 164; $b.Height = 38; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,5); $b.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.6) }
                 $sidebarBottom.Height = 146
                 $embeddedToolbar.Height = 47
                 $embeddedBackButton.Size = [Drawing.Size]::new(96,31)
@@ -895,7 +895,7 @@ function Update-CentralAdaptiveLayout {
                 $brandSub.Font = [Drawing.Font]::new("Segoe UI",8.5)
                 $sidebarSection.Height = 30
                 $navPanel.Height = 210
-                foreach ($b in @($navHome,$navPrograms,$navUpdates,$navBackup,$navFolder,$navAbout)) { $b.Width = 178; $b.Height = 42; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,6); $b.Font = [Drawing.Font]::new("Segoe UI Semibold",9) }
+                foreach ($b in @($navHome,$navUpdates,$navFolder,$navAbout)) { $b.Width = 178; $b.Height = 42; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,6); $b.Font = [Drawing.Font]::new("Segoe UI Semibold",9) }
                 $sidebarBottom.Height = 156
                 $embeddedToolbar.Height = 50
                 $embeddedBackButton.Size = [Drawing.Size]::new(100,32)
