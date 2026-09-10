@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.16.1"
+$script:AppVersion = "0.16.2"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -321,7 +321,6 @@ function Start-EmbeddedModule {
     param([ValidateSet("Generator", "Maintenance")][string]$Module)
 
     $moduleScript = if ($Module -eq "Generator") { $script:GeneratorScript } else { $script:MaintenanceScript }
-    $moduleDirectory = if ($Module -eq "Generator") { $script:GeneratorDirectory } else { $script:MaintenanceDirectory }
     $moduleName = if ($Module -eq "Generator") { "Gerenciador de Planilhas" } else { "Central de Manutenção CB5" }
     $moduleVersion = if ($Module -eq "Generator") { $script:GeneratorVersion } else { $script:MaintenanceVersion }
 
@@ -345,12 +344,19 @@ function Start-EmbeddedModule {
         $mainLayout.Visible = $false
         $embeddedHost.Visible = $true
         $embeddedHost.BringToFront()
+        Set-ActiveNavigation ""
         $embeddedTitle.Text = $moduleName
         $embeddedSubtitle.Text = "Módulo v$moduleVersion integrado à Central de Trabalho"
-        $embeddedLoading.Text = "Carregando $moduleName..."
-        $embeddedLoading.Visible = $true
         $embeddedContent.BackColor = $script:CurrentPalette.Background
         $embeddedContent.Controls.Clear()
+        $embeddedLoading.Text = "Carregando $moduleName...`r`nAguarde um instante."
+        $embeddedContent.Controls.Add($embeddedLoading)
+        $embeddedLoading.Visible = $true
+        $embeddedLoading.BringToFront()
+        $form.UseWaitCursor = $true
+        $embeddedContent.Cursor = [Windows.Forms.Cursors]::WaitCursor
+        Set-StatusMessage "Carregando $moduleName..." "Normal"
+        [Windows.Forms.Application]::DoEvents()
 
         # New-Module mantém um escopo de script vivo para os eventos do módulo.
         # Módulos novos podem exportar um UserControl (preferido) e módulos antigos
@@ -431,6 +437,8 @@ function Start-EmbeddedModule {
     }
     finally {
         $script:ModuleLoading = $false
+        try { $form.UseWaitCursor = $false } catch {}
+        try { $embeddedContent.Cursor = [Windows.Forms.Cursors]::Default } catch {}
         try { Update-CentralAvailabilityState } catch {}
     }
 }
@@ -619,11 +627,21 @@ function Update-CentralAvailabilityState {
         $maintenanceAvailable = [IO.File]::Exists($script:MaintenanceScript)
         $updaterAvailable = [IO.File]::Exists($script:UpdaterScript)
 
-        if ($null -ne $openGeneratorButton) { $openGeneratorButton.Enabled = ($generatorAvailable -and -not $script:ModuleLoading) }
-        if ($null -ne $openMaintenanceButton) { $openMaintenanceButton.Enabled = ($maintenanceAvailable -and -not $script:ModuleLoading) }
-        if ($null -ne $openGeneratorFolderButton) { $openGeneratorFolderButton.Enabled = [IO.Directory]::Exists($script:GeneratorDirectory) }
-        if ($null -ne $openMaintenanceFolderButton) { $openMaintenanceFolderButton.Enabled = [IO.Directory]::Exists($script:MaintenanceDirectory) }
-        if ($null -ne $navUpdates) { $navUpdates.Enabled = $updaterAvailable }
+        $busy = [bool]$script:ModuleLoading
+        if ($null -ne $openGeneratorButton) { $openGeneratorButton.Enabled = ($generatorAvailable -and -not $busy) }
+        if ($null -ne $openMaintenanceButton) { $openMaintenanceButton.Enabled = ($maintenanceAvailable -and -not $busy) }
+        if ($null -ne $openGeneratorFolderButton) { $openGeneratorFolderButton.Enabled = ([IO.Directory]::Exists($script:GeneratorDirectory) -and -not $busy) }
+        if ($null -ne $openMaintenanceFolderButton) { $openMaintenanceFolderButton.Enabled = ([IO.Directory]::Exists($script:MaintenanceDirectory) -and -not $busy) }
+        if ($null -ne $navHome) { $navHome.Enabled = -not $busy }
+        if ($null -ne $navUpdates) { $navUpdates.Enabled = ($updaterAvailable -and -not $busy) }
+        if ($null -ne $navFolder) { $navFolder.Enabled = -not $busy }
+        if ($null -ne $navAbout) { $navAbout.Enabled = -not $busy }
+        if ($null -ne $themeCombo) { $themeCombo.Enabled = -not $busy }
+        if ($null -ne $embeddedBackButton) { $embeddedBackButton.Enabled = -not $busy }
+        if ($null -ne $embeddedFolderButton) {
+            $moduleFolderAvailable = if ($script:EmbeddedModule -eq "Generator") { [IO.Directory]::Exists($script:GeneratorDirectory) } elseif ($script:EmbeddedModule -eq "Maintenance") { [IO.Directory]::Exists($script:MaintenanceDirectory) } else { $false }
+            $embeddedFolderButton.Enabled = ($moduleFolderAvailable -and -not $busy)
+        }
 
         if ($null -ne $generatorStatus) {
             $generatorStatus.Text = if ($generatorAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
@@ -721,8 +739,6 @@ function Apply-AppTheme {
         if ($null -ne $embeddedAccentLine) {
             $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } else { $script:CurrentPalette.Accent }
         }
-        $headerStatusPill.BackColor = $script:CurrentPalette.SuccessBack
-        $headerStatusPill.ForeColor = $script:CurrentPalette.Success
     } catch {}
     try {
         if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
@@ -1094,11 +1110,7 @@ function New-SidebarButton([string]$Text) {
 }
 
 $navHome = New-SidebarButton "⌂   Início"
-# Programas e Backup deixaram de ser botões próprios: eram rotas duplicadas.
-# Mantemos as variáveis nulas para compatibilidade com o estado interno de navegação.
-$navPrograms = $null
 $navUpdates = New-SidebarButton "↻   Atualizações"
-$navBackup = $null
 $navFolder = New-SidebarButton "▣   Pasta da Central"
 $navAbout = New-SidebarButton "ⓘ   Sobre"
 foreach ($button in @($navHome, $navUpdates, $navFolder, $navAbout)) { $navPanel.Controls.Add($button) }
@@ -1157,11 +1169,9 @@ $rootLayout.Controls.Add($mainPanel, 1, 0)
 $mainLayout = New-Object Windows.Forms.TableLayoutPanel
 $mainLayout.Dock = [Windows.Forms.DockStyle]::Fill
 $mainLayout.ColumnCount = 1
-$mainLayout.RowCount = 5
+$mainLayout.RowCount = 3
 [void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 92)))
-[void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 0)))
 [void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
-[void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 0)))
 [void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 44)))
 
 $mainPanel.Controls.Add($mainLayout)
@@ -1249,9 +1259,8 @@ $embeddedWatchTimer.Add_Tick({
     try {
         if ($embeddedHost.Visible -and $null -ne $script:HostedForm) {
             if ($script:HostedForm.IsDisposed) {
+                Close-EmbeddedModule -Force
                 Show-Dashboard -SkipClose
-                $script:HostedForm = $null
-                $script:EmbeddedModule = ""
                 Set-StatusMessage "O módulo integrado foi fechado." "Normal"
             }
         }
@@ -1287,82 +1296,15 @@ $todayLabel.Location = [Drawing.Point]::new([Math]::Max(760, $targetWidth - 455)
 $todayLabel.Font = [Drawing.Font]::new("Segoe UI", 9)
 $headerPanel.Controls.Add($todayLabel)
 
-$headerStatusPill = New-Object Windows.Forms.Label
-$headerStatusPill.Text = "  ●  SISTEMA PRONTO  "
-$headerStatusPill.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
-$headerStatusPill.AutoSize = $true
-$headerStatusPill.Padding = [Windows.Forms.Padding]::new(7, 5, 7, 5)
-$headerStatusPill.Location = [Drawing.Point]::new([Math]::Max(770, $targetWidth - 335), 10)
-$headerStatusPill.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.5)
-$headerPanel.Controls.Add($headerStatusPill)
-$headerStatusPill.Visible = $false
-
 $headerAccent = New-Object Windows.Forms.Panel
 $headerAccent.Dock = [Windows.Forms.DockStyle]::Bottom
 $headerAccent.Height = 2
 $headerPanel.Controls.Add($headerAccent)
 
-$summaryHost = New-Object Windows.Forms.Panel
-$summaryHost.Dock = [Windows.Forms.DockStyle]::Fill
-$summaryHost.Padding = [Windows.Forms.Padding]::new(18, 2, 18, 6)
-$summaryHost.Visible = $false
-$mainLayout.Controls.Add($summaryHost, 0, 1)
-
-$summaryFlow = New-Object Windows.Forms.FlowLayoutPanel
-$summaryFlow.Dock = [Windows.Forms.DockStyle]::Fill
-$summaryFlow.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
-$summaryFlow.WrapContents = $false
-$summaryFlow.AutoScroll = $false
-$summaryFlow.Padding = [Windows.Forms.Padding]::new(8, 4, 8, 4)
-$summaryHost.Controls.Add($summaryFlow)
-
-function New-SummaryCard([string]$Title, [string]$Value, [string]$DotText) {
-    $card = New-Object Windows.Forms.Panel
-    $card.Margin = [Windows.Forms.Padding]::new(8, 3, 8, 3)
-    $layout = New-Object Windows.Forms.TableLayoutPanel
-    $layout.Dock = [Windows.Forms.DockStyle]::Fill
-    $layout.Padding = [Windows.Forms.Padding]::new(15, 9, 14, 8)
-    $layout.ColumnCount = 2
-    $layout.RowCount = 2
-    [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 27)))
-    [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 45)))
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 55)))
-    $card.Controls.Add($layout)
-    $dot = New-Object Windows.Forms.Label
-    $dot.Text = $DotText
-    $dot.Dock = [Windows.Forms.DockStyle]::Fill
-    $dot.TextAlign = [Drawing.ContentAlignment]::MiddleCenter
-    $dot.Font = [Drawing.Font]::new("Segoe UI Semibold", 12)
-    $layout.Controls.Add($dot, 0, 0)
-    $layout.SetRowSpan($dot, 2)
-    $label = New-Object Windows.Forms.Label
-    $label.Text = $Title
-    $label.Dock = [Windows.Forms.DockStyle]::Fill
-    $label.TextAlign = [Drawing.ContentAlignment]::BottomLeft
-    $label.Font = [Drawing.Font]::new("Segoe UI", 8.5)
-    $layout.Controls.Add($label, 1, 0)
-    $valueLabel = New-Object Windows.Forms.Label
-    $valueLabel.Text = $Value
-    $valueLabel.Dock = [Windows.Forms.DockStyle]::Fill
-    $valueLabel.TextAlign = [Drawing.ContentAlignment]::TopLeft
-    $valueLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", 12.5)
-    $layout.Controls.Add($valueLabel, 1, 1)
-    return @($card, $layout, $dot, $label, $valueLabel)
-}
-
-$s1 = New-SummaryCard "Versão da Central" "$($script:AppVersion)" "●"
-$summaryCard1=$s1[0]; $summaryLayout1=$s1[1]; $summaryDot1=$s1[2]; $summaryLabel1=$s1[3]; $summaryValue1=$s1[4]
-$s2 = New-SummaryCard "Módulos integrados" "2 disponíveis" "●"
-$summaryCard2=$s2[0]; $summaryLayout2=$s2[1]; $summaryDot2=$s2[2]; $summaryLabel2=$s2[3]; $summaryValue2=$s2[4]
-$s3 = New-SummaryCard "Atualizador" "v$($script:UpdaterVersion) pronto" "●"
-$summaryCard3=$s3[0]; $summaryLayout3=$s3[1]; $summaryDot3=$s3[2]; $summaryLabel3=$s3[3]; $summaryValue3=$s3[4]
-foreach ($card in @($summaryCard1,$summaryCard2,$summaryCard3)) { $summaryFlow.Controls.Add($card) }
-
 $modulesHost = New-Object Windows.Forms.Panel
 $modulesHost.Dock = [Windows.Forms.DockStyle]::Fill
 $modulesHost.Padding = [Windows.Forms.Padding]::new(18, 0, 18, 4)
-$mainLayout.Controls.Add($modulesHost, 0, 2)
+$mainLayout.Controls.Add($modulesHost, 0, 1)
 
 # O cabeçalho e os cartões ficam em linhas diferentes para nunca se sobreporem.
 $modulesLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1510,80 +1452,10 @@ $maintenanceCard=$m[0]; $maintenanceOuter=$m[1]; $maintenanceLayout=$m[2]; $main
 $modulesFlow.Controls.Add($generatorCard)
 $modulesFlow.Controls.Add($maintenanceCard)
 
-$quickHost = New-Object Windows.Forms.Panel
-$quickHost.Dock = [Windows.Forms.DockStyle]::Fill
-$quickHost.Padding = [Windows.Forms.Padding]::new(18, 0, 18, 4)
-$quickHost.Visible = $false
-$mainLayout.Controls.Add($quickHost, 0, 3)
-
-$quickTitle = New-Object Windows.Forms.Label
-$quickTitle.Text = "Ações rápidas"
-$quickTitle.Location = [Drawing.Point]::new(28, 2)
-$quickTitle.AutoSize = $true
-$quickTitle.Font = [Drawing.Font]::new("Segoe UI Semibold", 14)
-$quickHost.Controls.Add($quickTitle)
-
-$quickSubtitle = New-Object Windows.Forms.Label
-$quickSubtitle.Text = "Acesso direto às tarefas de apoio da Central."
-$quickSubtitle.Location = [Drawing.Point]::new(30, 27)
-$quickSubtitle.Size = [Drawing.Size]::new(520, 22)
-$quickHost.Controls.Add($quickSubtitle)
-
-$quickFlow = New-Object Windows.Forms.FlowLayoutPanel
-$quickFlow.Location = [Drawing.Point]::new(18, 49)
-$quickFlow.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right -bor [Windows.Forms.AnchorStyles]::Bottom
-$quickFlow.Size = [Drawing.Size]::new(900, 76)
-$quickFlow.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
-$quickFlow.WrapContents = $false
-$quickFlow.Padding = [Windows.Forms.Padding]::new(8, 0, 8, 0)
-$quickHost.Controls.Add($quickFlow)
-
-function New-QuickCard([string]$Title,[string]$Text,[string]$ButtonText) {
-    $card = New-Object Windows.Forms.Panel
-    $card.Margin = [Windows.Forms.Padding]::new(8, 0, 8, 0)
-    $layout = New-Object Windows.Forms.TableLayoutPanel
-    $layout.Dock = [Windows.Forms.DockStyle]::Fill
-    $layout.Padding = [Windows.Forms.Padding]::new(14, 8, 14, 8)
-    $layout.ColumnCount = 2
-    $layout.RowCount = 2
-    [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
-    [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 145)))
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 45)))
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 55)))
-    $card.Controls.Add($layout)
-    $titleLabel = New-Object Windows.Forms.Label
-    $titleLabel.Text = $Title
-    $titleLabel.Dock = [Windows.Forms.DockStyle]::Fill
-    $titleLabel.TextAlign = [Drawing.ContentAlignment]::BottomLeft
-    $titleLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", 10.5)
-    $layout.Controls.Add($titleLabel,0,0)
-    $textLabel = New-Object Windows.Forms.Label
-    $textLabel.Text = $Text
-    $textLabel.Dock = [Windows.Forms.DockStyle]::Fill
-    $textLabel.TextAlign = [Drawing.ContentAlignment]::TopLeft
-    $textLabel.Font = [Drawing.Font]::new("Segoe UI",8.5)
-    $layout.Controls.Add($textLabel,0,1)
-    $button = New-Object Windows.Forms.Button
-    $button.Text = $ButtonText
-    $button.Dock = [Windows.Forms.DockStyle]::Fill
-    $button.Margin = [Windows.Forms.Padding]::new(8,8,0,8)
-    $button.Font = [Drawing.Font]::new("Segoe UI Semibold",8.5)
-    $layout.Controls.Add($button,1,0)
-    $layout.SetRowSpan($button,2)
-    return @($card,$layout,$titleLabel,$textLabel,$button)
-}
-
-$q1 = New-QuickCard "Atualizações" "Verifique novas versões e acesse os backups da Central." "ABRIR"
-$updatesQuickCard=$q1[0]; $updatesQuickLayout=$q1[1]; $updatesQuickTitle=$q1[2]; $updatesQuickText=$q1[3]; $quickUpdatesButton=$q1[4]
-$q2 = New-QuickCard "Pasta da Central" "Abra os arquivos instalados sem precisar procurar no Explorador." "ABRIR PASTA"
-$folderQuickCard=$q2[0]; $folderQuickLayout=$q2[1]; $folderQuickTitle=$q2[2]; $folderQuickText=$q2[3]; $quickFolderButton=$q2[4]
-$quickFlow.Controls.Add($updatesQuickCard)
-$quickFlow.Controls.Add($folderQuickCard)
-
 $footerPanel = New-Object Windows.Forms.Panel
 $footerPanel.Dock = [Windows.Forms.DockStyle]::Fill
 $footerPanel.Padding = [Windows.Forms.Padding]::new(26, 7, 26, 7)
-$mainLayout.Controls.Add($footerPanel, 0, 4)
+$mainLayout.Controls.Add($footerPanel, 0, 2)
 
 $footerLayout = New-Object Windows.Forms.TableLayoutPanel
 $footerLayout.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1615,15 +1487,14 @@ $toolTip.SetToolTip($openGeneratorButton, "Abrir o Gerenciador de Planilhas dent
 $toolTip.SetToolTip($openGeneratorFolderButton, "Abrir a pasta do Gerenciador")
 $toolTip.SetToolTip($openMaintenanceButton, "Abrir a Central de Manutenção CB5 dentro da Central")
 $toolTip.SetToolTip($openMaintenanceFolderButton, "Abrir a pasta da Manutenção CB5")
-$toolTip.SetToolTip($quickUpdatesButton, "Abrir atualização, backup e restauração")
 $toolTip.SetToolTip($embeddedBackButton, "Voltar para a tela inicial da Central de Trabalho (Alt+←)")
 $toolTip.SetToolTip($embeddedFolderButton, "Abrir a pasta do módulo que está em uso")
 
-foreach ($roundedPanel in @($summaryCard1,$summaryCard2,$summaryCard3,$generatorCard,$maintenanceCard,$updatesQuickCard,$folderQuickCard)) {
+foreach ($roundedPanel in @($generatorCard,$maintenanceCard)) {
     Enable-RoundedControl $roundedPanel 12
     Enable-CardHover $roundedPanel
 }
-foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$headerStatusPill,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton,$quickUpdatesButton,$quickFolderButton)) {
+foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton)) {
     Enable-RoundedControl $roundedSmall 8
 }
 
@@ -1651,10 +1522,8 @@ $openGeneratorButton.Add_Click({ Start-GeneratorModule })
 $openMaintenanceButton.Add_Click({ Start-MaintenanceModule })
 $openGeneratorFolderButton.Add_Click({ Open-ModuleFolder $script:GeneratorDirectory "Gerenciador de Planilhas" })
 $openMaintenanceFolderButton.Add_Click({ Open-ModuleFolder $script:MaintenanceDirectory "Central de Manutenção CB5" })
-$navUpdates.Add_Click({ Set-ActiveNavigation "Updates"; Start-UpdaterModule })
-$quickUpdatesButton.Add_Click({ Start-UpdaterModule })
-$navFolder.Add_Click({ Set-ActiveNavigation "Folder"; Open-RootFolder })
-$quickFolderButton.Add_Click({ Open-RootFolder })
+$navUpdates.Add_Click({ Start-UpdaterModule; Set-ActiveNavigation "Home" })
+$navFolder.Add_Click({ Open-RootFolder; Set-ActiveNavigation "Home" })
 $navHome.Add_Click({ Show-Dashboard })
 $navAbout.Add_Click({
     Set-ActiveNavigation "About"
@@ -1664,15 +1533,12 @@ $navAbout.Add_Click({
         [Windows.Forms.MessageBoxButtons]::OK,
         [Windows.Forms.MessageBoxIcon]::Information
     ) | Out-Null
+    Set-ActiveNavigation "Home"
 })
 $modulesFlow.Add_SizeChanged({ Update-CentralChromeLayout })
 $form.Add_Shown({ Update-CentralAdaptiveLayout; Update-ResponsiveLayout; Apply-AppTheme })
 $form.Add_SizeChanged({
-    try {
-        Update-CentralAdaptiveLayout
-        $todayLabel.Left = [Math]::Max(360, $headerPanel.ClientSize.Width - 285)
-        $headerStatusPill.Left = [Math]::Max(470, $headerPanel.ClientSize.Width - 155)
-    } catch {}
+    try { Update-CentralAdaptiveLayout } catch {}
 })
 $embeddedBackButton.Add_Click({ Show-Dashboard })
 $embeddedFolderButton.Add_Click({
