@@ -15,7 +15,7 @@ if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
 }
 
 $srcRoot = Split-Path -Parent $PSScriptRoot
-$iconAssetPath = Join-Path $srcRoot "assets\Central-de-Trabalho.ico.b64"
+$iconAssetPath = Join-Path $srcRoot "assets\Central-de-Trabalho.png.b64"
 if (-not (Test-Path -LiteralPath $iconAssetPath -PathType Leaf)) {
     throw "Central icon asset not found: $iconAssetPath"
 }
@@ -26,12 +26,37 @@ $iconPath = Join-Path $OutputDirectory "Central-de-Trabalho.ico"
 $versionSource = Join-Path $OutputDirectory "AssemblyInfo.generated.cs"
 
 $encodedIcon = (Get-Content -LiteralPath $iconAssetPath -Raw).Trim()
-try { $iconBytes = [Convert]::FromBase64String($encodedIcon) }
-catch { throw "Central icon asset is not valid Base64." }
-if ($iconBytes.Length -lt 1024 -or $iconBytes[0] -ne 0 -or $iconBytes[1] -ne 0 -or $iconBytes[2] -ne 1 -or $iconBytes[3] -ne 0) {
-    throw "Central icon asset is not a valid ICO file."
+try { $imageBytes = [Convert]::FromBase64String($encodedIcon) }
+catch { throw "Central icon image asset is not valid Base64." }
+if ($imageBytes.Length -lt 1024) { throw "Central icon image asset is unexpectedly small." }
+$imageSha = [BitConverter]::ToString(([Security.Cryptography.SHA256]::Create()).ComputeHash($imageBytes)).Replace('-', '')
+if ($imageSha -ne 'A4F954FAD5A3226B726214010B9C8B1C14D254ADE638A53FF23D6EEF6546E715') {
+    throw "Central icon image asset failed SHA-256 validation."
 }
-[IO.File]::WriteAllBytes($iconPath, $iconBytes)
+
+Add-Type -AssemblyName System.Drawing
+$memory = [IO.MemoryStream]::new(,$imageBytes)
+$bitmap = $null
+$icon = $null
+$fileStream = $null
+try {
+    $bitmap = [Drawing.Bitmap]::FromStream($memory)
+    if ($bitmap.Width -ne 64 -or $bitmap.Height -ne 64) {
+        throw "Central icon image must be 64x64 pixels."
+    }
+    $icon = [Drawing.Icon]::FromHandle($bitmap.GetHicon())
+    $fileStream = [IO.File]::Create($iconPath)
+    $icon.Save($fileStream)
+}
+finally {
+    if ($null -ne $fileStream) { $fileStream.Dispose() }
+    if ($null -ne $icon) { $icon.Dispose() }
+    if ($null -ne $bitmap) { $bitmap.Dispose() }
+    $memory.Dispose()
+}
+if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf) -or (Get-Item -LiteralPath $iconPath).Length -lt 512) {
+    throw "Central ICO was not generated correctly from the CT image."
+}
 
 $parts = @($Version.Split('.'))
 while ($parts.Count -lt 4) { $parts += '0' }
