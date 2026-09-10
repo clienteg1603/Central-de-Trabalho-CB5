@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.19.2",
+  "Version": "0.19.3",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.19.2.zip",
-  "PackageSha256": "718070C53B931BD2A1B10AA839F6351082B3F38FC417ECF4A8B3DBC5B686F346",
-  "PackageSize": 130314,
-  "PackageRoot": "Central-de-Trabalho-v0.19.2",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.19.3.zip",
+  "PackageSha256": "ABBC440284785FAEADA799C80AA989B12AA626F240C554C9E0F4BD7FBC75418C",
+  "PackageSize": 130623,
+  "PackageRoot": "Central-de-Trabalho-v0.19.3",
   "ReleaseNotes": [
-    "O ícone da Central de Trabalho foi simplificado para a nova marca CT azul e branca aprovada para uso no executável.",
-    "A nova arte foi preparada especificamente para leitura em tamanho pequeno no Explorador e na barra de tarefas, reduzindo detalhes que desapareciam ou ficavam pesados no ícone anterior.",
-    "O ativo usado no build permanece em 64x64, compatível com a conversão atual para o ícone incorporado ao Central de Trabalho.exe e ao Central de Trabalho Updater.exe.",
-    "A janela principal continua carregando o ícone gravado no próprio executável, preservando a mesma identidade no Explorador, barra de tarefas e Alt+Tab.",
-    "Nenhuma função do Gerenciador de Planilhas, da Central de Manutenção, do Atualizador ou dos dados do usuário foi alterada nesta versão.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1.",
-    "A distribuição continua limpa, sem VBS, BAT ou CMD, com Central de Trabalho.exe como ponto de entrada principal.",
-    "A versão Estável permanece v0.8.5; a v0.19.2 é publicada somente no canal Teste."
+    "Continuação da limpeza final da distribuição: a pasta de instalação fica visualmente mais simples no Explorador, mostrando por padrão somente Central de Trabalho.exe.",
+    "Os itens internos Central de Trabalho.ps1, PACOTE-MANIFESTO.json, Atualizador e Modulos passam a receber o atributo Hidden do Windows depois que a Central inicia com sucesso.",
+    "Nenhum arquivo interno foi removido ou deslocado nesta etapa; a mudança é apenas visual para preservar compatibilidade com o host nativo, módulos e Atualizador.",
+    "Mesmo ocultos no Explorador, os módulos e o Atualizador continuam sendo encontrados pelos mesmos caminhos e permanecem sujeitos às auditorias de integridade e regressão do pacote.",
+    "A nova marca CT azul e branca da v0.19.2 permanece aplicada ao Central de Trabalho.exe e ao Central de Trabalho Updater.exe.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional, saldo, histórico ou dado do usuário foi alterado.",
+    "A distribuição continua sem VBS, BAT ou CMD e sem lançador PowerShell externo.",
+    "A versão Estável permanece v0.8.5; a v0.19.3 é publicada somente no canal Teste."
   ]
 }

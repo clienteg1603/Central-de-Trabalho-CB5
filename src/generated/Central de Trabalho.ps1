@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.19.2"
+$script:AppVersion = "0.19.3"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.3"
 $script:MaintenanceVersion = "0.6.1"
@@ -78,6 +78,34 @@ function Remove-LegacyLauncherArtifact {
     }
 }
 Remove-LegacyLauncherArtifact
+
+# Mantém a pasta de instalação limpa para o usuário sem remover nenhum arquivo
+# necessário ao funcionamento. Os itens internos continuam no mesmo lugar para
+# preservar compatibilidade com o host, módulos e Atualizador; apenas recebem o
+# atributo Hidden do Windows depois que a Central já iniciou com sucesso.
+function Set-InternalRuntimeArtifactsHidden {
+    try {
+        $internalPaths = @(
+            [IO.Path]::Combine($script:RootPath, "Central de Trabalho.ps1"),
+            [IO.Path]::Combine($script:RootPath, "PACOTE-MANIFESTO.json"),
+            [IO.Path]::Combine($script:RootPath, "Atualizador"),
+            [IO.Path]::Combine($script:RootPath, "Modulos")
+        )
+
+        foreach ($internalPath in $internalPaths) {
+            if ([IO.File]::Exists($internalPath) -or [IO.Directory]::Exists($internalPath)) {
+                $attributes = [IO.File]::GetAttributes($internalPath)
+                if (($attributes -band [IO.FileAttributes]::Hidden) -eq 0) {
+                    [IO.File]::SetAttributes($internalPath, ($attributes -bor [IO.FileAttributes]::Hidden))
+                }
+            }
+        }
+    }
+    catch {
+        # A limpeza visual é auxiliar e nunca deve impedir a Central de abrir.
+    }
+}
+Set-InternalRuntimeArtifactsHidden
 
 $script:CurrentPalette = $null
 $script:ActiveNavName = "Home"
