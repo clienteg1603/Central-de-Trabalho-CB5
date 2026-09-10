@@ -1,6 +1,6 @@
 {
   "version": "0.18.2",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "A função Juntar lotes do Gerenciador de Planilhas agora aceita também uma única planilha mestre como entrada válida.",
     "Foi removida a antiga exigência de selecionar pelo menos duas planilhas tanto na conferência quanto na geração do arquivo final.",
