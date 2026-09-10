@@ -1,13 +1,15 @@
 {
-  "version": "0.14.3",
+  "version": "0.14.4",
   "buildRevision": 1,
   "releaseNotes": [
-    "A Central de Manutenção ganha navegação interna persistente no modo integrado.",
-    "Histórico passa a ser a seção padrão real abaixo do resumo, exibindo imediatamente suas ações de visualizar, editar/corrigir, registrar retorno e exportar.",
-    "Os botões Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras/Dados permanecem visíveis enquanto o conteúdo abaixo troca de seção.",
-    "O antigo botão Painel da manutenção deixa de ser necessário e fica removido do fluxo integrado.",
-    "Ao abrir Nova passagem, a faixa das cinco seções permanece disponível para retorno rápido, enquanto o resumo superior é recolhido para preservar espaço vertical.",
-    "Central de Manutenção passa para v0.5.9; Gerenciador permanece em v3.6.2.",
-    "Nenhuma regra de manutenção, histórico, diagnóstico, dados ou geração foi alterada."
+    "Rodada de manutenção geral de layout antes de continuar novas evoluções.",
+    "Na Central de Manutenção integrada, o cabeçalho repetido da Visão geral foi retirado da área persistente para eliminar cortes e liberar espaço vertical.",
+    "Nova passagem passa a fazer parte da mesma faixa fixa de navegação de Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras/Dados, evitando o botão laranja cortado no topo.",
+    "Os quatro cartões de resumo passam a usar altura adaptativa e são recolhidos automaticamente em Nova passagem ou quando a altura disponível for pequena.",
+    "A área ativa agora é reposicionada sempre abaixo do resumo e da navegação, com recálculo imediato ao trocar de seção e ao redimensionar a Central.",
+    "Em larguras menores, a navegação interna compacta texto e fonte para manter as seis ações em uma única linha.",
+    "Corrigido também o seletor Aparência da Central que podia ficar visualmente vazio em temas escuros; a área selecionada agora usa o item atual como fallback de pintura.",
+    "Central de Manutenção passa para v0.6.0; Gerenciador permanece em v3.6.2.",
+    "Nenhuma regra de manutenção, histórico, diagnóstico, geração, união ou saldo foi alterada."
   ]
 }
