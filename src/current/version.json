@@ -1,6 +1,6 @@
 {
   "version": "0.14.2",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Continuado o polimento geral da Central de Trabalho.",
     "O seletor Aparência agora é desenhado pela própria Central e acompanha corretamente os temas escuros, sem manter aquele fundo branco do ComboBox nativo.",
