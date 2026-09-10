@@ -88,6 +88,10 @@ jobs:
           cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
           cp "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
 
+          # Antes de empacotar, bloqueia a release se arquivos, versões ou regras
+          # críticas tiverem sido perdidos durante uma evolução visual/estrutural.
+          python3 src/ci/audit_release.py tree "$OUT_ROOT" "$VERSION"
+
           python3 - "$OUT_ROOT" "$VERSION" <<'PY'
           import hashlib, json, pathlib, sys, zipfile
           root = pathlib.Path(sys.argv[1])
@@ -123,6 +127,12 @@ jobs:
           pathlib.Path('updates/test.json').write_text(json.dumps(channel, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           print(f'Pacote {version}: {len(package)} bytes / {channel["PackageSha256"]}')
           PY
+
+          # Segunda barreira: valida o ZIP pronto, manifesto e metadados do canal
+          # antes de qualquer commit de publicação ser permitido.
+          python3 src/ci/audit_release.py package "$OUT_ROOT" "$VERSION" \
+            "updates/packages/Central-de-Trabalho-v${VERSION}.zip" \
+            "updates/test.json"
 
       - name: Publish test package
         shell: bash
