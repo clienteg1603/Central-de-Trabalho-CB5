@@ -1,14 +1,14 @@
 {
-  "version": "0.20.0",
+  "version": "0.20.1",
   "buildRevision": 1,
   "releaseNotes": [
-    "Consolida a distribuição da Central após a validação bem-sucedida do ciclo nativo de atualização 0.19.5 para 0.19.6 em uso real.",
-    "O build deixa de baixar ou reaproveitar a antiga versão Estável v0.8.5 para montar arquivos internos da aplicação.",
-    "Manutencao.Core.ps1 e Componentes.Core.ps1 passam a fazer parte do fonte runtime versionado, junto com a Central, módulos e Atualizador.",
-    "Os 10 arquivos operacionais do pacote final agora são produzidos exclusivamente a partir do fonte atual versionado e dos dois hosts EXE compilados no próprio build.",
-    "A auditoria de distribuição continua exigindo exatamente os arquivos necessários e bloqueando extras, VBS, BAT, CMD, caches, logs e dados do usuário.",
-    "As proteções do Atualizador para arquivos ocultos, validação de backup, rollback e reabertura automática permanecem inalteradas.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra de saldo, REPARO, duplicidade, planilhas, manutenção ou dados do usuário foi alterada.",
-    "A versão Estável permanece v0.8.5; a v0.20.0 é publicada somente no canal Teste."
+    "Refina a identidade dos executáveis da Central no Windows sem alterar nenhuma regra funcional.",
+    "Central de Trabalho.exe passa a exibir metadados padronizados em Propriedades > Detalhes: nome do produto, descrição, empresa, versão do produto, nome original do arquivo e identificação da Central.",
+    "Central de Trabalho Updater.exe recebe a mesma padronização, com descrição específica de Atualizador seguro da Central de Trabalho.",
+    "O build agora valida automaticamente esses metadados após compilar os dois EXEs e bloqueia a publicação se algum campo sair diferente do esperado.",
+    "A versão do produto exibida pelo Windows passa a acompanhar diretamente a versão pública da Central, enquanto a versão de arquivo continua no formato de quatro campos exigido pelo executável.",
+    "O ícone CT azul e branco, os hosts nativos, o Atualizador corrigido, a distribuição limpa e o build totalmente baseado no fonte versionado permanecem preservados.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra de planilhas, saldo, REPARO, duplicidade, manutenção, histórico ou dados do usuário foi alterada.",
+    "A versão Estável permanece v0.8.5; a v0.20.1 é publicada somente no canal Teste."
   ]
 }
