@@ -19,6 +19,13 @@ def replace_once(text, old, new, label):
     return text.replace(old, new, 1)
 
 
+def replace_expected(text, old, new, expected, label):
+    count = text.count(old)
+    if count != expected:
+        raise RuntimeError(f"{label}: esperado {expected} trecho(s), encontrado {count}")
+    return text.replace(old, new)
+
+
 central = read(CENTRAL)
 central = replace_once(central, '$script:AppVersion = "0.14.1"', '$script:AppVersion = "0.14.2"', "versao Central")
 
@@ -124,10 +131,12 @@ new_theme_head = '''    $selectedTheme = [string]$themeCombo.SelectedItem
     Set-CentralTitleBarTheme ($selectedTheme -ne "Claro corporativo")'''
 central = replace_once(central, old_theme_head, new_theme_head, "sincronizacao da barra de titulo")
 
-central = replace_once(
+# O arquivo ainda conserva uma função visual antiga e a função ativa; as duas usam este mesmo par.
+central = replace_expected(
     central,
     '    $themeCombo.BackColor = $script:CurrentPalette.Input\n    $themeCombo.ForeColor = $script:CurrentPalette.Text\n',
     '    $themeCombo.BackColor = $script:CurrentPalette.Input\n    $themeCombo.ForeColor = $script:CurrentPalette.Text\n    $themeCombo.Invalidate()\n',
+    2,
     "repintura do seletor de aparencia"
 )
 
