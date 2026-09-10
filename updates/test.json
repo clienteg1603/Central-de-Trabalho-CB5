@@ -2,18 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.12.4",
+  "Version": "0.13.0",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.12.4.zip",
-  "PackageSha256": "DCBF1E2F5012EA34AD2B4ACA034B85FC1191F5CF19174DD125AE1469185AE366",
-  "PackageSize": 903005,
-  "PackageRoot": "Central-de-Trabalho-v0.12.4",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.13.0.zip",
+  "PackageSha256": "BD85DDEDFF82DB43C2D16F643FA8AEF3356AF3CDE45D05E0B00E6AC4EC3AA0C9",
+  "PackageSize": 903528,
+  "PackageRoot": "Central-de-Trabalho-v0.13.0",
   "ReleaseNotes": [
-    "Corrigido o campo Série opcional em Apoio ao diagnóstico da Central de Manutenção CB5.",
-    "O antigo MaskedTextBox foi removido para eliminar os caracteres de máscara/linha branca e o comportamento de precisar clicar duas vezes antes de digitar.",
-    "O campo agora é um TextBox comum, nasce realmente vazio, aceita até 8 dígitos e bloqueia caracteres não numéricos digitados.",
-    "A validação de exatamente 8 dígitos continua ativa quando a série é utilizada.",
-    "Central de Manutenção passa para v0.5.8; Gerenciador de Planilhas permanece em v3.5.2.",
-    "Nenhuma regra de manutenção, diagnóstico, histórico, planilhas ou componentes foi alterada além desta correção de entrada."
+    "Iniciada a nova fase visual do Gerenciador de Planilhas, agora na versão 3.6.0.",
+    "No modo integrado à Central, as cinco áreas passam a usar nomes mais compactos: Gerar, Manutenções, Componentes, Juntar lotes e Códigos, mantendo descrições completas nos tooltips.",
+    "A tela Gerar ganhou uma hierarquia mais clara em três etapas: planilha mestre, destino automático e resumo antes da geração.",
+    "Os principais cartões do Gerenciador agora usam cantos arredondados e linguagem visual alinhada à Central de Manutenção.",
+    "Os botões de conferência foram simplificados para Conferir primeiro, reforçando o fluxo seguro antes de gravar.",
+    "A aba Códigos passa a ser realmente somente consulta e não exibe mais ações de gerar/atualizar que não pertencem a essa tela.",
+    "A correção anterior do modo sem consumo no Juntar lotes e a correção do campo Série opcional da Manutenção foram preservadas.",
+    "Nenhuma regra de geração, saldo, manutenção ou dados foi alterada nesta atualização visual."
   ]
 }
