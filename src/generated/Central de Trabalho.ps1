@@ -6,7 +6,34 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.14.1"
+if (-not ("CentralWindowStyle.Native" -as [type])) {
+    try {
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+namespace CentralWindowStyle {
+    public static class Native {
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+    }
+}
+"@
+    } catch {}
+}
+
+function Set-CentralTitleBarTheme {
+    param([bool]$Dark)
+    try {
+        if ($null -eq $form -or -not $form.IsHandleCreated -or -not ("CentralWindowStyle.Native" -as [type])) { return }
+        $value = if ($Dark) { 1 } else { 0 }
+        $result = [CentralWindowStyle.Native]::DwmSetWindowAttribute($form.Handle, 20, [ref]$value, 4)
+        if ($result -ne 0) {
+            [void][CentralWindowStyle.Native]::DwmSetWindowAttribute($form.Handle, 19, [ref]$value, 4)
+        }
+    } catch {}
+}
+
+$script:AppVersion = "0.14.2"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.6.2"
 $script:MaintenanceVersion = "0.5.8"
@@ -266,6 +293,7 @@ function Apply-AppTheme {
 
     $themeCombo.BackColor = $script:CurrentPalette.Input
     $themeCombo.ForeColor = $script:CurrentPalette.Text
+    $themeCombo.Invalidate()
     Set-PrimaryButtonStyle $openGeneratorButton
     Set-PrimaryButtonStyle $openMaintenanceButton
     if ($selectedTheme -eq "Técnico industrial") {
@@ -435,6 +463,11 @@ function Start-EmbeddedModule {
         $script:HostedModule = $moduleInfo
         $script:HostedForm = $hostedForm
         $script:EmbeddedModule = $Module
+        try {
+            if ($null -ne $embeddedAccentLine) {
+                $embeddedAccentLine.BackColor = if ($Module -eq "Generator") { Get-ModuleAccent "Generator" } else { Get-ModuleAccent "Maintenance" }
+            }
+        } catch {}
 
         if ($hostedForm -is [Windows.Forms.Form]) {
             $hostedForm.TopLevel = $false
@@ -669,6 +702,7 @@ function Apply-AppTheme {
     $sidebarColor = Get-SidebarColor $selectedTheme
     $generatorAccent = Get-ModuleAccent "Generator"
     $maintenanceAccent = Get-ModuleAccent "Maintenance"
+    Set-CentralTitleBarTheme ($selectedTheme -ne "Claro corporativo")
 
     $form.BackColor = $script:CurrentPalette.Background
     $rootLayout.BackColor = $script:CurrentPalette.Background
@@ -727,6 +761,7 @@ function Apply-AppTheme {
 
     $themeCombo.BackColor = $script:CurrentPalette.Input
     $themeCombo.ForeColor = $script:CurrentPalette.Text
+    $themeCombo.Invalidate()
 
     Set-ActiveNavigation $script:ActiveNavName
 
@@ -742,11 +777,13 @@ function Apply-AppTheme {
     if ($null -ne $embeddedBackButton) { Set-SecondaryButtonStyle $embeddedBackButton }
     if ($null -ne $embeddedFolderButton) { Set-SecondaryButtonStyle $embeddedFolderButton }
     $headerAccent.BackColor = $script:CurrentPalette.Accent
+    if ($null -ne $embeddedAccentLine) {
+        $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } else { $script:CurrentPalette.Accent }
+    }
     $headerStatusPill.BackColor = $script:CurrentPalette.SuccessBack
     $headerStatusPill.ForeColor = $script:CurrentPalette.Success
 
     if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
-        Set-StatusMessage "Sistema pronto. Todos os módulos principais foram localizados." "Success"
         $sidebarStatus.Text = "●  Sistema pronto"
         $sidebarStatusSub.Text = "2 módulos disponíveis"
     }
@@ -1054,9 +1091,41 @@ $themeCombo = New-Object Windows.Forms.ComboBox
 $themeCombo.Location = [Drawing.Point]::new(4, 27)
 $themeCombo.Size = [Drawing.Size]::new(184, 30)
 $themeCombo.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
+$themeCombo.DrawMode = [Windows.Forms.DrawMode]::OwnerDrawFixed
+$themeCombo.ItemHeight = 23
+$themeCombo.FlatStyle = [Windows.Forms.FlatStyle]::Flat
 [void]$themeCombo.Items.AddRange(@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste"))
 $themeCombo.SelectedItem = $settings.Theme
 if ($themeCombo.SelectedIndex -lt 0) { $themeCombo.SelectedIndex = 0 }
+$themeCombo.Add_DrawItem({
+    param($sender, $e)
+    try {
+        if ($e.Index -lt 0) { return }
+        $palette = $script:CurrentPalette
+        $back = if ($null -ne $palette) { $palette.Input } else { [Drawing.Color]::FromArgb(18,24,27) }
+        $fore = if ($null -ne $palette) { $palette.Text } else { [Drawing.Color]::White }
+        if (($e.State -band [Windows.Forms.DrawItemState]::Selected) -ne 0) {
+            $back = if ($null -ne $palette) { $palette.AccentStrong } else { [Drawing.Color]::FromArgb(27,151,134) }
+            $fore = if ($null -ne $palette) { $palette.AccentText } else { [Drawing.Color]::White }
+        }
+        $brush = New-Object Drawing.SolidBrush($back)
+        $textBrush = New-Object Drawing.SolidBrush($fore)
+        try {
+            $e.Graphics.FillRectangle($brush, $e.Bounds)
+            $textRect = [Drawing.Rectangle]::new($e.Bounds.X + 6, $e.Bounds.Y, [Math]::Max(1, $e.Bounds.Width - 8), $e.Bounds.Height)
+            $format = New-Object Drawing.StringFormat
+            try {
+                $format.LineAlignment = [Drawing.StringAlignment]::Center
+                $format.Trimming = [Drawing.StringTrimming]::EllipsisCharacter
+                $e.Graphics.DrawString([string]$sender.Items[$e.Index], $sender.Font, $textBrush, $textRect, $format)
+            } finally { $format.Dispose() }
+        } finally {
+            $brush.Dispose()
+            $textBrush.Dispose()
+        }
+        $e.DrawFocusRectangle()
+    } catch {}
+})
 $sidebarBottom.Controls.Add($themeCombo)
 
 $sidebarStatus = New-Object Windows.Forms.Label
@@ -1125,6 +1194,12 @@ $embeddedToolbar.Dock = [Windows.Forms.DockStyle]::Fill
 $embeddedToolbar.Margin = [Windows.Forms.Padding]::new(0)
 $embeddedToolbar.Padding = [Windows.Forms.Padding]::new(12, 6, 12, 6)
 $embeddedLayout.Controls.Add($embeddedToolbar, 0, 0)
+
+$embeddedAccentLine = New-Object Windows.Forms.Panel
+$embeddedAccentLine.Dock = [Windows.Forms.DockStyle]::Bottom
+$embeddedAccentLine.Height = 2
+$embeddedToolbar.Controls.Add($embeddedAccentLine)
+$embeddedAccentLine.BringToFront()
 
 $embeddedBackButton = New-Object Windows.Forms.Button
 $embeddedBackButton.Text = "←  CENTRAL"
