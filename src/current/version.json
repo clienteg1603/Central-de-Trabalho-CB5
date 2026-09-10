@@ -1,11 +1,12 @@
 {
-  "version": "0.14.1",
+  "version": "0.14.2",
   "buildRevision": 1,
   "releaseNotes": [
-    "Hotfix da Central de Trabalho após a v0.14.0.",
-    "Corrigida a exceção de inicialização 'A propriedade Width não foi encontrada neste objeto'.",
-    "A causa era o layout responsivo ainda tentar redimensionar os antigos botões Programas e Backup/restauração depois que eles foram removidos da navegação.",
-    "Os três perfis responsivos agora trabalham somente com os quatro controles que realmente existem: Início, Atualizações, Pasta da Central e Sobre.",
+    "Continuado o polimento geral da Central de Trabalho.",
+    "O seletor Aparência agora é desenhado pela própria Central e acompanha corretamente os temas escuros, sem manter aquele fundo branco do ComboBox nativo.",
+    "A barra de título do Windows passa a acompanhar os temas escuros quando o sistema oferecer suporte, mantendo modo claro no tema Claro corporativo.",
+    "A barra superior dos módulos integrados ganhou uma linha fina com a identidade visual do programa aberto.",
+    "O rodapé deixa de repetir permanentemente o estado Sistema pronto; esse estado permanece na lateral e o rodapé fica reservado para ações, avisos e erros.",
     "Gerenciador de Planilhas permanece em v3.6.2 e Central de Manutenção em v0.5.8.",
     "Nenhuma regra de geração, união, saldo, manutenção ou dados foi alterada."
   ]
