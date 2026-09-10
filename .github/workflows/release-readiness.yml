@@ -1,0 +1,28 @@
+name: Release readiness
+
+on:
+  push:
+    paths:
+      - 'src/ci/release_readiness.py'
+      - 'updates/test.json'
+      - 'updates/stable.json'
+      - 'updates/packages/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-release-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Audit release candidate and current stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 src/ci/release_readiness.py .
