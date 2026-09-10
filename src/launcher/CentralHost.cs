@@ -7,14 +7,21 @@ using System.Windows.Forms;
 
 internal static class Program
 {
+    private const string SelfTestSwitch = "--self-test";
+
     [STAThread]
     private static int Main(string[] args)
     {
-        Application.EnableVisualStyles();
-        Application.SetCompatibleTextRenderingDefault(false);
-
         string appRoot = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string scriptPath = Path.Combine(appRoot, "Central de Trabalho.ps1");
+
+        if (HasArgument(args, SelfTestSwitch))
+        {
+            return RunSelfTest(appRoot);
+        }
+
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
 
         if (!File.Exists(scriptPath))
         {
@@ -64,6 +71,83 @@ internal static class Program
             ShowFatal(ex.Message);
             return 1;
         }
+    }
+
+    private static int RunSelfTest(string appRoot)
+    {
+        try
+        {
+            string[] requiredFiles =
+            {
+                "Central de Trabalho.ps1",
+                @"Atualizador\CANAIS.json",
+                @"Atualizador\Central de Trabalho Updater.exe",
+                @"Atualizador\Central de Trabalho Updater.ps1",
+                @"Atualizador\Update.Core.ps1",
+                @"Modulos\Central-de-Manutencao-CB5\Central Manutencao CB5.ps1",
+                @"Modulos\Central-de-Manutencao-CB5\Manutencao.Core.ps1",
+                @"Modulos\Gerador-de-Planilhas-CB5-TV5\Gerador Planilhas.ps1",
+                @"Modulos\Gerador-de-Planilhas-CB5-TV5\Componentes.Core.ps1"
+            };
+
+            foreach (string relativePath in requiredFiles)
+            {
+                string fullPath = Path.Combine(appRoot, relativePath);
+                if (!File.Exists(fullPath) || new FileInfo(fullPath).Length <= 0)
+                {
+                    return 10;
+                }
+            }
+
+            foreach (string script in Directory.GetFiles(appRoot, "*.ps1", SearchOption.AllDirectories))
+            {
+                System.Management.Automation.Language.Token[] tokens;
+                System.Management.Automation.Language.ParseError[] errors;
+                System.Management.Automation.Language.Parser.ParseFile(script, out tokens, out errors);
+                if (errors != null && errors.Length > 0)
+                {
+                    return 11;
+                }
+            }
+
+            InitialSessionState state = InitialSessionState.CreateDefault();
+            state.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
+            using (Runspace runspace = RunspaceFactory.CreateRunspace(state))
+            {
+                runspace.ApartmentState = ApartmentState.STA;
+                runspace.ThreadOptions = PSThreadOptions.UseCurrentThread;
+                runspace.Open();
+                using (PowerShell ps = PowerShell.Create())
+                {
+                    ps.Runspace = runspace;
+                    ps.AddScript("$PSVersionTable.PSVersion.Major -ge 5");
+                    var result = ps.Invoke();
+                    if (ps.HadErrors || result == null || result.Count != 1 || !LanguagePrimitives.IsTrue(result[0].BaseObject))
+                    {
+                        return 12;
+                    }
+                }
+            }
+
+            return 0;
+        }
+        catch
+        {
+            return 13;
+        }
+    }
+
+    private static bool HasArgument(string[] args, string name)
+    {
+        if (args == null) return false;
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void ShowFatal(string details)
