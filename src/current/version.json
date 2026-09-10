@@ -1,13 +1,13 @@
 {
-  "version": "0.12.2",
+  "version": "0.12.3",
   "buildRevision": 1,
   "releaseNotes": [
-    "Corrigida a exceção ao trocar a aparência que citava a propriedade GridColor.",
-    "A Central agora só tenta sincronizar o tema com um módulo realmente vivo e ainda hospedado.",
-    "A troca de aparência da Central não é mais interrompida por uma falha visual temporária de um módulo integrado.",
-    "DataGridViews da Central de Manutenção e do Gerenciador deixam de receber atualização visual quando já estão sendo descartados.",
-    "O setter GridColor foi isolado para evitar a exceção do WinForms durante recriação ou descarte de controles.",
-    "Central de Manutenção passa para v0.5.7 e Gerenciador de Planilhas para v3.5.1.",
-    "Nenhuma regra de manutenção, histórico, diagnóstico, planilhas, componentes ou dados foi alterada."
+    "Ajustado o Juntar lotes do Gerenciador de Planilhas para permitir textos de REPARO não cadastrados quando Consumir saldo de componentes a faturar estiver desmarcado.",
+    "Exemplos como ASTEC, TROCADO BANANA deixam de bloquear a conferência e a união no modo sem consumo; o texto original é preservado na planilha unida.",
+    "Com Consumir saldo marcado, a validação continua rigorosa: manutenções e componentes precisam ser reconhecidos para que o saldo possa ser conferido e baixado com segurança.",
+    "A mesma regra foi aplicada a CB5 e TV5 e vale tanto para a conferência quanto para a execução da união.",
+    "As demais validações estruturais das planilhas continuam ativas, incluindo série, lote, NF, versão e demais campos obrigatórios.",
+    "Gerenciador de Planilhas passa para v3.5.2; Central de Manutenção permanece em v0.5.7.",
+    "Nenhum saldo é consumido por textos de REPARO desconhecidos quando a opção de consumo está desmarcada."
   ]
 }
