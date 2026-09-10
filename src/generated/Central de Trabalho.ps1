@@ -6,10 +6,10 @@ Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)
 
-$script:AppVersion = "0.11.0"
+$script:AppVersion = "0.11.3"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.4.0"
-$script:MaintenanceVersion = "0.5.0"
+$script:MaintenanceVersion = "0.5.3"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -830,7 +830,7 @@ function Update-CentralAdaptiveLayout {
                 $brandSub.Size = [Drawing.Size]::new(150, 22)
                 $brandSub.Font = [Drawing.Font]::new("Segoe UI", 7.5)
                 $sidebarSection.Height = 25
-                $navPanel.Height = 256
+                $navPanel.Height = 180
                 foreach ($b in @($navHome,$navPrograms,$navUpdates,$navBackup,$navFolder,$navAbout)) { $b.Width = 154; $b.Height = 35; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,4); $b.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.2) }
                 $sidebarBottom.Height = 137
                 $embeddedToolbar.Height = 44
@@ -855,7 +855,7 @@ function Update-CentralAdaptiveLayout {
                 $brandSub.Size = [Drawing.Size]::new(164,24)
                 $brandSub.Font = [Drawing.Font]::new("Segoe UI", 8)
                 $sidebarSection.Height = 28
-                $navPanel.Height = 278
+                $navPanel.Height = 195
                 foreach ($b in @($navHome,$navPrograms,$navUpdates,$navBackup,$navFolder,$navAbout)) { $b.Width = 164; $b.Height = 38; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,5); $b.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.6) }
                 $sidebarBottom.Height = 146
                 $embeddedToolbar.Height = 47
@@ -880,7 +880,7 @@ function Update-CentralAdaptiveLayout {
                 $brandSub.Size = [Drawing.Size]::new(174,26)
                 $brandSub.Font = [Drawing.Font]::new("Segoe UI",8.5)
                 $sidebarSection.Height = 30
-                $navPanel.Height = 300
+                $navPanel.Height = 210
                 foreach ($b in @($navHome,$navPrograms,$navUpdates,$navBackup,$navFolder,$navAbout)) { $b.Width = 178; $b.Height = 42; $b.Margin = [Windows.Forms.Padding]::new(0,0,0,6); $b.Font = [Drawing.Font]::new("Segoe UI Semibold",9) }
                 $sidebarBottom.Height = 156
                 $embeddedToolbar.Height = 50
@@ -998,7 +998,7 @@ $sidebarSection.BringToFront()
 
 $navPanel = New-Object Windows.Forms.FlowLayoutPanel
 $navPanel.Dock = [Windows.Forms.DockStyle]::Top
-$navPanel.Height = 300
+$navPanel.Height = 210
 $navPanel.FlowDirection = [Windows.Forms.FlowDirection]::TopDown
 $navPanel.WrapContents = $false
 $navPanel.Padding = [Windows.Forms.Padding]::new(0, 4, 0, 0)
@@ -1016,9 +1016,11 @@ function New-SidebarButton([string]$Text) {
 
 $navHome = New-SidebarButton "⌂   Início"
 $navPrograms = New-SidebarButton "▦   Programas"
-$navUpdates = New-SidebarButton "↻   Atualizações"
+$navPrograms.Visible = $false
+$navUpdates = New-SidebarButton "↻   Atualizações / backup"
 $navBackup = New-SidebarButton "⟲   Backup / restauração"
-$navFolder = New-SidebarButton "▣   Abrir pasta"
+$navBackup.Visible = $false
+$navFolder = New-SidebarButton "▣   Pasta da Central"
 $navAbout = New-SidebarButton "ⓘ   Sobre"
 foreach ($button in @($navHome, $navPrograms, $navUpdates, $navBackup, $navFolder, $navAbout)) { $navPanel.Controls.Add($button) }
 
@@ -1075,9 +1077,9 @@ $mainLayout.Dock = [Windows.Forms.DockStyle]::Fill
 $mainLayout.ColumnCount = 1
 $mainLayout.RowCount = 5
 [void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 92)))
-[void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 98)))
+[void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 0)))
 [void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
-[void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 132)))
+[void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 0)))
 [void]$mainLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 44)))
 
 $mainPanel.Controls.Add($mainLayout)
@@ -1132,7 +1134,7 @@ $embeddedSubtitle.Font = [Drawing.Font]::new("Segoe UI", 8)
 $embeddedToolbar.Controls.Add($embeddedSubtitle)
 
 $embeddedFolderButton = New-Object Windows.Forms.Button
-$embeddedFolderButton.Text = "ABRIR PASTA"
+$embeddedFolderButton.Text = "PASTA DO MÓDULO"
 $embeddedFolderButton.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Right
 $embeddedFolderButton.Size = [Drawing.Size]::new(110, 32)
 $embeddedFolderButton.Location = [Drawing.Point]::new([Math]::Max(690, $targetWidth - 380), 9)
@@ -1205,6 +1207,7 @@ $headerStatusPill.Padding = [Windows.Forms.Padding]::new(7, 5, 7, 5)
 $headerStatusPill.Location = [Drawing.Point]::new([Math]::Max(770, $targetWidth - 335), 10)
 $headerStatusPill.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.5)
 $headerPanel.Controls.Add($headerStatusPill)
+$headerStatusPill.Visible = $false
 
 $headerAccent = New-Object Windows.Forms.Panel
 $headerAccent.Dock = [Windows.Forms.DockStyle]::Bottom
@@ -1214,6 +1217,7 @@ $headerPanel.Controls.Add($headerAccent)
 $summaryHost = New-Object Windows.Forms.Panel
 $summaryHost.Dock = [Windows.Forms.DockStyle]::Fill
 $summaryHost.Padding = [Windows.Forms.Padding]::new(18, 2, 18, 6)
+$summaryHost.Visible = $false
 $mainLayout.Controls.Add($summaryHost, 0, 1)
 
 $summaryFlow = New-Object Windows.Forms.FlowLayoutPanel
@@ -1421,6 +1425,7 @@ $modulesFlow.Controls.Add($maintenanceCard)
 $quickHost = New-Object Windows.Forms.Panel
 $quickHost.Dock = [Windows.Forms.DockStyle]::Fill
 $quickHost.Padding = [Windows.Forms.Padding]::new(18, 0, 18, 4)
+$quickHost.Visible = $false
 $mainLayout.Controls.Add($quickHost, 0, 3)
 
 $quickTitle = New-Object Windows.Forms.Label
@@ -1511,6 +1516,7 @@ $footerVersion.Text = "Central v$($script:AppVersion)  •  Integração interna
 $footerVersion.AutoSize = $true
 $footerVersion.Anchor = [Windows.Forms.AnchorStyles]::Right
 $footerLayout.Controls.Add($footerVersion, 1, 0)
+$footerVersion.Visible = $false
 
 # Polimento visual seguro
 $toolTip = New-Object Windows.Forms.ToolTip
@@ -1624,3 +1630,5 @@ finally {
     if ($null -ne $form) { $form.Dispose() }
     Close-CentralSingleInstanceMutex
 }
+
+# UI_DEDUP_CENTRAL_V0113

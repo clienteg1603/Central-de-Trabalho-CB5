@@ -2,17 +2,21 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.11.2",
+  "Version": "0.11.3",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.2.zip",
-  "PackageSha256": "2098A5F4E202CA7832672D766849AD7EA153C80FAA7B2F46782B5388FE3D7F7E",
-  "PackageSize": 899312,
-  "PackageRoot": "Central-de-Trabalho-v0.11.2",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.3.zip",
+  "PackageSha256": "5A61E9A3C6E7D1FD5C0684DBB18C9C8B00921A8713C86A278023A3C71D65E0A3",
+  "PackageSize": 900085,
+  "PackageRoot": "Central-de-Trabalho-v0.11.3",
   "ReleaseNotes": [
-    "Limpeza de navegação da Central de Manutenção CB5.",
-    "Removidos da Visão geral os botões Histórico, Apoio ao diagnóstico e Esquemáticos, pois repetiam as abas principais.",
-    "A Visão geral volta a priorizar resumo, indicadores, Nova passagem e atividade recente.",
-    "Mantido o botão Nova passagem porque ele inicia um registro limpo, função diferente de apenas abrir a aba Passagem.",
-    "Nenhuma regra de manutenção, histórico, diagnóstico ou salvamento foi alterada."
+    "Limpeza ampla de duplicações visuais na Central de Trabalho e na Central de Manutenção CB5.",
+    "Na Central de Trabalho, Programas e Backup deixam de aparecer como navegações separadas; Atualizações passa a concentrar atualização, backup e restauração.",
+    "A área Ações rápidas e os cartões-resumo repetidos foram retirados da tela principal; permanecem os cartões dos dois programas.",
+    "Status repetido do cabeçalho e versão repetida do rodapé foram removidos da visualização.",
+    "Na Central de Manutenção integrada, a faixa superior de abas foi ocultada e os botões centrais passam a ser a navegação principal.",
+    "A Visão geral da Manutenção oferece Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras/Dados, além de Nova passagem.",
+    "Nas páginas internas da Manutenção, um único botão Voltar à visão geral aparece no rodapé.",
+    "Botões FILTRAR e BUSCAR foram ocultados onde a atualização já acontece automaticamente.",
+    "Nenhuma regra de manutenção, salvamento, histórico, diagnóstico ou atualização foi alterada."
   ]
 }

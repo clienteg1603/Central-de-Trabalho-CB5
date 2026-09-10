@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.5.2"
+$script:AppVersion = "0.5.3"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -1502,7 +1502,33 @@ else {
     $mainTabs.SizeMode = [Windows.Forms.TabSizeMode]::Normal
     $mainTabs.Padding = [Drawing.Point]::new(14, 7)
 }
-$rootLayout.Controls.Add($mainTabs, 0, 1)
+if ($script:IsInProcessHosted) {
+    $tabsViewport = New-Object Windows.Forms.Panel
+    $tabsViewport.Dock = [Windows.Forms.DockStyle]::Fill
+    $tabsViewport.Margin = [Windows.Forms.Padding]::new(0)
+    $tabsViewport.Padding = [Windows.Forms.Padding]::new(0)
+    $tabsViewport.AutoScroll = $false
+    $rootLayout.Controls.Add($tabsViewport, 0, 1)
+
+    $mainTabs.Dock = [Windows.Forms.DockStyle]::None
+    $mainTabs.Anchor = [Windows.Forms.AnchorStyles]::Top -bor [Windows.Forms.AnchorStyles]::Bottom -bor [Windows.Forms.AnchorStyles]::Left -bor [Windows.Forms.AnchorStyles]::Right
+    $tabsViewport.Controls.Add($mainTabs)
+    $tabsViewport.Add_SizeChanged({
+        try {
+            $hiddenTabStrip = 31
+            $mainTabs.Location = [Drawing.Point]::new(0, -$hiddenTabStrip)
+            $mainTabs.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), [Math]::Max(1, $tabsViewport.ClientSize.Height + $hiddenTabStrip))
+        } catch {}
+    })
+    try {
+        $hiddenTabStrip = 31
+        $mainTabs.Location = [Drawing.Point]::new(0, -$hiddenTabStrip)
+        $mainTabs.Size = [Drawing.Size]::new([Math]::Max(1, $tabsViewport.ClientSize.Width), [Math]::Max(1, $tabsViewport.ClientSize.Height + $hiddenTabStrip))
+    } catch {}
+}
+else {
+    $rootLayout.Controls.Add($mainTabs, 0, 1)
+}
 
 $dashboardTab = New-Object Windows.Forms.TabPage
 $dashboardTab.Text = "Visão geral"
@@ -1512,12 +1538,13 @@ $mainTabs.TabPages.Add($dashboardTab)
 $dashboardRoot = New-Object Windows.Forms.TableLayoutPanel
 $dashboardRoot.Dock = [Windows.Forms.DockStyle]::Fill
 $dashboardRoot.Padding = if ($script:IsInProcessHosted) { [Windows.Forms.Padding]::new(12) } else { [Windows.Forms.Padding]::new(18) }
-$dashboardRoot.RowCount = 3
+$dashboardRoot.RowCount = 4
 $dashboardRoot.ColumnCount = 1
 $dashboardIntroHeight = if ($script:IsInProcessHosted) { 56 } else { 68 }
 $dashboardCardsHeight = if ($script:IsInProcessHosted) { 122 } else { 138 }
 [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardIntroHeight)))
 [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardCardsHeight)))
+[void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 46)))
 [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
 $dashboardTab.Controls.Add($dashboardRoot)
 
@@ -1631,11 +1658,40 @@ $returnsValue = $null
 $cardReturns = New-SummaryCard "Retornos identificados" "Success" ([ref]$returnsValue)
 $cardsLayout.Controls.Add($cardReturns, 3, 0)
 
+$dashboardNavigation = New-Object Windows.Forms.TableLayoutPanel
+$dashboardNavigation.Dock = [Windows.Forms.DockStyle]::Fill
+$dashboardNavigation.ColumnCount = 5
+$dashboardNavigation.RowCount = 1
+$dashboardNavigation.Margin = [Windows.Forms.Padding]::new(4, 3, 4, 3)
+for ($i = 0; $i -lt 5; $i++) { [void]$dashboardNavigation.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 20))) }
+$dashboardRoot.Controls.Add($dashboardNavigation, 0, 2)
+
+function New-DashboardNavButton([string]$Text) {
+    $button = New-Object Windows.Forms.Button
+    $button.Text = $Text
+    $button.Dock = [Windows.Forms.DockStyle]::Fill
+    $button.Margin = [Windows.Forms.Padding]::new(3, 2, 3, 2)
+    $button.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.0)
+    $button.Tag = "Secondary"
+    return $button
+}
+
+$dashboardHistoryButton = New-DashboardNavButton "HISTÓRICO"
+$dashboardStatsButton = New-DashboardNavButton "ESTATÍSTICAS"
+$dashboardDiagnosisButton = New-DashboardNavButton "DIAGNÓSTICO"
+$dashboardSchematicsButton = New-DashboardNavButton "ESQUEMÁTICOS"
+$dashboardRulesButton = New-DashboardNavButton "REGRAS / DADOS"
+$dashboardNavigation.Controls.Add($dashboardHistoryButton, 0, 0)
+$dashboardNavigation.Controls.Add($dashboardStatsButton, 1, 0)
+$dashboardNavigation.Controls.Add($dashboardDiagnosisButton, 2, 0)
+$dashboardNavigation.Controls.Add($dashboardSchematicsButton, 3, 0)
+$dashboardNavigation.Controls.Add($dashboardRulesButton, 4, 0)
+
 $recentGroup = New-Object Windows.Forms.GroupBox
 $recentGroup.Text = "Atividade recente"
 $recentGroup.Dock = [Windows.Forms.DockStyle]::Fill
 $recentGroup.Padding = if ($script:IsInProcessHosted) { [Windows.Forms.Padding]::new(8, 18, 8, 8) } else { [Windows.Forms.Padding]::new(10, 20, 10, 10) }
-$dashboardRoot.Controls.Add($recentGroup, 0, 2)
+$dashboardRoot.Controls.Add($recentGroup, 0, 3)
 $recentGrid = New-Grid
 foreach ($column in @(
     @("Data", "Data", 115, "Fixed", 100), @("Serie", "Série", 95, "Fixed", 85), @("Passagem", "Passagem", 80, "Fixed", 70),
@@ -2077,8 +2133,11 @@ $historyFilterButton.Text = "FILTRAR"
 $historyFilterButton.Dock = [Windows.Forms.DockStyle]::Fill
 $historyFilterButton.Tag = "Primary"
 $historyFilterLayout.Controls.Add($historyFilterButton, 4, 0)
+$historyFilterButton.Visible = $false
+$historyFilterLayout.ColumnStyles[4].Width = 0
+$historyFilterLayout.ColumnStyles[5].Width = 20
 $historyClearButton = New-Object Windows.Forms.Button
-$historyClearButton.Text = "LIMPAR"
+$historyClearButton.Text = "LIMPAR FILTROS"
 $historyClearButton.Dock = [Windows.Forms.DockStyle]::Fill
 $historyClearButton.Tag = "Secondary"
 $historyFilterLayout.Controls.Add($historyClearButton, 5, 0)
@@ -2301,6 +2360,8 @@ $schemaSearchButton.Dock = [Windows.Forms.DockStyle]::Fill
 $schemaSearchButton.Margin = [Windows.Forms.Padding]::new(8, 10, 8, 10)
 $schemaSearchButton.Tag = "Primary"
 $schemaSearchLayout.Controls.Add($schemaSearchButton, 2, 0)
+$schemaSearchButton.Visible = $false
+$schemaSearchLayout.ColumnStyles[2].Width = 0
 $schemaOpenButton = New-Object Windows.Forms.Button
 $schemaOpenButton.Text = "ABRIR SELECIONADO"
 $schemaOpenButton.Dock = [Windows.Forms.DockStyle]::Fill
@@ -2494,8 +2555,9 @@ $footerPanel.Padding = [Windows.Forms.Padding]::new(20, 7, 20, 7)
 $rootLayout.Controls.Add($footerPanel, 0, 2)
 $footerLayout = New-Object Windows.Forms.TableLayoutPanel
 $footerLayout.Dock = [Windows.Forms.DockStyle]::Fill
-$footerLayout.ColumnCount = 2
+$footerLayout.ColumnCount = 3
 [void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
+[void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 132)))
 [void]$footerLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 $footerPanel.Controls.Add($footerLayout)
 $statusLabel = New-Object Windows.Forms.Label
@@ -2504,12 +2566,20 @@ $statusLabel.Dock = [Windows.Forms.DockStyle]::Fill
 $statusLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
 $statusLabel.AutoEllipsis = $true
 $footerLayout.Controls.Add($statusLabel, 0, 0)
+$footerHomeButton = New-Object Windows.Forms.Button
+$footerHomeButton.Text = "← VISÃO GERAL"
+$footerHomeButton.Dock = [Windows.Forms.DockStyle]::Fill
+$footerHomeButton.Margin = [Windows.Forms.Padding]::new(4, 0, 4, 0)
+$footerHomeButton.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.0)
+$footerHomeButton.Tag = "Secondary"
+$footerHomeButton.Visible = $false
+$footerLayout.Controls.Add($footerHomeButton, 1, 0)
 $footerVersion = New-Object Windows.Forms.Label
 $footerVersion.Text = "Manutenção CB5 v$($script:AppVersion)"
 $footerVersion.AutoSize = $true
 $footerVersion.Anchor = [Windows.Forms.AnchorStyles]::Right
 $footerVersion.TextAlign = [Drawing.ContentAlignment]::MiddleRight
-$footerLayout.Controls.Add($footerVersion, 1, 0)
+$footerLayout.Controls.Add($footerVersion, 2, 0)
 
 
 $script:MaintenanceResponsiveBusy = $false
@@ -2634,6 +2704,7 @@ function Update-MaintenanceResponsiveLayout {
         $dashboardRoot.Padding = [Windows.Forms.Padding]::new([Math]::Max(5,$passagePadding))
         $dashboardRoot.RowStyles[0].Height = $dashIntro
         $dashboardRoot.RowStyles[1].Height = $dashboardCardsH
+        $dashboardRoot.RowStyles[2].Height = if ($profile -eq "Tight") { 38 } elseif ($profile -eq "Compact") { 42 } else { 46 }
         $dashboardRoot.AutoScroll = ($summaryColumns -eq 1)
         $dashboardActionWidthNow = if ($profile -eq "Tight") { 126 } elseif ($profile -eq "Compact") { 142 } else { 158 }
         $dashboardIntro.ColumnStyles[1].Width = $dashboardActionWidthNow
@@ -2758,6 +2829,19 @@ $mainTabs.Add_DrawItem({
 
 $themeCombo.Add_SelectedIndexChanged({ Apply-MaintenanceTheme; Update-MaintenanceResponsiveLayout; Save-MaintenanceSettings })
 $dashboardNewButton.Add_Click({ Reset-PassageForm; $mainTabs.SelectedTab = $passageTab })
+$dashboardHistoryButton.Add_Click({ $mainTabs.SelectedTab = $historyTab })
+$dashboardStatsButton.Add_Click({ $mainTabs.SelectedTab = $statisticsTab })
+$dashboardDiagnosisButton.Add_Click({ $mainTabs.SelectedTab = $diagnosisTab })
+$dashboardSchematicsButton.Add_Click({ $mainTabs.SelectedTab = $schematicsTab })
+$dashboardRulesButton.Add_Click({ $mainTabs.SelectedTab = $rulesTab })
+$footerHomeButton.Add_Click({ $mainTabs.SelectedTab = $dashboardTab })
+$mainTabs.Add_SelectedIndexChanged({
+    try {
+        if ($script:IsInProcessHosted) {
+            $footerHomeButton.Visible = ($mainTabs.SelectedTab -ne $dashboardTab)
+        }
+    } catch {}
+})
 $recentGrid.Add_CellDoubleClick({ Show-PassageDetails (Get-SelectedRecordFromGrid $recentGrid) })
 $serialBox.Add_KeyPress({
     param($sender, $eventArgs)
@@ -2901,3 +2985,5 @@ else {
         Close-SingleInstanceMutex
     }
 }
+
+# UI_DEDUP_MAINTENANCE_V0113
