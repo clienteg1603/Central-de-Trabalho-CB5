@@ -19,6 +19,10 @@ for old, new in replacements_central:
 replacements_generator = [
     ('$script:AppVersion = "3.7.2"', '$script:AppVersion = "3.7.3"'),
     (
+        '$combineIntro.Text = "Selecione duas ou mais mestres da mesma NF. Cada linha representa um lote e mantém sua própria manutenção."',
+        '$combineIntro.Text = "Selecione uma ou mais mestres. Quando houver mais de uma, elas devem pertencer à mesma NF. Cada linha representa um lote e mantém sua própria manutenção."'
+    ),
+    (
         '$combineIntro.Text = "Selecione duas ou mais mestres $Product da mesma NF. Cada linha representa um lote; informe as manutenções adicionais diretamente na linha correspondente. A ordem abaixo será mantida no arquivo final."',
         '$combineIntro.Text = "Selecione uma ou mais mestres $Product. Quando houver mais de uma, elas devem pertencer à mesma NF. Cada linha representa um lote; informe as manutenções adicionais diretamente na linha correspondente. A ordem abaixo será mantida no arquivo final."'
     ),
