@@ -27,9 +27,8 @@ central = read(CENTRAL)
 central = replace_once(central, '$script:AppVersion = "0.14.4"', '$script:AppVersion = "0.14.5"', "versao Central")
 central = replace_once(central, '$script:MaintenanceVersion = "0.6.0"', '$script:MaintenanceVersion = "0.6.1"', "versao Manutencao na Central")
 
-# O ComboBox OwnerDraw vinha preenchendo o fundo, mas o texto podia desaparecer
-# em alguns Windows/temas. Voltamos ao desenho nativo: menos sofisticado, porém
-# previsível, acessível e sem campo vazio.
+# Remove o OwnerDraw que podia pintar o campo de Aparência sem conseguir desenhar
+# o texto em alguns ambientes WinForms. O controle nativo é mais previsível.
 combo_start = central.index('$themeCombo = New-Object Windows.Forms.ComboBox\n')
 combo_end_marker = '$sidebarBottom.Controls.Add($themeCombo)\n'
 combo_end = central.index(combo_end_marker, combo_start) + len(combo_end_marker)
@@ -47,38 +46,30 @@ $sidebarBottom.Controls.Add($themeCombo)
 '''
 central = central[:combo_start] + new_combo + central[combo_end:]
 
-# Rotas removidas deixam de existir também no estado interno.
-old_nav_map = '''    $map = @{
+# Elimina estados internos de rotas que já não existem visualmente.
+central = replace_once(
+    central,
+    '''    $map = @{
         Home = $navHome
         Programs = $navPrograms
         Updates = $navUpdates
         Backup = $navBackup
         Folder = $navFolder
         About = $navAbout
-    }'''
-new_nav_map = '''    $map = @{
+    }''',
+    '''    $map = @{
         Home = $navHome
         Updates = $navUpdates
         Folder = $navFolder
         About = $navAbout
-    }'''
-central = replace_once(central, old_nav_map, new_nav_map, "mapa de navegacao sem rotas antigas")
-central = replace_once(
-    central,
-    '$openGeneratorButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-GeneratorModule })',
-    '$openGeneratorButton.Add_Click({ Start-GeneratorModule })',
-    "evento abrir Gerenciador sem rota fantasma"
+    }''',
+    "mapa de navegacao"
 )
-central = replace_once(
-    central,
-    '$openMaintenanceButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-MaintenanceModule })',
-    '$openMaintenanceButton.Add_Click({ Start-MaintenanceModule })',
-    "evento abrir Manutencao sem rota fantasma"
-)
+central = replace_once(central, '$openGeneratorButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-GeneratorModule })', '$openGeneratorButton.Add_Click({ Start-GeneratorModule })', "abrir Gerenciador")
+central = replace_once(central, '$openMaintenanceButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-MaintenanceModule })', '$openMaintenanceButton.Add_Click({ Start-MaintenanceModule })', "abrir Manutencao")
 
-# Substitui somente a ÚLTIMA definição de Apply-AppTheme (a ativa) por uma
-# aplicação tolerante a controles opcionais/ocultos. O tema principal nunca
-# deve falhar inteiro por causa de um detalhe visual secundário.
+# A última definição é a ativa. Ela passa a cuidar apenas do que realmente está
+# visível, com cada grupo isolado para um detalhe opcional nunca abortar o tema.
 theme_start = central.rfind('function Apply-AppTheme {')
 theme_end = central.find('\nfunction Update-ResponsiveLayout', theme_start)
 if theme_start < 0 or theme_end < 0:
@@ -94,7 +85,6 @@ new_theme = r'''function Apply-AppTheme {
     $maintenanceAccent = Get-ModuleAccent "Maintenance"
 
     try { Set-CentralTitleBarTheme ($selectedTheme -ne "Claro corporativo") } catch {}
-
     try {
         $form.BackColor = $script:CurrentPalette.Background
         $rootLayout.BackColor = $script:CurrentPalette.Background
@@ -109,7 +99,6 @@ new_theme = r'''function Apply-AppTheme {
         if ($null -ne $embeddedToolbar) { $embeddedToolbar.BackColor = $script:CurrentPalette.Surface }
         if ($null -ne $embeddedContent) { $embeddedContent.BackColor = $script:CurrentPalette.Background }
     } catch {}
-
     try {
         foreach ($label in @($brandTitle, $brandSub, $sidebarSection, $sidebarThemeLabel, $sidebarVersion)) {
             if ($null -ne $label) { $label.ForeColor = [Drawing.Color]::FromArgb(225, 235, 245) }
@@ -117,7 +106,6 @@ new_theme = r'''function Apply-AppTheme {
         $sidebarStatus.ForeColor = $script:CurrentPalette.Success
         $sidebarStatusSub.ForeColor = [Drawing.Color]::FromArgb(161, 179, 197)
     } catch {}
-
     try {
         foreach ($label in @($pageTitle, $programsTitle, $generatorTitle, $maintenanceTitle, $todayLabel, $embeddedTitle)) {
             if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Text }
@@ -126,7 +114,6 @@ new_theme = r'''function Apply-AppTheme {
             if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Muted }
         }
     } catch {}
-
     try {
         foreach ($panel in @($generatorCard, $maintenanceCard)) {
             if ($null -ne $panel) {
@@ -148,16 +135,12 @@ new_theme = r'''function Apply-AppTheme {
         $maintenanceStatus.BackColor = $script:CurrentPalette.SuccessBack
         $maintenanceStatus.ForeColor = $script:CurrentPalette.Success
     } catch {}
-
-    # Mantém o seletor de aparência no desenho nativo, mas com cores coerentes.
     try {
         $themeCombo.BackColor = $script:CurrentPalette.Input
         $themeCombo.ForeColor = $script:CurrentPalette.Text
         $themeCombo.Refresh()
     } catch {}
-
     try { Set-ActiveNavigation $script:ActiveNavName } catch {}
-
     try {
         Set-PrimaryButtonStyle $openGeneratorButton
         $openGeneratorButton.BackColor = $generatorAccent
@@ -169,7 +152,6 @@ new_theme = r'''function Apply-AppTheme {
         if ($null -ne $embeddedBackButton) { Set-SecondaryButtonStyle $embeddedBackButton }
         if ($null -ne $embeddedFolderButton) { Set-SecondaryButtonStyle $embeddedFolderButton }
     } catch {}
-
     try {
         $headerAccent.BackColor = $script:CurrentPalette.Accent
         if ($null -ne $embeddedAccentLine) {
@@ -178,7 +160,6 @@ new_theme = r'''function Apply-AppTheme {
         $headerStatusPill.BackColor = $script:CurrentPalette.SuccessBack
         $headerStatusPill.ForeColor = $script:CurrentPalette.Success
     } catch {}
-
     try {
         if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
             $sidebarStatus.Text = "●  Sistema pronto"
@@ -200,7 +181,6 @@ new_theme = r'''function Apply-AppTheme {
             $sidebarStatusSub.Text = "Gerenciador não localizado"
         }
     } catch {}
-
     try {
         foreach ($rounded in @($generatorCard,$maintenanceCard,$brandMark,$generatorIcon,$maintenanceIcon,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton)) {
             if ($null -ne $rounded) { Set-RoundedRegion $rounded 10 }
@@ -211,7 +191,7 @@ new_theme = r'''function Apply-AppTheme {
 '''
 central = central[:theme_start] + new_theme + central[theme_end:]
 
-# O layout responsivo deixa de recalcular blocos antigos que já estão ocultos.
+# Somente a área realmente visível participa do recálculo responsivo principal.
 resp_start = central.rfind('function Update-ResponsiveLayout {')
 resp_end = central.find('\n\n$script:CentralAdaptiveBusy', resp_start)
 if resp_start < 0 or resp_end < 0:
@@ -234,9 +214,9 @@ new_resp = r'''function Update-ResponsiveLayout {
 '''
 central = central[:resp_start] + new_resp + central[resp_end:]
 
-# Evento de tema: sucesso/falha de sincronização do módulo fica separado do
-# desenho da Central e não deixa mensagem vermelha permanente por detalhe visual.
-old_event = '''$themeCombo.Add_SelectedIndexChanged({
+central = replace_once(
+    central,
+    '''$themeCombo.Add_SelectedIndexChanged({
     # A aparência da Central deve sempre mudar mesmo que um módulo hospedado
     # esteja em processo de fechamento. Erro de tema de módulo não pode abrir
     # a caixa de exceção do WinForms nem interromper a troca de aparência.
@@ -252,27 +232,28 @@ old_event = '''$themeCombo.Add_SelectedIndexChanged({
     catch {
         try { Set-StatusMessage "A aparência da Central foi aplicada; o módulo aberto será atualizado ao reabrir." "Warning" } catch {}
     }
-})'''
-new_event = '''$themeCombo.Add_SelectedIndexChanged({
+})''',
+    '''$themeCombo.Add_SelectedIndexChanged({
     try { Apply-AppTheme } catch {}
     try { Save-AppSettings } catch {}
     try { Sync-HostedModuleTheme } catch {}
     try { Set-StatusMessage ("Aparência aplicada: " + [string]$themeCombo.SelectedItem + ".") "Success" } catch {}
-})'''
-central = replace_once(central, old_event, new_event, "evento robusto de aparencia")
-
-# Eventos de resize de áreas invisíveis deixam de rodar a cada redimensionamento.
-old_resize = '''$summaryFlow.Add_SizeChanged({ Update-ResponsiveLayout })
+})''',
+    "evento de aparencia"
+)
+central = replace_once(
+    central,
+    '''$summaryFlow.Add_SizeChanged({ Update-ResponsiveLayout })
 $modulesFlow.Add_SizeChanged({ Update-ResponsiveLayout })
 $quickFlow.Add_SizeChanged({ Update-ResponsiveLayout })
 $quickHost.Add_SizeChanged({
     $quickFlow.Width = [Math]::Max(300, $quickHost.ClientSize.Width - 36)
     $quickFlow.Height = [Math]::Max(62, $quickHost.ClientSize.Height - 53)
     Update-ResponsiveLayout
-})'''
-new_resize = '''$modulesFlow.Add_SizeChanged({ Update-ResponsiveLayout })'''
-central = replace_once(central, old_resize, new_resize, "resize somente da area visivel")
-
+})''',
+    '''$modulesFlow.Add_SizeChanged({ Update-ResponsiveLayout })''',
+    "eventos responsivos antigos"
+)
 write(CENTRAL, central)
 
 
@@ -281,16 +262,10 @@ write(CENTRAL, central)
 # ---------------------------------------------------------------------------
 maint = read(MAINT)
 maint = replace_once(maint, '$script:AppVersion = "0.6.0"', '$script:AppVersion = "0.6.1"', "versao Manutencao")
-maint = replace_once(
-    maint,
-    '$script:HostedSectionNavPanel = $null\n',
-    '$script:HostedSectionNavPanel = $null\n$script:HostedShell = $null\n',
-    "estado do shell hospedado"
-)
+maint = replace_once(maint, '$script:HostedSectionNavPanel = $null\n', '$script:HostedSectionNavPanel = $null\n$script:HostedShell = $null\n', "estado do shell")
 
-# Troca o posicionamento absoluto do cabeçalho/cartões/navegação por um
-# TableLayoutPanel de três linhas. Assim cada faixa recebe espaço físico e não
-# pode invadir/cortar a seção abaixo ao mudar resolução ou escala do Windows.
+# O modo integrado passa a ter três linhas físicas: cartões, navegação e conteúdo.
+# Não há mais sobreposição absoluta entre essas regiões.
 block_start = maint.index('if ($script:IsInProcessHosted) {\n    $tabsViewport = New-Object Windows.Forms.Panel\n')
 block_end_marker = '''else {
     $rootLayout.Controls.Add($mainTabs, 0, 1)
@@ -331,27 +306,27 @@ new_host_block = r'''if ($script:IsInProcessHosted) {
 
             $isPassage = $false
             $passageVar = Get-Variable -Name passageTab -ErrorAction SilentlyContinue
-            if ($null -ne $passageVar -and $null -ne $passageVar.Value -and $mainTabs.SelectedTab -eq $passageVar.Value) {
-                $isPassage = $true
-            }
+            if ($null -ne $passageVar -and $null -ne $passageVar.Value -and $mainTabs.SelectedTab -eq $passageVar.Value) { $isPassage = $true }
 
             $overviewHeight = 0
             if (-not $isPassage -and $shellH -ge 650) {
-                $overviewHeight = if ($shellH -lt 760) { 92 } elseif ($shellH -lt 940) { 102 } else { 110 }
+                if ($shellW -ge 1380) {
+                    $overviewHeight = if ($shellH -lt 760) { 92 } elseif ($shellH -lt 940) { 102 } else { 110 }
+                }
+                elseif ($shellW -ge 720 -and $shellH -ge 760) {
+                    $overviewHeight = if ($shellH -lt 900) { 158 } else { 174 }
+                }
+                elseif ($shellH -ge 980) {
+                    $overviewHeight = 300
+                }
             }
             $navHeight = if ($shellH -lt 600) { 38 } else { 42 }
             $script:HostedShell.RowStyles[0].Height = $overviewHeight
             $script:HostedShell.RowStyles[1].Height = $navHeight
 
-            if ($null -ne $script:HostedOverviewPanel) {
-                $script:HostedOverviewPanel.Visible = ($overviewHeight -gt 0)
-            }
-            if ($null -ne $script:HostedSectionNavPanel) {
-                $script:HostedSectionNavPanel.Visible = $true
-            }
+            if ($null -ne $script:HostedOverviewPanel) { $script:HostedOverviewPanel.Visible = ($overviewHeight -gt 0) }
+            if ($null -ne $script:HostedSectionNavPanel) { $script:HostedSectionNavPanel.Visible = $true }
 
-            # Seis comandos permanecem em uma única faixa; em largura menor os
-            # nomes são abreviados, em vez de deixar o WinForms cortar letras.
             $compactNav = ($shellW -lt 1120)
             if ($compactNav) {
                 $dashboardNewButton.Text = "+ PASSAGEM"
@@ -396,11 +371,10 @@ else {
 $dashboardTab = New-Object Windows.Forms.TabPage'''
 maint = maint[:block_start] + new_host_block + maint[block_end + len(block_end_marker):]
 
-# Painéis persistentes passam a ocupar linhas reais do shell.
 maint = replace_once(
     maint,
     '''    $script:HostedOverviewPanel.Margin = [Windows.Forms.Padding]::new(0)
-    $script:HostedOverviewPanel.Padding = [Windows.Forms.Padding]::new(8, 6, 8, 4)
+    $script:HostedOverviewPanel.Padding = [Windows.Forms.Padding]::new(8, 5, 8, 5)
     $tabsViewport.Controls.Add($script:HostedOverviewPanel)''',
     '''    $script:HostedOverviewPanel.Dock = [Windows.Forms.DockStyle]::Fill
     $script:HostedOverviewPanel.Margin = [Windows.Forms.Padding]::new(0)
@@ -419,18 +393,5 @@ maint = replace_once(
     $script:HostedShell.Controls.Add($script:HostedSectionNavPanel, 0, 1)''',
     "navegacao no shell"
 )
-
-# O botão de navegação já não precisa de uma margem grande; aumenta a área útil
-# do texto sem mudar a lógica de clique.
-maint = replace_once(
-    maint,
-    '''    $button.Margin = [Windows.Forms.Padding]::new(3, 2, 3, 2)
-    $button.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.0)''',
-    '''    $button.Margin = [Windows.Forms.Padding]::new(2, 2, 2, 2)
-    $button.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.0)
-    $button.AutoEllipsis = $true''',
-    "botoes internos com ellipsis seguro"
-)
-
 write(MAINT, maint)
 print("Manutenção geral v0.14.5 aplicada com sucesso.")
