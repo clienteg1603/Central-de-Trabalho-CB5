@@ -33,10 +33,10 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.14.4"
+$script:AppVersion = "0.14.5"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.6.2"
-$script:MaintenanceVersion = "0.6.0"
+$script:MaintenanceVersion = "0.6.1"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -653,9 +653,7 @@ function Set-ActiveNavigation {
     $script:ActiveNavName = $Name
     $map = @{
         Home = $navHome
-        Programs = $navPrograms
         Updates = $navUpdates
-        Backup = $navBackup
         Folder = $navFolder
         About = $navAbout
     }
@@ -698,146 +696,133 @@ function Set-NavButtonStyle {
 
 function Apply-AppTheme {
     $selectedTheme = [string]$themeCombo.SelectedItem
+    if ([string]::IsNullOrWhiteSpace($selectedTheme) -or -not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $selectedTheme)) {
+        $selectedTheme = "Escuro profissional"
+    }
     $script:CurrentPalette = Get-ThemePalette $selectedTheme
     $sidebarColor = Get-SidebarColor $selectedTheme
     $generatorAccent = Get-ModuleAccent "Generator"
     $maintenanceAccent = Get-ModuleAccent "Maintenance"
-    Set-CentralTitleBarTheme ($selectedTheme -ne "Claro corporativo")
 
-    $form.BackColor = $script:CurrentPalette.Background
-    $rootLayout.BackColor = $script:CurrentPalette.Background
-    $sidebar.BackColor = $sidebarColor
-    $mainPanel.BackColor = $script:CurrentPalette.Background
-    if ($null -ne $embeddedHost) { $embeddedHost.BackColor = $script:CurrentPalette.Background }
-    if ($null -ne $embeddedToolbar) { $embeddedToolbar.BackColor = $script:CurrentPalette.Surface }
-    if ($null -ne $embeddedContent) { $embeddedContent.BackColor = $script:CurrentPalette.Background }
-    $headerPanel.BackColor = $script:CurrentPalette.Background
-    $summaryHost.BackColor = $script:CurrentPalette.Background
-    $modulesHost.BackColor = $script:CurrentPalette.Background
-    $quickHost.BackColor = $script:CurrentPalette.Background
-    $footerPanel.BackColor = $script:CurrentPalette.Footer
-
-    foreach ($label in @($brandTitle, $brandSub, $sidebarSection, $sidebarThemeLabel, $sidebarVersion)) {
-        $label.ForeColor = [Drawing.Color]::FromArgb(225, 235, 245)
-    }
-    $sidebarStatus.ForeColor = $script:CurrentPalette.Success
-    $sidebarStatusSub.ForeColor = [Drawing.Color]::FromArgb(161, 179, 197)
-
-    foreach ($label in @($pageTitle, $programsTitle, $generatorTitle, $maintenanceTitle, $quickTitle, $updatesQuickTitle, $folderQuickTitle, $todayLabel, $embeddedTitle)) {
-        $label.ForeColor = $script:CurrentPalette.Text
-    }
-    foreach ($label in @(
-        $pageSubtitle, $programsSubtitle, $generatorDescription, $generatorDetail, $maintenanceDescription, $maintenanceDetail,
-        $quickSubtitle, $updatesQuickText, $folderQuickText, $footerVersion, $embeddedSubtitle, $embeddedLoading
-    )) {
-        $label.ForeColor = $script:CurrentPalette.Muted
-    }
-
-    foreach ($panel in @($summaryCard1, $summaryCard2, $summaryCard3, $generatorCard, $maintenanceCard, $updatesQuickCard, $folderQuickCard)) {
-        $panel.BackColor = $script:CurrentPalette.Card
-        $panel.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
-    }
-    foreach ($layout in @($summaryLayout1, $summaryLayout2, $summaryLayout3, $generatorLayout, $maintenanceLayout, $updatesQuickLayout, $folderQuickLayout)) {
-        $layout.BackColor = $script:CurrentPalette.Card
-    }
-
-    foreach ($label in @($summaryLabel1, $summaryLabel2, $summaryLabel3)) { $label.ForeColor = $script:CurrentPalette.Muted }
-    foreach ($label in @($summaryValue1, $summaryValue2, $summaryValue3)) { $label.ForeColor = $script:CurrentPalette.Text }
-    $summaryDot1.ForeColor = $script:CurrentPalette.Accent
-    $summaryDot2.ForeColor = $generatorAccent
-    $summaryDot3.ForeColor = $script:CurrentPalette.Blue
-
-    $generatorAccentBar.BackColor = $generatorAccent
-    $generatorIcon.BackColor = $generatorAccent
-    $generatorIcon.ForeColor = [Drawing.Color]::White
-    $maintenanceAccentBar.BackColor = $maintenanceAccent
-    $maintenanceIcon.BackColor = $maintenanceAccent
-    $maintenanceIcon.ForeColor = [Drawing.Color]::White
-
-    $generatorStatus.BackColor = $script:CurrentPalette.SuccessBack
-    $generatorStatus.ForeColor = $script:CurrentPalette.Success
-    $maintenanceStatus.BackColor = $script:CurrentPalette.SuccessBack
-    $maintenanceStatus.ForeColor = $script:CurrentPalette.Success
-
-    $themeCombo.BackColor = $script:CurrentPalette.Input
-    $themeCombo.ForeColor = $script:CurrentPalette.Text
-    $themeCombo.Invalidate()
-
-    Set-ActiveNavigation $script:ActiveNavName
-
-    Set-PrimaryButtonStyle $openGeneratorButton
-    $openGeneratorButton.BackColor = $generatorAccent
-    Set-PrimaryButtonStyle $openMaintenanceButton
-    $openMaintenanceButton.BackColor = $maintenanceAccent
-    $openMaintenanceButton.ForeColor = [Drawing.Color]::White
-    Set-SecondaryButtonStyle $quickUpdatesButton
-    Set-SecondaryButtonStyle $quickFolderButton
-    Set-SecondaryButtonStyle $openGeneratorFolderButton
-    Set-SecondaryButtonStyle $openMaintenanceFolderButton
-    if ($null -ne $embeddedBackButton) { Set-SecondaryButtonStyle $embeddedBackButton }
-    if ($null -ne $embeddedFolderButton) { Set-SecondaryButtonStyle $embeddedFolderButton }
-    $headerAccent.BackColor = $script:CurrentPalette.Accent
-    if ($null -ne $embeddedAccentLine) {
-        $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } else { $script:CurrentPalette.Accent }
-    }
-    $headerStatusPill.BackColor = $script:CurrentPalette.SuccessBack
-    $headerStatusPill.ForeColor = $script:CurrentPalette.Success
-
-    if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
-        $sidebarStatus.Text = "●  Sistema pronto"
-        $sidebarStatusSub.Text = "2 módulos disponíveis"
-    }
-    elseif (-not [IO.File]::Exists($script:UpdaterScript)) {
-        Set-StatusMessage "O Atualizador da Central de Trabalho não foi encontrado." "Error"
-        $sidebarStatus.Text = "●  Atenção"
-        $sidebarStatusSub.Text = "Atualizador não localizado"
-    }
-    elseif (-not [IO.File]::Exists($script:MaintenanceScript)) {
-        Set-StatusMessage "O módulo Central de Manutenção CB5 não foi encontrado." "Error"
-        $sidebarStatus.Text = "●  Atenção"
-        $sidebarStatusSub.Text = "Manutenção não localizada"
-    }
-    else {
-        Set-StatusMessage "O módulo Gerenciador de Planilhas não foi encontrado." "Error"
-        $sidebarStatus.Text = "●  Atenção"
-        $sidebarStatusSub.Text = "Gerenciador não localizado"
-    }
-    foreach ($rounded in @($summaryCard1,$summaryCard2,$summaryCard3,$generatorCard,$maintenanceCard,$updatesQuickCard,$folderQuickCard,$brandMark,$generatorIcon,$maintenanceIcon,$headerStatusPill,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton,$quickUpdatesButton,$quickFolderButton)) {
-        Set-RoundedRegion $rounded 10
-    }
-    $form.Invalidate($true)
+    try { Set-CentralTitleBarTheme ($selectedTheme -ne "Claro corporativo") } catch {}
+    try {
+        $form.BackColor = $script:CurrentPalette.Background
+        $rootLayout.BackColor = $script:CurrentPalette.Background
+        $sidebar.BackColor = $sidebarColor
+        $mainPanel.BackColor = $script:CurrentPalette.Background
+        $headerPanel.BackColor = $script:CurrentPalette.Background
+        $modulesHost.BackColor = $script:CurrentPalette.Background
+        $footerPanel.BackColor = $script:CurrentPalette.Footer
+    } catch {}
+    try {
+        if ($null -ne $embeddedHost) { $embeddedHost.BackColor = $script:CurrentPalette.Background }
+        if ($null -ne $embeddedToolbar) { $embeddedToolbar.BackColor = $script:CurrentPalette.Surface }
+        if ($null -ne $embeddedContent) { $embeddedContent.BackColor = $script:CurrentPalette.Background }
+    } catch {}
+    try {
+        foreach ($label in @($brandTitle, $brandSub, $sidebarSection, $sidebarThemeLabel, $sidebarVersion)) {
+            if ($null -ne $label) { $label.ForeColor = [Drawing.Color]::FromArgb(225, 235, 245) }
+        }
+        $sidebarStatus.ForeColor = $script:CurrentPalette.Success
+        $sidebarStatusSub.ForeColor = [Drawing.Color]::FromArgb(161, 179, 197)
+    } catch {}
+    try {
+        foreach ($label in @($pageTitle, $programsTitle, $generatorTitle, $maintenanceTitle, $todayLabel, $embeddedTitle)) {
+            if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Text }
+        }
+        foreach ($label in @($pageSubtitle, $programsSubtitle, $generatorDescription, $generatorDetail, $maintenanceDescription, $maintenanceDetail, $embeddedSubtitle, $embeddedLoading)) {
+            if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Muted }
+        }
+    } catch {}
+    try {
+        foreach ($panel in @($generatorCard, $maintenanceCard)) {
+            if ($null -ne $panel) {
+                $panel.BackColor = $script:CurrentPalette.Card
+                $panel.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
+            }
+        }
+        foreach ($layout in @($generatorLayout, $maintenanceLayout)) {
+            if ($null -ne $layout) { $layout.BackColor = $script:CurrentPalette.Card }
+        }
+        $generatorAccentBar.BackColor = $generatorAccent
+        $generatorIcon.BackColor = $generatorAccent
+        $generatorIcon.ForeColor = [Drawing.Color]::White
+        $maintenanceAccentBar.BackColor = $maintenanceAccent
+        $maintenanceIcon.BackColor = $maintenanceAccent
+        $maintenanceIcon.ForeColor = [Drawing.Color]::White
+        $generatorStatus.BackColor = $script:CurrentPalette.SuccessBack
+        $generatorStatus.ForeColor = $script:CurrentPalette.Success
+        $maintenanceStatus.BackColor = $script:CurrentPalette.SuccessBack
+        $maintenanceStatus.ForeColor = $script:CurrentPalette.Success
+    } catch {}
+    try {
+        $themeCombo.BackColor = $script:CurrentPalette.Input
+        $themeCombo.ForeColor = $script:CurrentPalette.Text
+        $themeCombo.Refresh()
+    } catch {}
+    try { Set-ActiveNavigation $script:ActiveNavName } catch {}
+    try {
+        Set-PrimaryButtonStyle $openGeneratorButton
+        $openGeneratorButton.BackColor = $generatorAccent
+        Set-PrimaryButtonStyle $openMaintenanceButton
+        $openMaintenanceButton.BackColor = $maintenanceAccent
+        $openMaintenanceButton.ForeColor = [Drawing.Color]::White
+        Set-SecondaryButtonStyle $openGeneratorFolderButton
+        Set-SecondaryButtonStyle $openMaintenanceFolderButton
+        if ($null -ne $embeddedBackButton) { Set-SecondaryButtonStyle $embeddedBackButton }
+        if ($null -ne $embeddedFolderButton) { Set-SecondaryButtonStyle $embeddedFolderButton }
+    } catch {}
+    try {
+        $headerAccent.BackColor = $script:CurrentPalette.Accent
+        if ($null -ne $embeddedAccentLine) {
+            $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } else { $script:CurrentPalette.Accent }
+        }
+        $headerStatusPill.BackColor = $script:CurrentPalette.SuccessBack
+        $headerStatusPill.ForeColor = $script:CurrentPalette.Success
+    } catch {}
+    try {
+        if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
+            $sidebarStatus.Text = "●  Sistema pronto"
+            $sidebarStatusSub.Text = "2 módulos disponíveis"
+        }
+        elseif (-not [IO.File]::Exists($script:UpdaterScript)) {
+            Set-StatusMessage "O Atualizador da Central de Trabalho não foi encontrado." "Error"
+            $sidebarStatus.Text = "●  Atenção"
+            $sidebarStatusSub.Text = "Atualizador não localizado"
+        }
+        elseif (-not [IO.File]::Exists($script:MaintenanceScript)) {
+            Set-StatusMessage "O módulo Central de Manutenção CB5 não foi encontrado." "Error"
+            $sidebarStatus.Text = "●  Atenção"
+            $sidebarStatusSub.Text = "Manutenção não localizada"
+        }
+        else {
+            Set-StatusMessage "O módulo Gerenciador de Planilhas não foi encontrado." "Error"
+            $sidebarStatus.Text = "●  Atenção"
+            $sidebarStatusSub.Text = "Gerenciador não localizado"
+        }
+    } catch {}
+    try {
+        foreach ($rounded in @($generatorCard,$maintenanceCard,$brandMark,$generatorIcon,$maintenanceIcon,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton)) {
+            if ($null -ne $rounded) { Set-RoundedRegion $rounded 10 }
+        }
+    } catch {}
+    try { $form.Invalidate($true) } catch {}
 }
 
 function Update-ResponsiveLayout {
     if ($null -eq $modulesFlow -or $modulesFlow.ClientSize.Width -le 0) { return }
-
-    $available = $modulesFlow.ClientSize.Width - $modulesFlow.Padding.Horizontal - 34
-    if ($available -lt 420) { $available = 420 }
-    $moduleWidth = $available
-    if ($available -ge 860) { $moduleWidth = [int](($available - 22) / 2) }
-    foreach ($card in @($generatorCard, $maintenanceCard)) {
-        $card.Width = $moduleWidth
-        $card.Height = 252
-    }
-
-    $summaryAvailable = $summaryFlow.ClientSize.Width - $summaryFlow.Padding.Horizontal - 40
-    if ($summaryAvailable -gt 0) {
-        $summaryWidth = [Math]::Max(215, [int](($summaryAvailable - 28) / 3))
-        foreach ($card in @($summaryCard1, $summaryCard2, $summaryCard3)) {
-            $card.Width = $summaryWidth
-            $card.Height = 86
+    try {
+        $available = $modulesFlow.ClientSize.Width - $modulesFlow.Padding.Horizontal - 34
+        if ($available -lt 420) { $available = 420 }
+        $moduleWidth = $available
+        if ($available -ge 860) { $moduleWidth = [int](($available - 22) / 2) }
+        foreach ($card in @($generatorCard, $maintenanceCard)) {
+            if ($null -ne $card) {
+                $card.Width = $moduleWidth
+                $card.Height = 252
+            }
         }
-    }
-
-    $quickAvailable = $quickFlow.ClientSize.Width - $quickFlow.Padding.Horizontal - 34
-    if ($quickAvailable -gt 0) {
-        $quickWidth = $quickAvailable
-        if ($quickAvailable -ge 700) { $quickWidth = [int](($quickAvailable - 22) / 2) }
-        foreach ($card in @($updatesQuickCard, $folderQuickCard)) {
-            $card.Width = $quickWidth
-            $card.Height = 72
-        }
-    }
+    } catch {}
 }
 
 
@@ -1091,45 +1076,12 @@ $themeCombo = New-Object Windows.Forms.ComboBox
 $themeCombo.Location = [Drawing.Point]::new(4, 27)
 $themeCombo.Size = [Drawing.Size]::new(184, 30)
 $themeCombo.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
-$themeCombo.DrawMode = [Windows.Forms.DrawMode]::OwnerDrawFixed
-$themeCombo.ItemHeight = 23
-$themeCombo.FlatStyle = [Windows.Forms.FlatStyle]::Flat
+$themeCombo.DrawMode = [Windows.Forms.DrawMode]::Normal
+$themeCombo.FlatStyle = [Windows.Forms.FlatStyle]::Popup
+$themeCombo.IntegralHeight = $true
 [void]$themeCombo.Items.AddRange(@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste"))
 $themeCombo.SelectedItem = $settings.Theme
 if ($themeCombo.SelectedIndex -lt 0) { $themeCombo.SelectedIndex = 0 }
-$themeCombo.Add_DrawItem({
-    param($sender, $e)
-    try {
-        $index = [int]$e.Index
-        if ($index -lt 0) { $index = [int]$sender.SelectedIndex }
-        $palette = $script:CurrentPalette
-        $back = if ($null -ne $palette) { $palette.Input } else { [Drawing.Color]::FromArgb(18,24,27) }
-        $fore = if ($null -ne $palette) { $palette.Text } else { [Drawing.Color]::White }
-        if (($e.State -band [Windows.Forms.DrawItemState]::Selected) -ne 0) {
-            $back = if ($null -ne $palette) { $palette.AccentStrong } else { [Drawing.Color]::FromArgb(27,151,134) }
-            $fore = if ($null -ne $palette) { $palette.AccentText } else { [Drawing.Color]::White }
-        }
-        $brush = New-Object Drawing.SolidBrush($back)
-        $textBrush = New-Object Drawing.SolidBrush($fore)
-        try {
-            $e.Graphics.FillRectangle($brush, $e.Bounds)
-            if ($index -ge 0 -and $index -lt $sender.Items.Count) {
-                $textRect = [Drawing.Rectangle]::new($e.Bounds.X + 7, $e.Bounds.Y, [Math]::Max(1, $e.Bounds.Width - 10), $e.Bounds.Height)
-                $format = New-Object Drawing.StringFormat
-                try {
-                    $format.LineAlignment = [Drawing.StringAlignment]::Center
-                    $format.Trimming = [Drawing.StringTrimming]::EllipsisCharacter
-                    $format.FormatFlags = [Drawing.StringFormatFlags]::NoWrap
-                    $e.Graphics.DrawString([string]$sender.Items[$index], $sender.Font, $textBrush, $textRect, $format)
-                } finally { $format.Dispose() }
-            }
-        } finally {
-            $brush.Dispose()
-            $textBrush.Dispose()
-        }
-        if (($e.State -band [Windows.Forms.DrawItemState]::Focus) -ne 0) { $e.DrawFocusRectangle() }
-    } catch {}
-})
 $sidebarBottom.Controls.Add($themeCombo)
 
 $sidebarStatus = New-Object Windows.Forms.Label
@@ -1634,24 +1586,13 @@ foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$headerSt
 
 # Eventos
 $themeCombo.Add_SelectedIndexChanged({
-    # A aparência da Central deve sempre mudar mesmo que um módulo hospedado
-    # esteja em processo de fechamento. Erro de tema de módulo não pode abrir
-    # a caixa de exceção do WinForms nem interromper a troca de aparência.
-    try {
-        Apply-AppTheme
-        Save-AppSettings
-    }
-    catch {
-        try { Set-StatusMessage "Não foi possível aplicar completamente a aparência da Central." "Error" } catch {}
-        return
-    }
-    try { Sync-HostedModuleTheme }
-    catch {
-        try { Set-StatusMessage "A aparência da Central foi aplicada; o módulo aberto será atualizado ao reabrir." "Warning" } catch {}
-    }
+    try { Apply-AppTheme } catch {}
+    try { Save-AppSettings } catch {}
+    try { Sync-HostedModuleTheme } catch {}
+    try { Set-StatusMessage ("Aparência aplicada: " + [string]$themeCombo.SelectedItem + ".") "Success" } catch {}
 })
-$openGeneratorButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-GeneratorModule })
-$openMaintenanceButton.Add_Click({ Set-ActiveNavigation "Programs"; Start-MaintenanceModule })
+$openGeneratorButton.Add_Click({ Start-GeneratorModule })
+$openMaintenanceButton.Add_Click({ Start-MaintenanceModule })
 $openGeneratorFolderButton.Add_Click({ Open-ModuleFolder $script:GeneratorDirectory "Gerenciador de Planilhas" })
 $openMaintenanceFolderButton.Add_Click({ Open-ModuleFolder $script:MaintenanceDirectory "Central de Manutenção CB5" })
 $navUpdates.Add_Click({ Set-ActiveNavigation "Updates"; Start-UpdaterModule })
@@ -1668,14 +1609,7 @@ $navAbout.Add_Click({
         [Windows.Forms.MessageBoxIcon]::Information
     ) | Out-Null
 })
-$summaryFlow.Add_SizeChanged({ Update-ResponsiveLayout })
 $modulesFlow.Add_SizeChanged({ Update-ResponsiveLayout })
-$quickFlow.Add_SizeChanged({ Update-ResponsiveLayout })
-$quickHost.Add_SizeChanged({
-    $quickFlow.Width = [Math]::Max(300, $quickHost.ClientSize.Width - 36)
-    $quickFlow.Height = [Math]::Max(62, $quickHost.ClientSize.Height - 53)
-    Update-ResponsiveLayout
-})
 $form.Add_Shown({ Update-CentralAdaptiveLayout; Update-ResponsiveLayout; Apply-AppTheme })
 $form.Add_SizeChanged({
     try {
