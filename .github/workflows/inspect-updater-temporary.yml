@@ -6,62 +6,34 @@ on:
       - '.github/workflows/inspect-updater-temporary.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  full-cycle-core-test:
-    runs-on: windows-latest
+  promote-updater-source:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Reproduce v0.19.3 to v0.19.4 core update
-        shell: powershell
+      - name: Promote updater runtime source from validated test package
+        shell: bash
         run: |
-          $ErrorActionPreference = 'Stop'
-          $work = Join-Path $env:RUNNER_TEMP 'central-update-cycle-test'
-          if (Test-Path $work) { Remove-Item $work -Recurse -Force }
-          New-Item -ItemType Directory -Path $work | Out-Null
-
-          $oldZip = Join-Path $work 'old.zip'
-          $newZip = Join-Path $PWD 'updates\packages\Central-de-Trabalho-v0.19.4.zip'
-          $env:OLD_ZIP = $oldZip
-          python -c "import os,subprocess,pathlib; pathlib.Path(os.environ['OLD_ZIP']).write_bytes(subprocess.check_output(['git','show','ae5e2c8:updates/packages/Central-de-Trabalho-v0.19.3.zip']))"
-          if (-not (Test-Path $oldZip)) { throw 'Could not recover v0.19.3 package' }
-
-          $oldExtract = Join-Path $work 'old'
-          $newExtract = Join-Path $work 'new'
-          Expand-Archive -LiteralPath $oldZip -DestinationPath $oldExtract
-          Expand-Archive -LiteralPath $newZip -DestinationPath $newExtract
-          $installRoot = (Get-ChildItem -LiteralPath $oldExtract -Directory | Select-Object -First 1).FullName
-          $payloadRoot = (Get-ChildItem -LiteralPath $newExtract -Directory | Select-Object -First 1).FullName
-
-          foreach ($path in @(
-            (Join-Path $installRoot 'Central de Trabalho.ps1'),
-            (Join-Path $installRoot 'PACOTE-MANIFESTO.json'),
-            (Join-Path $installRoot 'Atualizador'),
-            (Join-Path $installRoot 'Modulos')
-          )) {
-            $attr = [IO.File]::GetAttributes($path)
-            [IO.File]::SetAttributes($path, ($attr -bor [IO.FileAttributes]::Hidden))
-          }
-
-          $oldCore = Join-Path $installRoot 'Atualizador\Update.Core.ps1'
-          . $oldCore
-          $script:CentralUpdateApplicationDataRootOverride = Join-Path $work 'localappdata'
-          New-Item -ItemType Directory -Force -Path $script:CentralUpdateApplicationDataRootOverride | Out-Null
-
-          Write-Host "INSTALL_ROOT=$installRoot"
-          Write-Host "PAYLOAD_ROOT=$payloadRoot"
-          Write-Host "Central exists=$([IO.File]::Exists((Join-Path $installRoot 'Central de Trabalho.ps1')))"
-          Write-Host "Core exists=$([IO.File]::Exists($oldCore))"
-          try {
-            $result = Install-CentralUpdatePayload -PayloadRoot $payloadRoot -InstallRoot $installRoot -CurrentVersion '0.19.3' -TargetVersion '0.19.4'
-            Write-Host 'FULL_CYCLE_CORE_OK=true'
-            $manifest = Get-Content -LiteralPath (Join-Path $installRoot 'PACOTE-MANIFESTO.json') -Raw | ConvertFrom-Json
-            Write-Host "INSTALLED_VERSION=$($manifest.Version)"
-          }
-          catch {
-            Write-Host "FULL_CYCLE_CORE_FAIL=$($_.Exception.ToString())"
-            throw
-          }
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, zipfile
+          package = pathlib.Path('updates/packages/Central-de-Trabalho-v0.19.4.zip')
+          out_dir = pathlib.Path('src/generated/Atualizador')
+          out_dir.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(package) as z:
+              for filename in ('Central de Trabalho Updater.ps1', 'Update.Core.ps1', 'CANAIS.json'):
+                  suffix = 'Atualizador/' + filename
+                  name = next(n for n in z.namelist() if n.replace('\\','/').endswith(suffix))
+                  data = z.read(name)
+                  (out_dir / filename).write_bytes(data)
+                  print('promoted', suffix)
+          PY
+          git config user.name "Central de Trabalho Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/generated/Atualizador
+          git commit -m "Versiona fonte atual do Atualizador para correção de recuperação"
+          git push
