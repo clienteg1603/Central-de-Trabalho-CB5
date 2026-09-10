@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build native Windows hosts
+      - name: Build and smoke-test native Windows hosts
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
@@ -34,6 +34,33 @@ jobs:
           $updaterExe = Join-Path $outDir "Central de Trabalho Updater.exe"
           if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { throw "Host nativo da Central não foi gerado." }
           if (-not (Test-Path -LiteralPath $updaterExe -PathType Leaf)) { throw "Host nativo do Atualizador não foi gerado." }
+
+          # Monta uma instalação temporária completa e executa o autoteste silencioso
+          # dos dois EXEs. Nada da interface gráfica é aberto durante esse teste.
+          $smokeRoot = Join-Path $work "smoke\Central-de-Trabalho"
+          $smokeUpdater = Join-Path $smokeRoot "Atualizador"
+          $smokeMaintenance = Join-Path $smokeRoot "Modulos\Central-de-Manutencao-CB5"
+          $smokeGenerator = Join-Path $smokeRoot "Modulos\Gerador-de-Planilhas-CB5-TV5"
+          New-Item -ItemType Directory -Force -Path $smokeUpdater, $smokeMaintenance, $smokeGenerator | Out-Null
+
+          Copy-Item -LiteralPath $hostExe -Destination (Join-Path $smokeRoot "Central de Trabalho.exe") -Force
+          Copy-Item -LiteralPath $updaterExe -Destination (Join-Path $smokeUpdater "Central de Trabalho Updater.exe") -Force
+          Copy-Item -LiteralPath "src\generated\Central de Trabalho.ps1" -Destination $smokeRoot -Force
+          Copy-Item -LiteralPath "src\generated\Atualizador\CANAIS.json" -Destination $smokeUpdater -Force
+          Copy-Item -LiteralPath "src\generated\Atualizador\Central de Trabalho Updater.ps1" -Destination $smokeUpdater -Force
+          Copy-Item -LiteralPath "src\generated\Atualizador\Update.Core.ps1" -Destination $smokeUpdater -Force
+          Copy-Item -LiteralPath "src\generated\Modulos\Central-de-Manutencao-CB5\Central Manutencao CB5.ps1" -Destination $smokeMaintenance -Force
+          Copy-Item -LiteralPath "src\generated\Modulos\Central-de-Manutencao-CB5\Manutencao.Core.ps1" -Destination $smokeMaintenance -Force
+          Copy-Item -LiteralPath "src\generated\Modulos\Gerador-de-Planilhas-CB5-TV5\Gerador Planilhas.ps1" -Destination $smokeGenerator -Force
+          Copy-Item -LiteralPath "src\generated\Modulos\Gerador-de-Planilhas-CB5-TV5\Componentes.Core.ps1" -Destination $smokeGenerator -Force
+
+          $centralSmoke = Start-Process -FilePath (Join-Path $smokeRoot "Central de Trabalho.exe") -ArgumentList "--self-test" -WorkingDirectory $smokeRoot -Wait -PassThru
+          if ($centralSmoke.ExitCode -ne 0) { throw "Autoteste da Central falhou com código $($centralSmoke.ExitCode)." }
+
+          $updaterSmoke = Start-Process -FilePath (Join-Path $smokeUpdater "Central de Trabalho Updater.exe") -ArgumentList "--self-test", "-InstallRoot", ('"' + $smokeRoot + '"') -WorkingDirectory $smokeUpdater -Wait -PassThru
+          if ($updaterSmoke.ExitCode -ne 0) { throw "Autoteste do Atualizador falhou com código $($updaterSmoke.ExitCode)." }
+
+          Write-Host "SMOKE TEST NATIVO: OK - Central e Atualizador validaram arquivos, scripts e engine PowerShell em processo."
           Write-Host "Hosts nativos prontos com identidade visual CT:"
           Write-Host "  $hostExe"
           Write-Host "  $updaterExe"
