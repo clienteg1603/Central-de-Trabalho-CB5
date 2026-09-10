@@ -13,12 +13,12 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 if (-not (Test-Path -LiteralPath $ReferenceExe -PathType Leaf)) {
-    throw "Executável de referência não encontrado: $ReferenceExe"
+    throw "Reference executable not found: $ReferenceExe"
 }
 
 $sourcePath = Join-Path $PSScriptRoot "CentralHost.cs"
 if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
-    throw "Fonte do host nativo não encontrado: $sourcePath"
+    throw "Native host source not found: $sourcePath"
 }
 
 [void](New-Item -ItemType Directory -Force -Path $OutputDirectory)
@@ -28,7 +28,7 @@ $versionSource = Join-Path $OutputDirectory "AssemblyInfo.generated.cs"
 
 Add-Type -AssemblyName System.Drawing
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path -LiteralPath $ReferenceExe).Path)
-if ($null -eq $icon) { throw "Não foi possível extrair o ícone do executável de referência." }
+if ($null -eq $icon) { throw "Could not extract icon from reference executable." }
 try {
     $stream = [IO.File]::Create($iconPath)
     try { $icon.Save($stream) }
@@ -44,7 +44,7 @@ using System.Reflection;
 [assembly: AssemblyTitle("Central de Trabalho")]
 [assembly: AssemblyProduct("Central de Trabalho CB5")]
 [assembly: AssemblyCompany("Central de Trabalho CB5")]
-[assembly: AssemblyDescription("Host gráfico nativo da Central de Trabalho")]
+[assembly: AssemblyDescription("Native graphical host for Central de Trabalho")]
 [assembly: AssemblyVersion("$fileVersion")]
 [assembly: AssemblyFileVersion("$fileVersion")]
 "@ | Set-Content -LiteralPath $versionSource -Encoding UTF8
@@ -54,11 +54,11 @@ $cscCandidates = @(
     (Join-Path $env:WINDIR "Microsoft.NET\Framework\v4.0.30319\csc.exe")
 )
 $csc = $cscCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-if ([string]::IsNullOrWhiteSpace($csc)) { throw "Compilador C# do .NET Framework não encontrado." }
+if ([string]::IsNullOrWhiteSpace($csc)) { throw "C# compiler from .NET Framework not found." }
 
 $sma = [System.Management.Automation.PowerShell].Assembly.Location
 if ([string]::IsNullOrWhiteSpace($sma) -or -not (Test-Path -LiteralPath $sma -PathType Leaf)) {
-    throw "System.Management.Automation.dll do Windows PowerShell não foi localizada."
+    throw "System.Management.Automation.dll from Windows PowerShell not found."
 }
 
 $arguments = @(
@@ -79,32 +79,32 @@ $arguments = @(
 )
 
 & $csc @arguments
-if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar o host nativo da Central (código $LASTEXITCODE)." }
-if (-not (Test-Path -LiteralPath $outExe -PathType Leaf)) { throw "O compilador não gerou Central de Trabalho.exe." }
+if ($LASTEXITCODE -ne 0) { throw "Native host compilation failed with code $LASTEXITCODE." }
+if (-not (Test-Path -LiteralPath $outExe -PathType Leaf)) { throw "Compiler did not generate Central de Trabalho.exe." }
 
 $bytes = [IO.File]::ReadAllBytes($outExe)
 if ($bytes.Length -lt 1024 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) {
-    throw "O host compilado não é um executável PE válido."
+    throw "Compiled host is not a valid PE executable."
 }
 $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
-if ($peOffset -lt 0 -or ($peOffset + 96) -ge $bytes.Length) { throw "Cabeçalho PE do host nativo é inválido." }
+if ($peOffset -lt 0 -or ($peOffset + 96) -ge $bytes.Length) { throw "Invalid PE header in native host." }
 if ($bytes[$peOffset] -ne 0x50 -or $bytes[$peOffset + 1] -ne 0x45 -or $bytes[$peOffset + 2] -ne 0 -or $bytes[$peOffset + 3] -ne 0) {
-    throw "Assinatura PE do host nativo é inválida."
+    throw "Invalid PE signature in native host."
 }
 $optionalHeader = $peOffset + 24
 $subsystem = [BitConverter]::ToUInt16($bytes, $optionalHeader + 68)
-if ($subsystem -ne 2) { throw "O executável foi compilado com subsistema incorreto ($subsystem). Esperado Windows GUI (2)." }
+if ($subsystem -ne 2) { throw "Wrong executable subsystem ($subsystem). Expected Windows GUI (2)." }
 
 $sourceText = Get-Content -LiteralPath $sourcePath -Raw
 foreach ($forbidden in @('Process.Start(', 'powershell.exe', 'pwsh.exe', 'WScript.Shell')) {
     if ($sourceText.IndexOf($forbidden, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-        throw "O host nativo contém chamada proibida a processo externo: $forbidden"
+        throw "Native host contains forbidden external process call: $forbidden"
     }
 }
 
 $info = [Diagnostics.FileVersionInfo]::GetVersionInfo($outExe)
 if ($info.FileVersion -ne $fileVersion) {
-    throw "Versão do EXE divergente: $($info.FileVersion) != $fileVersion"
+    throw "EXE version mismatch: $($info.FileVersion) != $fileVersion"
 }
 
-Write-Host "HOST NATIVO: OK — Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, subsistema Windows GUI, PowerShell hospedado no próprio processo."
+Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, in-process PowerShell engine."
