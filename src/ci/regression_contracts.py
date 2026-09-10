@@ -166,13 +166,33 @@ def main():
         require_function(errors, maintenance_core, fn, "Manutencao.Core")
     require_regex(errors, maintenance_core, r"function\s+Test-CB5Serial\b.{0,1600}(\{8\}|Length\s+-e[q|n]\s+8|Length\s+-ne\s+8)", "Manutencao.Core / série exatamente 8 dígitos")
 
-    # ATUALIZADOR — preserva núcleo, hash do pacote e fluxo de proteção/recuperação.
+    # ATUALIZADOR — preserva núcleo, hash do pacote, arquivos ocultos e recuperação real.
     require(errors, updater, "Update.Core.ps1", "Atualizador")
     for marker in ("PackageSha256", "PackageSize", "PACOTE-MANIFESTO.json"):
         if marker not in updater and marker not in updater_core:
             errors.append(f"Atualizador: contrato ausente entre script e Core: {marker}")
     if not re.search(r"function\s+[A-Za-z0-9_-]+", updater_core, re.I):
         errors.append("Atualizador: Update.Core.ps1 não contém funções executáveis")
+
+    for fn in (
+        "Resolve-CentralUpdateInstallRootPath",
+        "Assert-CentralUpdateInstallRoot",
+        "Clear-CentralUpdateBlockingAttributes",
+        "Restore-CentralUpdateBackup",
+        "Install-CentralUpdatePayload",
+    ):
+        require_function(errors, updater_core, fn, "Atualizador / recuperação")
+    for marker in (
+        '([IO.FileInfo]::new($path)).Length',
+        'Clear-CentralUpdateBlockingAttributes -Path $destination',
+        '$InstallRoot = Resolve-CentralUpdateInstallRootPath -InstallRoot $InstallRoot',
+        '$originalError = $_',
+        '$rollbackError = $null',
+    ):
+        require(errors, updater_core, marker, "Atualizador / arquivos ocultos e rollback")
+    if '(Get-Item -LiteralPath $path).Length' in updater_core:
+        errors.append("Atualizador: validação do pacote voltou a depender de Get-Item, que falha com arquivo oculto")
+    require(errors, updater, 'O Atualizador tentou restaurar o backup automaticamente.', "Atualizador / mensagem de recuperação")
 
     fail(errors)
     print("REGRESSÃO FUNCIONAL: OK — contratos de Central, Gerenciador, Componentes, Manutenção e Atualizador preservados.")
