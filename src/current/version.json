@@ -1,14 +1,14 @@
 {
-  "version": "0.16.2",
+  "version": "0.16.3",
   "buildRevision": 1,
   "releaseNotes": [
-    "Continuação do polimento global com limpeza estrutural e melhoria da transição entre a Central e os módulos integrados.",
-    "A tela inicial deixa de manter controles completos invisíveis de Resumo e Ações rápidas; o layout passa a ter somente as três linhas realmente usadas: cabeçalho, módulos e rodapé.",
-    "Foram removidos estados antigos de Programas e Backup e o selo de status duplicado que permanecia oculto no cabeçalho.",
-    "O feedback de carregamento dos módulos foi corrigido: o aviso Carregando agora permanece visível antes da criação do Gerenciador ou da Manutenção, com cursor de espera e bloqueio temporário dos comandos que poderiam gerar reentrada.",
-    "Durante o carregamento, aparência, navegação e ações concorrentes ficam temporariamente desabilitadas e são restauradas automaticamente no sucesso ou no erro.",
-    "Se um módulo integrado se encerrar por conta própria, a Central agora também libera corretamente o escopo PowerShell correspondente, evitando módulo órfão em memória.",
-    "Atualizações, Pasta da Central e Sobre passam a se comportar visualmente como ações: depois de executadas, Início continua sendo a seção ativa; ao abrir um módulo nenhuma rota lateral fica falsamente destacada.",
+    "Continuação do polimento global com foco em consistência de estado e pequenas proteções da Central de Trabalho.",
+    "O status lateral passa a refletir dinamicamente a instalação real: quantidade de módulos disponíveis e ausência do Atualizador são mostradas sem depender de trocar o tema ou reiniciar a Central.",
+    "Os cartões de Gerenciador e Manutenção, botões de pasta, Atualizações e cursores acompanham imediatamente o estado disponível/indisponível dos arquivos instalados.",
+    "A data exibida no cabeçalho também é atualizada automaticamente enquanto a Central permanece aberta.",
+    "Foi removida a segunda rotina de status que ainda existia dentro da aplicação de tema, deixando uma única fonte de verdade para a saúde da Central.",
+    "A Central agora impede que vários Atualizadores sejam abertos ao mesmo tempo por cliques repetidos; enquanto a janela anterior estiver ativa, um novo clique apenas informa que ela já está aberta.",
+    "Uma verificação leve a cada poucos segundos mantém esses estados sincronizados sem alterar dados, módulos ou regras de negócio.",
     "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra funcional ou de dados foi alterada."
   ]
 }
