@@ -1,6 +1,6 @@
 {
   "version": "0.11.0",
-  "buildRevision": 3,
+  "buildRevision": 4,
   "releaseNotes": [
     "Primeiro bloco visual da Etapa 3 focado na Central de Manutenção CB5.",
     "Integração estável dentro da Central mantida, com as 7 áreas acessíveis.",
