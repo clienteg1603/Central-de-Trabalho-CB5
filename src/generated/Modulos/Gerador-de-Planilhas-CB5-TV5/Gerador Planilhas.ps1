@@ -17,6 +17,7 @@ $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:EmbeddedParentHandle = [IntPtr]::new($EmbeddedParentHandle)
 $script:EmbeddedResizeTimer = $null
+$script:GeneratorHostedShell = $null
 
 if ($script:IsEmbedded -and -not ("CentralModuleEmbed.Native" -as [type])) {
     Add-Type -TypeDefinition @"
@@ -78,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.6.2"
+$script:AppVersion = "3.7.0"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -3441,6 +3442,36 @@ $combineGenerateButton.Tag = "Primary"
 $combineGenerateButton.Visible = $false
 $footerPanel.Controls.Add($combineGenerateButton)
 
+if ($script:IsInProcessHosted) {
+    $script:GeneratorHostedShell = New-Object Windows.Forms.TableLayoutPanel
+    $script:GeneratorHostedShell.Dock = [Windows.Forms.DockStyle]::Fill
+    $script:GeneratorHostedShell.Margin = New-Object Windows.Forms.Padding(0)
+    $script:GeneratorHostedShell.Padding = New-Object Windows.Forms.Padding(0)
+    $script:GeneratorHostedShell.ColumnCount = 1
+    $script:GeneratorHostedShell.RowCount = 3
+    [void]$script:GeneratorHostedShell.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
+    [void]$script:GeneratorHostedShell.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 42)))
+    [void]$script:GeneratorHostedShell.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
+    [void]$script:GeneratorHostedShell.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 56)))
+
+    try { $form.Controls.Remove($headerPanel) } catch {}
+    try { $form.Controls.Remove($tabs) } catch {}
+    try { $form.Controls.Remove($footerPanel) } catch {}
+
+    $headerPanel.Dock = [Windows.Forms.DockStyle]::Fill
+    $headerPanel.Margin = New-Object Windows.Forms.Padding(0)
+    $tabs.Dock = [Windows.Forms.DockStyle]::Fill
+    $tabs.Margin = New-Object Windows.Forms.Padding(6, 4, 6, 3)
+    $footerPanel.Dock = [Windows.Forms.DockStyle]::Fill
+    $footerPanel.Margin = New-Object Windows.Forms.Padding(0)
+
+    $script:GeneratorHostedShell.Controls.Add($headerPanel, 0, 0)
+    $script:GeneratorHostedShell.Controls.Add($tabs, 0, 1)
+    $script:GeneratorHostedShell.Controls.Add($footerPanel, 0, 2)
+    $form.Controls.Add($script:GeneratorHostedShell)
+    $script:GeneratorHostedShell.BringToFront()
+}
+
 # Layout compacto quando o Gerenciador está hospedado dentro da Central de Trabalho.
 # Mantém Produto acessível, remove cabeçalho duplicado e deixa o conteúdo usar a área disponível.
 if ($script:IsInProcessHosted) {
@@ -3520,35 +3551,55 @@ function Update-GeneratorResponsiveLayout {
                 $headerPanel.Height = 34; $accentStrip.Height = 34
                 $productLabel.Location = [Drawing.Point]::new(10,9)
                 $productCombo.Location = [Drawing.Point]::new(62,3); $productCombo.Size = [Drawing.Size]::new(145,26)
-                $tabs.Location = [Drawing.Point]::new(5,37); $tabs.ItemSize = [Drawing.Size]::new(0,27); $tabs.Padding = [Drawing.Point]::new(8,3)
+                $tabs.Padding = [Drawing.Point]::new(6,3)
                 $footerPanel.Height = 46
                 $progressStatusLabel.Top = 3; $progressBar.Top = 23
                 $generateButton.Height = 31; $combineGenerateButton.Height = 31; $updateMasterButton.Height = 31
                 $generateButton.Width = 222; $combineGenerateButton.Width = 222; $updateMasterButton.Width = 180
+                if ($null -ne $script:GeneratorHostedShell) {
+                    $script:GeneratorHostedShell.RowStyles[0].Height = 34
+                    $script:GeneratorHostedShell.RowStyles[2].Height = 46
+                }
+                $tabHeaderHeight = 27
             }
             "Compact" {
                 $form.Font = [Drawing.Font]::new("Segoe UI",8.7)
                 $headerPanel.Height = 38; $accentStrip.Height = 38
                 $productLabel.Location = [Drawing.Point]::new(12,10)
                 $productCombo.Location = [Drawing.Point]::new(69,5); $productCombo.Size = [Drawing.Size]::new(158,27)
-                $tabs.Location = [Drawing.Point]::new(6,41); $tabs.ItemSize = [Drawing.Size]::new(0,29); $tabs.Padding = [Drawing.Point]::new(10,4)
+                $tabs.Padding = [Drawing.Point]::new(8,4)
                 $footerPanel.Height = 50
                 $progressStatusLabel.Top = 4; $progressBar.Top = 25
                 $generateButton.Height = 33; $combineGenerateButton.Height = 33; $updateMasterButton.Height = 33
                 $generateButton.Width = 238; $combineGenerateButton.Width = 238; $updateMasterButton.Width = 190
+                if ($null -ne $script:GeneratorHostedShell) {
+                    $script:GeneratorHostedShell.RowStyles[0].Height = 38
+                    $script:GeneratorHostedShell.RowStyles[2].Height = 50
+                }
+                $tabHeaderHeight = 29
             }
             default {
                 $form.Font = [Drawing.Font]::new("Segoe UI",9.25)
                 $headerPanel.Height = 42; $accentStrip.Height = 42
                 $productLabel.Location = [Drawing.Point]::new(16,12)
                 $productCombo.Location = [Drawing.Point]::new(78,6); $productCombo.Size = [Drawing.Size]::new(172,28)
-                $tabs.Location = [Drawing.Point]::new(8,46); $tabs.ItemSize = [Drawing.Size]::new(0,31); $tabs.Padding = [Drawing.Point]::new(14,5)
+                $tabs.Padding = [Drawing.Point]::new(10,5)
                 $footerPanel.Height = 56
                 $progressStatusLabel.Top = 5; $progressBar.Top = 27
                 $generateButton.Height = 36; $combineGenerateButton.Height = 36; $updateMasterButton.Height = 36
                 $generateButton.Width = 254; $combineGenerateButton.Width = 254; $updateMasterButton.Width = 205
+                if ($null -ne $script:GeneratorHostedShell) {
+                    $script:GeneratorHostedShell.RowStyles[0].Height = 42
+                    $script:GeneratorHostedShell.RowStyles[2].Height = 56
+                }
+                $tabHeaderHeight = 31
             }
         }
+
+        $tabs.SizeMode = [Windows.Forms.TabSizeMode]::Fixed
+        $navWidth = if ($tabs.ClientSize.Width -gt 200) { $tabs.ClientSize.Width } else { [Math]::Max(480, $form.ClientSize.Width - 16) }
+        $tabWidth = [Math]::Min(190, [Math]::Max(92, [int][Math]::Floor(($navWidth - 10) / 5)))
+        $tabs.ItemSize = [Drawing.Size]::new($tabWidth, $tabHeaderHeight)
         foreach ($page in @($tabGenerate,$tabExtra,$tabComponents,$tabCombine,$tabDescriptions)) { $page.AutoScroll = $true; $page.AutoScrollMinSize = [Drawing.Size]::new(0,0) }
     }
     catch {}
@@ -3560,10 +3611,18 @@ function Update-RootLayout {
     Update-GeneratorResponsiveLayout
 
     $clientWidth = [Math]::Max(1, $form.ClientSize.Width)
-    $headerPanel.Width = $clientWidth
-    $tabs.Width = [Math]::Max(320, $clientWidth - (2 * $tabs.Left))
-    $bottomGap = if ($script:IsInProcessHosted) { 4 } else { 10 }
-    $tabs.Height = [Math]::Max(220, $footerPanel.Top - $tabs.Top - $bottomGap)
+    if ($script:IsInProcessHosted -and $null -ne $script:GeneratorHostedShell) {
+        $headerPanel.Dock = [Windows.Forms.DockStyle]::Fill
+        $tabs.Dock = [Windows.Forms.DockStyle]::Fill
+        $footerPanel.Dock = [Windows.Forms.DockStyle]::Fill
+        $script:GeneratorHostedShell.PerformLayout()
+    }
+    else {
+        $headerPanel.Width = $clientWidth
+        $tabs.Width = [Math]::Max(320, $clientWidth - (2 * $tabs.Left))
+        $bottomGap = 10
+        $tabs.Height = [Math]::Max(220, $footerPanel.Top - $tabs.Top - $bottomGap)
+    }
 
     $rightMargin = if ($script:IsInProcessHosted -and $script:GeneratorResponsiveProfile -eq "Tight") { 8 } elseif ($script:IsInProcessHosted) { 12 } else { 20 }
     $buttonGap = if ($script:IsInProcessHosted) { 7 } else { 10 }
@@ -5054,6 +5113,9 @@ if ($script:IsInProcessHosted) {
     $form.MinimumSize = [Drawing.Size]::new(1, 1)
     $form.Dock = [Windows.Forms.DockStyle]::Fill
     $form.Add_HandleCreated({ try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })
+    if ($null -ne $script:GeneratorHostedShell) {
+        $script:GeneratorHostedShell.Add_SizeChanged({ try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })
+    }
     $form.Add_Disposed({
         try { Save-AppSettings } catch {}
         try { if ($null -ne $logoPicture.Image) { $logoPicture.Image.Dispose() } } catch {}
