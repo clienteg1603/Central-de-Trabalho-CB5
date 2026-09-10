@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.16.0"
+$script:AppVersion = "0.16.1"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -63,6 +63,7 @@ $script:HostedModule = $null
 $script:HostedForm = $null
 $script:EmbeddedModule = ""
 $script:EmbeddedClosing = $false
+$script:ModuleLoading = $false
 
 $script:SingleInstanceMutex = $null
 $script:OwnsSingleInstanceMutex = $false
@@ -250,97 +251,6 @@ function Set-StatusMessage {
     }
 }
 
-function Apply-AppTheme {
-    $selectedTheme = [string]$themeCombo.SelectedItem
-    $script:CurrentPalette = Get-ThemePalette $selectedTheme
-
-    $form.BackColor = $script:CurrentPalette.Background
-    $rootLayout.BackColor = $script:CurrentPalette.Background
-    $headerPanel.BackColor = $script:CurrentPalette.Surface
-    $introPanel.BackColor = $script:CurrentPalette.Background
-    $cardsHost.BackColor = $script:CurrentPalette.Background
-    $cardsFlow.BackColor = $script:CurrentPalette.Background
-    $footerPanel.BackColor = $script:CurrentPalette.Footer
-
-    foreach ($label in @($appTitle, $generatorTitle, $maintenanceTitle)) {
-        $label.ForeColor = $script:CurrentPalette.Text
-    }
-    foreach ($label in @(
-        $appSubtitle,
-        $themeLabel,
-        $introText,
-        $generatorDescription,
-        $generatorDetail,
-        $maintenanceDescription,
-        $maintenanceDetail,
-        $footerVersion
-    )) {
-        $label.ForeColor = $script:CurrentPalette.Muted
-    }
-
-    foreach ($card in @($generatorCard, $maintenanceCard)) {
-        $card.BackColor = $script:CurrentPalette.Card
-        $card.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
-    }
-    foreach ($layout in @($generatorLayout, $maintenanceLayout)) {
-        $layout.BackColor = $script:CurrentPalette.Card
-    }
-
-    $generatorStatus.BackColor = $script:CurrentPalette.SuccessBack
-    $generatorStatus.ForeColor = $script:CurrentPalette.Success
-    $maintenanceStatus.BackColor = $script:CurrentPalette.SuccessBack
-    $maintenanceStatus.ForeColor = $script:CurrentPalette.Success
-
-    $themeCombo.BackColor = $script:CurrentPalette.Input
-    $themeCombo.ForeColor = $script:CurrentPalette.Text
-    $themeCombo.Invalidate()
-    Set-PrimaryButtonStyle $openGeneratorButton
-    Set-PrimaryButtonStyle $openMaintenanceButton
-    if ($selectedTheme -eq "Técnico industrial") {
-        $openMaintenanceButton.BackColor = $script:CurrentPalette.Planned
-        $openMaintenanceButton.ForeColor = [Drawing.Color]::FromArgb(24, 28, 30)
-    }
-    elseif ($selectedTheme -eq "Escuro profissional") {
-        $openGeneratorButton.BackColor = [Drawing.Color]::FromArgb(28, 145, 196)
-        $openMaintenanceButton.BackColor = [Drawing.Color]::FromArgb(211, 129, 31)
-        $openMaintenanceButton.ForeColor = [Drawing.Color]::White
-    }
-    Set-SecondaryButtonStyle $updatesButton
-    Set-SecondaryButtonStyle $openFolderButton
-
-    if ([IO.File]::Exists($script:GeneratorScript) -and [IO.File]::Exists($script:MaintenanceScript) -and [IO.File]::Exists($script:UpdaterScript)) {
-        Set-StatusMessage "Pronto. Gerenciador v$($script:GeneratorVersion), Manutenção v$($script:MaintenanceVersion) e Atualizador v$($script:UpdaterVersion)." "Success"
-    }
-    elseif (-not [IO.File]::Exists($script:UpdaterScript)) {
-        Set-StatusMessage "O Atualizador da Central de Trabalho não foi encontrado." "Error"
-    }
-    elseif (-not [IO.File]::Exists($script:MaintenanceScript)) {
-        Set-StatusMessage "O módulo Central de Manutenção CB5 não foi encontrado." "Error"
-    }
-    else {
-        Set-StatusMessage "O módulo Gerenciador de Planilhas não foi encontrado." "Error"
-    }
-    $form.Invalidate($true)
-}
-
-function Update-CardLayout {
-    if ($null -eq $cardsFlow -or $cardsFlow.ClientSize.Width -le 0) { return }
-
-    $availableWidth = $cardsFlow.ClientSize.Width - $cardsFlow.Padding.Horizontal - 34
-    if ($availableWidth -lt 360) { $availableWidth = 360 }
-
-    $cardWidth = $availableWidth
-    if ($availableWidth -ge 850) {
-        $cardWidth = [int](($availableWidth - 22) / 2)
-    }
-
-    foreach ($card in @($generatorCard, $maintenanceCard)) {
-        $card.Width = $cardWidth
-        $card.Height = 330
-    }
-}
-
-
 # Integração real dos módulos na própria árvore WinForms da Central.
 # Em vez de anexar uma janela externa com SetParent, cada módulo é carregado
 # em um módulo PowerShell isolado e devolve seu Form como controle filho.
@@ -404,6 +314,7 @@ function Show-Dashboard {
     if ($null -ne $mainLayout) { $mainLayout.Visible = $true; $mainLayout.BringToFront() }
     Set-ActiveNavigation "Home"
     Set-StatusMessage "Visão geral da Central de Trabalho." "Normal"
+    try { if ($null -ne $openGeneratorButton -and $openGeneratorButton.Enabled) { $openGeneratorButton.Select() } } catch {}
 }
 
 function Start-EmbeddedModule {
@@ -424,6 +335,10 @@ function Start-EmbeddedModule {
         ) | Out-Null
         return
     }
+
+    if ($script:ModuleLoading) { return }
+    $script:ModuleLoading = $true
+    try { Update-CentralAvailabilityState } catch {}
 
     try {
         Close-EmbeddedModule
@@ -513,6 +428,10 @@ function Start-EmbeddedModule {
             [Windows.Forms.MessageBoxButtons]::OK,
             [Windows.Forms.MessageBoxIcon]::Error
         ) | Out-Null
+    }
+    finally {
+        $script:ModuleLoading = $false
+        try { Update-CentralAvailabilityState } catch {}
     }
 }
 
@@ -694,6 +613,31 @@ function Set-NavButtonStyle {
     }
 }
 
+function Update-CentralAvailabilityState {
+    try {
+        $generatorAvailable = [IO.File]::Exists($script:GeneratorScript)
+        $maintenanceAvailable = [IO.File]::Exists($script:MaintenanceScript)
+        $updaterAvailable = [IO.File]::Exists($script:UpdaterScript)
+
+        if ($null -ne $openGeneratorButton) { $openGeneratorButton.Enabled = ($generatorAvailable -and -not $script:ModuleLoading) }
+        if ($null -ne $openMaintenanceButton) { $openMaintenanceButton.Enabled = ($maintenanceAvailable -and -not $script:ModuleLoading) }
+        if ($null -ne $openGeneratorFolderButton) { $openGeneratorFolderButton.Enabled = [IO.Directory]::Exists($script:GeneratorDirectory) }
+        if ($null -ne $openMaintenanceFolderButton) { $openMaintenanceFolderButton.Enabled = [IO.Directory]::Exists($script:MaintenanceDirectory) }
+        if ($null -ne $navUpdates) { $navUpdates.Enabled = $updaterAvailable }
+
+        if ($null -ne $generatorStatus) {
+            $generatorStatus.Text = if ($generatorAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
+            $generatorStatus.BackColor = if ($generatorAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
+            $generatorStatus.ForeColor = if ($generatorAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
+        }
+        if ($null -ne $maintenanceStatus) {
+            $maintenanceStatus.Text = if ($maintenanceAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
+            $maintenanceStatus.BackColor = if ($maintenanceAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
+            $maintenanceStatus.ForeColor = if ($maintenanceAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
+        }
+    } catch {}
+}
+
 function Apply-AppTheme {
     $selectedTheme = [string]$themeCombo.SelectedItem
     if ([string]::IsNullOrWhiteSpace($selectedTheme) -or -not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $selectedTheme)) {
@@ -801,6 +745,7 @@ function Apply-AppTheme {
             $sidebarStatusSub.Text = "Gerenciador não localizado"
         }
     } catch {}
+    try { Update-CentralAvailabilityState } catch {}
     try {
         foreach ($rounded in @($generatorCard,$maintenanceCard,$brandMark,$generatorIcon,$maintenanceIcon,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton)) {
             if ($null -ne $rounded) { Set-RoundedRegion $rounded 10 }
@@ -1063,6 +1008,7 @@ $form.Font = [Drawing.Font]::new("Segoe UI", 9.5)
 $form.MaximizeBox = $true
 $form.MinimizeBox = $true
 $form.SizeGripStyle = [Windows.Forms.SizeGripStyle]::Show
+$form.KeyPreview = $true
 
 # A janela nasce sempre dentro da área útil do monitor atual. O WinForms cuida do DPI;
 # o layout abaixo usa a área efetivamente disponível para escolher uma densidade visual.
@@ -1670,7 +1616,7 @@ $toolTip.SetToolTip($openGeneratorFolderButton, "Abrir a pasta do Gerenciador")
 $toolTip.SetToolTip($openMaintenanceButton, "Abrir a Central de Manutenção CB5 dentro da Central")
 $toolTip.SetToolTip($openMaintenanceFolderButton, "Abrir a pasta da Manutenção CB5")
 $toolTip.SetToolTip($quickUpdatesButton, "Abrir atualização, backup e restauração")
-$toolTip.SetToolTip($embeddedBackButton, "Voltar para a tela inicial da Central de Trabalho")
+$toolTip.SetToolTip($embeddedBackButton, "Voltar para a tela inicial da Central de Trabalho (Alt+←)")
 $toolTip.SetToolTip($embeddedFolderButton, "Abrir a pasta do módulo que está em uso")
 
 foreach ($roundedPanel in @($summaryCard1,$summaryCard2,$summaryCard3,$generatorCard,$maintenanceCard,$updatesQuickCard,$folderQuickCard)) {
@@ -1680,6 +1626,19 @@ foreach ($roundedPanel in @($summaryCard1,$summaryCard2,$summaryCard3,$generator
 foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$headerStatusPill,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton,$quickUpdatesButton,$quickFolderButton)) {
     Enable-RoundedControl $roundedSmall 8
 }
+
+# Ordem de foco: navegação da Central, aparência e ações principais.
+$navHome.TabIndex = 0
+$navUpdates.TabIndex = 1
+$navFolder.TabIndex = 2
+$navAbout.TabIndex = 3
+$themeCombo.TabIndex = 4
+$openGeneratorButton.TabIndex = 10
+$openGeneratorFolderButton.TabIndex = 11
+$openMaintenanceButton.TabIndex = 12
+$openMaintenanceFolderButton.TabIndex = 13
+$embeddedBackButton.TabIndex = 0
+$embeddedFolderButton.TabIndex = 1
 
 # Eventos
 $themeCombo.Add_SelectedIndexChanged({
@@ -1743,6 +1702,16 @@ $embeddedContent.Add_SizeChanged({
     } catch {}
 })
 try { $form.Add_DpiChanged({ Update-CentralAdaptiveLayout }) } catch {}
+$form.Add_KeyDown({
+    param($sender, $eventArgs)
+    try {
+        if ($eventArgs.Alt -and $eventArgs.KeyCode -eq [Windows.Forms.Keys]::Left -and $embeddedHost.Visible) {
+            Show-Dashboard
+            $eventArgs.Handled = $true
+            $eventArgs.SuppressKeyPress = $true
+        }
+    } catch {}
+})
 $form.Add_FormClosing({ Close-EmbeddedModule; Save-AppSettings })
 
     Apply-AppTheme

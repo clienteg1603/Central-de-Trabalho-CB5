@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.16.0",
+  "Version": "0.16.1",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.16.0.zip",
-  "PackageSha256": "383FF29DBB34A2D3440B0B56C142000BABBCBB9CCBBA2985B2C7BA560EA64302",
-  "PackageSize": 908668,
-  "PackageRoot": "Central-de-Trabalho-v0.16.0",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.16.1.zip",
+  "PackageSha256": "EF9344E102C8A1C7BE8FB813A727D80A2AD512E73D854B414458DCDA4EE8FDD1",
+  "PackageSize": 908754,
+  "PackageRoot": "Central-de-Trabalho-v0.16.1",
   "ReleaseNotes": [
-    "Início do polimento global da Central de Trabalho após o fechamento do acabamento responsivo do Gerenciador.",
-    "A tela inicial passa a recalcular cartões dos dois módulos pela largura e altura realmente disponíveis, reduzindo espaços excessivos e risco de cortes em janelas menores.",
-    "Título, descrição e botões dos cartões ganham comportamento adaptativo; em larguras estreitas os textos compactam sem esconder funções.",
-    "Cabeçalho principal passa a proteger o espaço entre título, subtítulo e data; a data é ocultada apenas quando não há largura suficiente.",
-    "A barra lateral passa a dimensionar botões, seletor de aparência, status e versão pela largura interna real em vez de depender apenas de medidas fixas por perfil.",
-    "A barra superior dos módulos integrados passa a reservar dinamicamente o espaço do botão Pasta do módulo e aplica reticências seguras ao título e subtítulo quando necessário.",
-    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1.",
-    "Nenhuma regra de geração, manutenção, componentes, saldo, união ou dados foi alterada."
+    "Continuação do polimento global com foco em confiabilidade e navegação da Central de Trabalho.",
+    "Foram removidas duas rotinas antigas que ainda restavam do layout anterior e já haviam sido substituídas pelas implementações atuais.",
+    "Os cartões dos módulos agora refletem o estado real dos arquivos instalados: Disponível ou Indisponível, com bloqueio do botão quando o módulo não existe.",
+    "Atualizações também é desabilitado automaticamente se o Atualizador não estiver presente, evitando ações que terminariam apenas em erro.",
+    "A abertura de Gerenciador ou Manutenção passa a bloquear reentrada durante o carregamento, reduzindo risco de dois cliques iniciarem carregamentos concorrentes.",
+    "A ordem de navegação por Tab foi organizada entre menu lateral, aparência e ações dos módulos.",
+    "Alt+Seta para a esquerda passa a retornar ao painel da Central quando um módulo integrado estiver aberto, sem usar Esc e sem interferir em campos ou grades.",
+    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra de dados foi alterada."
   ]
 }
