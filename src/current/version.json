@@ -1,14 +1,14 @@
 {
-  "version": "0.11.4",
-  "buildRevision": 2,
+  "version": "0.11.5",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 3 continua com polimento das telas técnicas da Central de Manutenção CB5.",
-    "Estatísticas ganhou cabeçalho mais claro e abas internas redesenhadas no mesmo padrão visual da Manutenção.",
-    "Diagnóstico recebeu avisos e área de resultado mais legíveis, mantendo a distinção entre hipótese e defeito confirmado.",
-    "Esquemáticos foi simplificado: o botão BUSCAR foi removido de verdade e o espaço voltou para a pesquisa instantânea.",
-    "Histórico também foi simplificado internamente: o botão FILTRAR foi removido de verdade e Limpar filtros ganhou o espaço restante.",
-    "Regras e Dados recebeu leitura mais limpa da base e das regras operacionais.",
-    "Estatísticas, Diagnóstico, Esquemáticos, Histórico e Regras/Dados agora ajustam alturas, margens e fontes conforme o espaço real disponível.",
-    "Nenhuma regra de manutenção, diagnóstico, histórico, esquemáticos ou salvamento foi alterada."
+    "Etapa 3 avança para a tela Passagem / manutenção da Central de Manutenção CB5.",
+    "Corrigida a matemática interna do bloco Identificação: em perfis compactos a altura agora comporta todas as linhas sem compressão ou corte.",
+    "Conclusão também recebeu alturas internas compatíveis com os perfis responsivos, evitando ComboBox e ajuda espremidos.",
+    "Identificação, modo atual, fluxo automático, avisos de atualização e regra de código receberam hierarquia visual mais clara.",
+    "Os avisos laterais ganharam margens, cantos arredondados e melhor separação das ações da passagem.",
+    "O botão de limpeza foi simplificado para NOVA / LIMPAR e os principais campos e ações agora têm tooltips explicativos.",
+    "Os títulos dos blocos foram encurtados para leitura mais rápida sem alterar a sequência operacional.",
+    "Nenhuma regra de manutenção, validação, histórico, salvamento ou conclusão foi alterada."
   ]
 }
