@@ -1,15 +1,16 @@
 {
-  "version": "0.14.4",
+  "version": "0.14.5",
   "buildRevision": 1,
   "releaseNotes": [
-    "Rodada de manutenção geral de layout antes de continuar novas evoluções.",
-    "Na Central de Manutenção integrada, o cabeçalho repetido da Visão geral foi retirado da área persistente para eliminar cortes e liberar espaço vertical.",
-    "Nova passagem passa a fazer parte da mesma faixa fixa de navegação de Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras/Dados, evitando o botão laranja cortado no topo.",
-    "Os quatro cartões de resumo passam a usar altura adaptativa e são recolhidos automaticamente em Nova passagem ou quando a altura disponível for pequena.",
-    "A área ativa agora é reposicionada sempre abaixo do resumo e da navegação, com recálculo imediato ao trocar de seção e ao redimensionar a Central.",
-    "Em larguras menores, a navegação interna compacta texto e fonte para manter as seis ações em uma única linha.",
-    "Corrigido também o seletor Aparência da Central que podia ficar visualmente vazio em temas escuros; a área selecionada agora usa o item atual como fallback de pintura.",
-    "Central de Manutenção passa para v0.6.0; Gerenciador permanece em v3.6.2.",
-    "Nenhuma regra de manutenção, histórico, diagnóstico, geração, união ou saldo foi alterada."
+    "Segunda rodada de manutenção geral antes de retomar novas evoluções.",
+    "Corrigido o seletor Aparência da Central: o desenho customizado que podia deixar o campo vazio foi removido e o texto volta a ser exibido de forma nativa e confiável.",
+    "A aplicação de tema da Central foi simplificada e isolada por blocos para que um detalhe visual secundário não interrompa toda a troca de aparência nem deixe aviso vermelho permanente.",
+    "Rotas internas antigas de Programas e Backup deixam de participar do estado de navegação e os módulos passam a abrir sem selecionar uma rota que já não existe.",
+    "Cálculos responsivos de áreas antigas e invisíveis deixam de rodar desnecessariamente durante redimensionamento.",
+    "A Central de Manutenção integrada passa a usar um shell de três linhas reais — resumo, navegação e conteúdo — eliminando a sobreposição por posicionamento absoluto que ainda podia causar cortes.",
+    "Os cartões de resumo continuam adaptativos e são ocultados em Nova passagem ou quando falta altura; a faixa de navegação permanece sempre separada do conteúdo ativo.",
+    "Em larguras menores, os seis comandos internos usam nomes abreviados e ellipsis seguro em vez de cortar o texto.",
+    "Central de Manutenção passa para v0.6.1; Gerenciador permanece em v3.6.2.",
+    "Nenhuma regra de manutenção, histórico, diagnóstico, geração, união, saldo ou dados foi alterada."
   ]
 }
