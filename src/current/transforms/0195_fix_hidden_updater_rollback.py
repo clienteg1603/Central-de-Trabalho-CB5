@@ -2,14 +2,22 @@
 from pathlib import Path
 
 central_path = Path("src/generated/Central de Trabalho.ps1")
+updater_path = Path("src/generated/Atualizador/Central de Trabalho Updater.ps1")
 core_path = Path("src/generated/Atualizador/Update.Core.ps1")
 
 central = central_path.read_text(encoding="utf-8-sig")
+updater = updater_path.read_text(encoding="utf-8-sig")
 core = core_path.read_text(encoding="utf-8-sig")
 
 if '$script:AppVersion = "0.19.4"' not in central:
     raise SystemExit("Central: versão-base 0.19.4 não encontrada")
 central = central.replace('$script:AppVersion = "0.19.4"', '$script:AppVersion = "0.19.5"', 1)
+
+old_payload_size = 'if ((Get-Item -LiteralPath $path).Length -ne [long]$file.Size) { throw "Tamanho divergente: $relative" }'
+new_payload_size = 'if (([IO.FileInfo]::new($path)).Length -ne [long]$file.Size) { throw "Tamanho divergente: $relative" }'
+if old_payload_size not in core:
+    raise SystemExit("Atualizador: validação de tamanho com Get-Item não encontrada")
+core = core.replace(old_payload_size, new_payload_size, 1)
 
 old_assert_prefix = '''function Assert-CentralUpdateInstallRoot {
     param([Parameter(Mandatory = $true)][string]$InstallRoot)
@@ -207,9 +215,16 @@ if old_catch not in core:
     raise SystemExit("Atualizador: bloco de rollback não encontrado")
 core = core.replace(old_catch, new_catch, 1)
 
+old_error_message = '"A atualização não pôde ser concluída.`r`n`r`n$($_.Exception.Message)`r`n`r`nSe a troca de arquivos já havia começado, o backup foi restaurado automaticamente.",'
+new_error_message = '"A atualização não pôde ser concluída.`r`n`r`n$($_.Exception.Message)`r`n`r`nO Atualizador tentou restaurar o backup automaticamente. Se a própria mensagem indicar falha na restauração, use o backup anterior antes de tentar novamente.",'
+if old_error_message not in updater:
+    raise SystemExit("Atualizador: mensagem antiga de falha não encontrada")
+updater = updater.replace(old_error_message, new_error_message, 1)
+
 required_markers = [
     'function Resolve-CentralUpdateInstallRootPath',
     'function Clear-CentralUpdateBlockingAttributes',
+    '([IO.FileInfo]::new($path)).Length',
     'Clear-CentralUpdateBlockingAttributes -Path $destination',
     '$InstallRoot = Resolve-CentralUpdateInstallRootPath -InstallRoot $InstallRoot',
     '$originalError = $_',
@@ -220,5 +235,6 @@ for marker in required_markers:
         raise SystemExit(f"Atualizador: marcador final ausente: {marker}")
 
 central_path.write_text(central, encoding="utf-8-sig")
+updater_path.write_text(updater, encoding="utf-8-sig")
 core_path.write_text(core, encoding="utf-8-sig")
-print("0.19.5: corrige atualização sobre arquivos ocultos e torna rollback recuperável.")
+print("0.19.5: corrige atualização sobre arquivos ocultos, validação do backup e rollback recuperável.")
