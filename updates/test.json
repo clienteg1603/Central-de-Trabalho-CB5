@@ -2,19 +2,17 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.11.1",
+  "Version": "0.11.2",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.1.zip",
-  "PackageSha256": "A8D77F4E6A391B726E84403CD62A813CF7041EFACA60068EE9756812217E7306",
-  "PackageSize": 899563,
-  "PackageRoot": "Central-de-Trabalho-v0.11.1",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.11.2.zip",
+  "PackageSha256": "2098A5F4E202CA7832672D766849AD7EA153C80FAA7B2F46782B5388FE3D7F7E",
+  "PackageSize": 899312,
+  "PackageRoot": "Central-de-Trabalho-v0.11.2",
   "ReleaseNotes": [
-    "Segundo bloco visual da Etapa 3 na Central de Manutenção CB5.",
-    "Visão geral ganhou atalhos diretos para Histórico, Apoio ao diagnóstico e Esquemáticos.",
-    "Tabelas receberam visual mais limpo, linhas alternadas e menos bordas pesadas.",
-    "Grupos e cartões foram refinados para combinar melhor com as paletas da Central.",
-    "Ações da tela de Passagem receberam espaçamento e hierarquia visual melhores.",
-    "Responsividade do dashboard foi ajustada para comportar a nova faixa de atalhos.",
-    "Nenhuma regra de manutenção, histórico ou diagnóstico foi alterada."
+    "Limpeza de navegação da Central de Manutenção CB5.",
+    "Removidos da Visão geral os botões Histórico, Apoio ao diagnóstico e Esquemáticos, pois repetiam as abas principais.",
+    "A Visão geral volta a priorizar resumo, indicadores, Nova passagem e atividade recente.",
+    "Mantido o botão Nova passagem porque ele inicia um registro limpo, função diferente de apenas abrir a aba Passagem.",
+    "Nenhuma regra de manutenção, histórico, diagnóstico ou salvamento foi alterada."
   ]
 }
