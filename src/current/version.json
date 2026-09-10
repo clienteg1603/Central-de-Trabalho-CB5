@@ -1,6 +1,6 @@
 {
   "version": "0.16.1",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Continuação do polimento global com foco em confiabilidade e navegação da Central de Trabalho.",
     "Foram removidas duas rotinas antigas que ainda restavam do layout anterior e já haviam sido substituídas pelas implementações atuais.",
