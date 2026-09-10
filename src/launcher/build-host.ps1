@@ -3,22 +3,21 @@ param(
     [string]$Version,
 
     [Parameter(Mandatory = $true)]
-    [string]$OutputDirectory,
-
-    [Parameter(Mandatory = $true)]
-    [string]$ReferenceExe
+    [string]$OutputDirectory
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-if (-not (Test-Path -LiteralPath $ReferenceExe -PathType Leaf)) {
-    throw "Reference executable not found: $ReferenceExe"
-}
-
 $sourcePath = Join-Path $PSScriptRoot "CentralHost.cs"
 if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
     throw "Native host source not found: $sourcePath"
+}
+
+$srcRoot = Split-Path -Parent $PSScriptRoot
+$iconAssetPath = Join-Path $srcRoot "assets\Central-de-Trabalho.ico.b64"
+if (-not (Test-Path -LiteralPath $iconAssetPath -PathType Leaf)) {
+    throw "Central icon asset not found: $iconAssetPath"
 }
 
 [void](New-Item -ItemType Directory -Force -Path $OutputDirectory)
@@ -26,15 +25,13 @@ $outExe = Join-Path $OutputDirectory "Central de Trabalho.exe"
 $iconPath = Join-Path $OutputDirectory "Central-de-Trabalho.ico"
 $versionSource = Join-Path $OutputDirectory "AssemblyInfo.generated.cs"
 
-Add-Type -AssemblyName System.Drawing
-$icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Resolve-Path -LiteralPath $ReferenceExe).Path)
-if ($null -eq $icon) { throw "Could not extract icon from reference executable." }
-try {
-    $stream = [IO.File]::Create($iconPath)
-    try { $icon.Save($stream) }
-    finally { $stream.Dispose() }
+$encodedIcon = (Get-Content -LiteralPath $iconAssetPath -Raw).Trim()
+try { $iconBytes = [Convert]::FromBase64String($encodedIcon) }
+catch { throw "Central icon asset is not valid Base64." }
+if ($iconBytes.Length -lt 1024 -or $iconBytes[0] -ne 0 -or $iconBytes[1] -ne 0 -or $iconBytes[2] -ne 1 -or $iconBytes[3] -ne 0) {
+    throw "Central icon asset is not a valid ICO file."
 }
-finally { $icon.Dispose() }
+[IO.File]::WriteAllBytes($iconPath, $iconBytes)
 
 $parts = @($Version.Split('.'))
 while ($parts.Count -lt 4) { $parts += '0' }
@@ -113,4 +110,4 @@ if ($info.FileVersion -ne $fileVersion) {
     throw "EXE version mismatch: $($info.FileVersion) != $fileVersion"
 }
 
-Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, in-process PowerShell engine."
+Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, in-process PowerShell engine."
