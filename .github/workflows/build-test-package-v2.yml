@@ -34,15 +34,151 @@ jobs:
           BASE_ROOT="$BUILD_DIR/base/Central-de-Trabalho-v${BASE_VERSION}"
           test -d "$BASE_ROOT"
 
-          # A partir da v0.11.x, os fontes montados ficam no próprio repositório.
-          # Isso elimina o ciclo frágil de patches grandes e facilita evoluções pequenas.
           test -f "src/generated/Central de Trabalho.ps1"
           test -f "src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1"
           test -f "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
 
+          # Bloco visual incremental v0.11.1. É idempotente: depois que o fonte
+          # gerado recebe a marca, builds seguintes não aplicam a alteração de novo.
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('src/generated/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1')
+          s = p.read_text(encoding='utf-8-sig')
+          marker = '# VISUAL_BLOCK_2_V0111'
+          if marker not in s:
+              def rep(old, new, label):
+                  nonlocal_dummy = None
+                  global s
+                  n = s.count(old)
+                  if n != 1:
+                      raise RuntimeError(f'{label}: esperado 1 trecho, encontrado {n}')
+                  s = s.replace(old, new, 1)
+
+              rep('$script:AppVersion = "0.5.0"', '$script:AppVersion = "0.5.1"', 'versão')
+
+              rep('''    elseif ($Control -is [Windows.Forms.GroupBox]) {
+                  $Control.BackColor = $script:CurrentPalette.Card
+                  $Control.ForeColor = $script:CurrentPalette.Text
+              }''','''    elseif ($Control -is [Windows.Forms.GroupBox]) {
+                  $Control.BackColor = $script:CurrentPalette.Card
+                  $Control.ForeColor = $script:CurrentPalette.Text
+                  $Control.FlatStyle = [Windows.Forms.FlatStyle]::Flat
+              }''','groupbox')
+
+              rep('''        $Control.ColumnHeadersDefaultCellStyle.BackColor = $script:CurrentPalette.Surface
+                  $Control.ColumnHeadersDefaultCellStyle.ForeColor = $script:CurrentPalette.Text
+                  $Control.EnableHeadersVisualStyles = $false''','''        $Control.ColumnHeadersDefaultCellStyle.BackColor = $script:CurrentPalette.Surface
+                  $Control.ColumnHeadersDefaultCellStyle.ForeColor = $script:CurrentPalette.Text
+                  $Control.AlternatingRowsDefaultCellStyle.BackColor = $script:CurrentPalette.Background
+                  $Control.AlternatingRowsDefaultCellStyle.ForeColor = $script:CurrentPalette.Text
+                  $Control.BorderStyle = [Windows.Forms.BorderStyle]::None
+                  $Control.CellBorderStyle = [Windows.Forms.DataGridViewCellBorderStyle]::SingleHorizontal
+                  $Control.ColumnHeadersBorderStyle = [Windows.Forms.DataGridViewHeaderBorderStyle]::None
+                  $Control.DefaultCellStyle.Padding = [Windows.Forms.Padding]::new(4, 2, 4, 2)
+                  $Control.EnableHeadersVisualStyles = $false''','grids')
+
+              rep('''$dashboardRoot.RowCount = 3
+          $dashboardRoot.ColumnCount = 1
+          $dashboardIntroHeight = if ($script:IsInProcessHosted) { 56 } else { 68 }
+          $dashboardCardsHeight = if ($script:IsInProcessHosted) { 122 } else { 138 }
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardIntroHeight)))
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardCardsHeight)))
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))''','''$dashboardRoot.RowCount = 4
+          $dashboardRoot.ColumnCount = 1
+          $dashboardIntroHeight = if ($script:IsInProcessHosted) { 56 } else { 68 }
+          $dashboardCardsHeight = if ($script:IsInProcessHosted) { 122 } else { 138 }
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardIntroHeight)))
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $dashboardCardsHeight)))
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 46)))
+          [void]$dashboardRoot.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))''','dashboard rows')
+
+              rep('''$returnsValue = $null
+          $cardReturns = New-SummaryCard "Retornos identificados" "Success" ([ref]$returnsValue)
+          $cardsLayout.Controls.Add($cardReturns, 3, 0)
+
+          $recentGroup = New-Object Windows.Forms.GroupBox''','''$returnsValue = $null
+          $cardReturns = New-SummaryCard "Retornos identificados" "Success" ([ref]$returnsValue)
+          $cardsLayout.Controls.Add($cardReturns, 3, 0)
+
+          $dashboardQuickActions = New-Object Windows.Forms.TableLayoutPanel
+          $dashboardQuickActions.Dock = [Windows.Forms.DockStyle]::Fill
+          $dashboardQuickActions.ColumnCount = 3
+          $dashboardQuickActions.RowCount = 1
+          $dashboardQuickActions.Margin = [Windows.Forms.Padding]::new(4, 3, 4, 3)
+          for ($i = 0; $i -lt 3; $i++) { [void]$dashboardQuickActions.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 33.333))) }
+          $dashboardRoot.Controls.Add($dashboardQuickActions, 0, 2)
+
+          $dashboardHistoryButton = New-Object Windows.Forms.Button
+          $dashboardHistoryButton.Text = "HISTÓRICO"
+          $dashboardHistoryButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $dashboardHistoryButton.Margin = [Windows.Forms.Padding]::new(0, 2, 4, 2)
+          $dashboardHistoryButton.Tag = "Primary"
+          $dashboardQuickActions.Controls.Add($dashboardHistoryButton, 0, 0)
+
+          $dashboardDiagnosisButton = New-Object Windows.Forms.Button
+          $dashboardDiagnosisButton.Text = "APOIO AO DIAGNÓSTICO"
+          $dashboardDiagnosisButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $dashboardDiagnosisButton.Margin = [Windows.Forms.Padding]::new(4, 2, 4, 2)
+          $dashboardDiagnosisButton.Tag = "Secondary"
+          $dashboardQuickActions.Controls.Add($dashboardDiagnosisButton, 1, 0)
+
+          $dashboardSchematicsButton = New-Object Windows.Forms.Button
+          $dashboardSchematicsButton.Text = "ESQUEMÁTICOS"
+          $dashboardSchematicsButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $dashboardSchematicsButton.Margin = [Windows.Forms.Padding]::new(4, 2, 0, 2)
+          $dashboardSchematicsButton.Tag = "Secondary"
+          $dashboardQuickActions.Controls.Add($dashboardSchematicsButton, 2, 0)
+
+          $recentGroup = New-Object Windows.Forms.GroupBox''','quick actions')
+
+              rep('$dashboardRoot.Controls.Add($recentGroup, 0, 2)', '$dashboardRoot.Controls.Add($recentGroup, 0, 3)', 'recent row')
+
+              rep('''        $dashboardRoot.RowStyles[0].Height = $dashIntro
+                  $dashboardRoot.RowStyles[1].Height = $dashboardCardsH
+                  $dashboardRoot.AutoScroll = ($summaryColumns -eq 1)''','''        $dashboardRoot.RowStyles[0].Height = $dashIntro
+                  $dashboardRoot.RowStyles[1].Height = $dashboardCardsH
+                  $dashboardRoot.RowStyles[2].Height = if ($profile -eq "Tight") { 38 } elseif ($profile -eq "Compact") { 42 } else { 46 }
+                  $dashboardRoot.AutoScroll = ($summaryColumns -eq 1)''','quick responsive')
+
+              rep('''$themeCombo.Add_SelectedIndexChanged({ Apply-MaintenanceTheme; Update-MaintenanceResponsiveLayout; Save-MaintenanceSettings })
+          $dashboardNewButton.Add_Click({ Reset-PassageForm; $mainTabs.SelectedTab = $passageTab })''','''$themeCombo.Add_SelectedIndexChanged({ Apply-MaintenanceTheme; Update-MaintenanceResponsiveLayout; Save-MaintenanceSettings })
+          $dashboardNewButton.Add_Click({ Reset-PassageForm; $mainTabs.SelectedTab = $passageTab })
+          $dashboardHistoryButton.Add_Click({ $mainTabs.SelectedTab = $historyTab })
+          $dashboardDiagnosisButton.Add_Click({ $mainTabs.SelectedTab = $diagnosisTab })
+          $dashboardSchematicsButton.Add_Click({ $mainTabs.SelectedTab = $schematicsTab })''','handlers')
+
+              rep('''$newPassageButton.Text = "LIMPAR / NOVA PASSAGEM"
+          $newPassageButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $newPassageButton.Tag = "Secondary"''','''$newPassageButton.Text = "LIMPAR / NOVA PASSAGEM"
+          $newPassageButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $newPassageButton.Margin = [Windows.Forms.Padding]::new(0, 2, 0, 2)
+          $newPassageButton.Tag = "Secondary"''','action spacing 1')
+              rep('''$savePassageButton.Text = "SALVAR ANDAMENTO"
+          $savePassageButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $savePassageButton.Tag = "Secondary"''','''$savePassageButton.Text = "SALVAR ANDAMENTO"
+          $savePassageButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $savePassageButton.Margin = [Windows.Forms.Padding]::new(0, 2, 0, 2)
+          $savePassageButton.Tag = "Secondary"''','action spacing 2')
+              rep('''$completePassageButton.Text = "CONCLUIR PASSAGEM"
+          $completePassageButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $completePassageButton.Tag = "Action"''','''$completePassageButton.Text = "CONCLUIR PASSAGEM"
+          $completePassageButton.Dock = [Windows.Forms.DockStyle]::Fill
+          $completePassageButton.Margin = [Windows.Forms.Padding]::new(0, 2, 0, 0)
+          $completePassageButton.Tag = "Action"''','action spacing 3')
+
+              anchor = '\nif ($script:IsInProcessHosted) {\n    # A Central de Trabalho já fornece título, versão e navegação.'
+              if anchor not in s:
+                  raise RuntimeError('marcador final não encontrado')
+              s = s.replace(anchor, '\n' + marker + anchor, 1)
+              p.write_text(s, encoding='utf-8', newline='')
+              print('Bloco visual v0.11.1 aplicado.')
+          else:
+              print('Bloco visual v0.11.1 já presente.')
+          PY
+
           if compgen -G "src/current/transforms/*.py" > /dev/null; then
             for transform in src/current/transforms/*.py; do
-              echo "Aplicando transformação: $transform"
+              echo "Aplicando transformação adicional: $transform"
               python3 "$transform"
             done
           fi
@@ -53,7 +189,6 @@ jobs:
           cp "src/generated/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" \
              "$BASE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
 
-          # Windows PowerShell trabalha de forma mais segura com estes scripts em UTF-8 BOM.
           python3 - "$BASE_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
