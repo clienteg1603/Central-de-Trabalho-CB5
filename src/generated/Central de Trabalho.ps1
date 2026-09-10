@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.16.3"
+$script:AppVersion = "0.16.4"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.2"
 $script:MaintenanceVersion = "0.6.1"
@@ -44,14 +44,18 @@ $script:GeneratorDirectory = [IO.Path]::Combine(
     "Gerador-de-Planilhas-CB5-TV5"
 )
 $script:GeneratorScript = [IO.Path]::Combine($script:GeneratorDirectory, "Gerador Planilhas.ps1")
+$script:GeneratorCore = [IO.Path]::Combine($script:GeneratorDirectory, "Componentes.Core.ps1")
 $script:MaintenanceDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
     "Central-de-Manutencao-CB5"
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
+$script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
 $script:UpdaterDirectory = [IO.Path]::Combine($script:RootPath, "Atualizador")
 $script:UpdaterScript = [IO.Path]::Combine($script:UpdaterDirectory, "Central de Trabalho Updater.ps1")
+$script:UpdaterCore = [IO.Path]::Combine($script:UpdaterDirectory, "Update.Core.ps1")
+$script:UpdaterChannels = [IO.Path]::Combine($script:UpdaterDirectory, "CANAIS.json")
 $script:SettingsDirectory = [IO.Path]::Combine(
     [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData),
     "CentralDeTrabalho"
@@ -253,6 +257,32 @@ function Set-StatusMessage {
     }
 }
 
+
+function Get-CentralHealthSnapshot {
+    $generatorRequired = @($script:GeneratorScript, $script:GeneratorCore)
+    $maintenanceRequired = @($script:MaintenanceScript, $script:MaintenanceCore)
+    $updaterRequired = @($script:UpdaterScript, $script:UpdaterCore, $script:UpdaterChannels)
+
+    $generatorMissing = @($generatorRequired | Where-Object { -not [IO.File]::Exists($_) })
+    $maintenanceMissing = @($maintenanceRequired | Where-Object { -not [IO.File]::Exists($_) })
+    $updaterMissing = @($updaterRequired | Where-Object { -not [IO.File]::Exists($_) })
+
+    [pscustomobject]@{
+        GeneratorAvailable = ($generatorMissing.Count -eq 0)
+        MaintenanceAvailable = ($maintenanceMissing.Count -eq 0)
+        UpdaterAvailable = ($updaterMissing.Count -eq 0)
+        GeneratorMissing = $generatorMissing
+        MaintenanceMissing = $maintenanceMissing
+        UpdaterMissing = $updaterMissing
+    }
+}
+
+function Format-MissingCentralFiles {
+    param([object[]]$Paths)
+    if ($null -eq $Paths -or $Paths.Count -eq 0) { return "" }
+    return (($Paths | ForEach-Object { "• " + [IO.Path]::GetFileName([string]$_) }) -join "`r`n")
+}
+
 # Integração real dos módulos na própria árvore WinForms da Central.
 # Em vez de anexar uma janela externa com SetParent, cada módulo é carregado
 # em um módulo PowerShell isolado e devolve seu Form como controle filho.
@@ -326,10 +356,14 @@ function Start-EmbeddedModule {
     $moduleName = if ($Module -eq "Generator") { "Gerenciador de Planilhas" } else { "Central de Manutenção CB5" }
     $moduleVersion = if ($Module -eq "Generator") { $script:GeneratorVersion } else { $script:MaintenanceVersion }
 
-    if (-not [IO.File]::Exists($moduleScript)) {
-        Set-StatusMessage "Não foi possível abrir: arquivo do módulo ausente." "Error"
+    $health = Get-CentralHealthSnapshot
+    $moduleAvailable = if ($Module -eq "Generator") { $health.GeneratorAvailable } else { $health.MaintenanceAvailable }
+    $moduleMissing = if ($Module -eq "Generator") { @($health.GeneratorMissing) } else { @($health.MaintenanceMissing) }
+    if (-not $moduleAvailable) {
+        $missingText = Format-MissingCentralFiles $moduleMissing
+        Set-StatusMessage "Não foi possível abrir: instalação do módulo incompleta." "Error"
         [Windows.Forms.MessageBox]::Show(
-            "O arquivo de $moduleName não foi encontrado.`r`n`r`n$moduleScript",
+            "A instalação de $moduleName está incompleta.`r`n`r`nArquivos necessários que não foram encontrados:`r`n$missingText`r`n`r`nUse Atualizações para reparar ou reinstalar a versão atual.",
             "Central de Trabalho",
             [Windows.Forms.MessageBoxButtons]::OK,
             [Windows.Forms.MessageBoxIcon]::Error
@@ -465,10 +499,12 @@ function Start-UpdaterModule {
         $script:UpdaterProcess = $null
     }
 
-    if (-not [IO.File]::Exists($script:UpdaterScript)) {
-        Set-StatusMessage "Não foi possível abrir: arquivo do Atualizador ausente." "Error"
+    $health = Get-CentralHealthSnapshot
+    if (-not $health.UpdaterAvailable) {
+        $missingText = Format-MissingCentralFiles @($health.UpdaterMissing)
+        Set-StatusMessage "Não foi possível abrir: instalação do Atualizador incompleta." "Error"
         [Windows.Forms.MessageBox]::Show(
-            "O arquivo do Atualizador não foi encontrado.`r`n`r`n$($script:UpdaterScript)",
+            "A instalação do Atualizador está incompleta.`r`n`r`nArquivos necessários que não foram encontrados:`r`n$missingText",
             "Central de Trabalho",
             [Windows.Forms.MessageBoxButtons]::OK,
             [Windows.Forms.MessageBoxIcon]::Error
@@ -636,9 +672,10 @@ function Set-NavButtonStyle {
 
 function Update-CentralAvailabilityState {
     try {
-        $generatorAvailable = [IO.File]::Exists($script:GeneratorScript)
-        $maintenanceAvailable = [IO.File]::Exists($script:MaintenanceScript)
-        $updaterAvailable = [IO.File]::Exists($script:UpdaterScript)
+        $health = Get-CentralHealthSnapshot
+        $generatorAvailable = [bool]$health.GeneratorAvailable
+        $maintenanceAvailable = [bool]$health.MaintenanceAvailable
+        $updaterAvailable = [bool]$health.UpdaterAvailable
         $generatorFolderAvailable = [IO.Directory]::Exists($script:GeneratorDirectory)
         $maintenanceFolderAvailable = [IO.Directory]::Exists($script:MaintenanceDirectory)
         $moduleCount = ([int]$generatorAvailable + [int]$maintenanceAvailable)
@@ -681,12 +718,12 @@ function Update-CentralAvailabilityState {
         if ($null -ne $themeCombo) { $themeCombo.Enabled = (-not $script:ModuleLoading) }
 
         if ($null -ne $generatorStatus) {
-            $generatorStatus.Text = if ($generatorAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
+            $generatorStatus.Text = if ($generatorAvailable) { "  DISPONÍVEL  " } elseif ($generatorFolderAvailable) { "  INCOMPLETO  " } else { "  INDISPONÍVEL  " }
             $generatorStatus.BackColor = if ($generatorAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
             $generatorStatus.ForeColor = if ($generatorAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
         }
         if ($null -ne $maintenanceStatus) {
-            $maintenanceStatus.Text = if ($maintenanceAvailable) { "  DISPONÍVEL  " } else { "  INDISPONÍVEL  " }
+            $maintenanceStatus.Text = if ($maintenanceAvailable) { "  DISPONÍVEL  " } elseif ($maintenanceFolderAvailable) { "  INCOMPLETO  " } else { "  INDISPONÍVEL  " }
             $maintenanceStatus.BackColor = if ($maintenanceAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
             $maintenanceStatus.ForeColor = if ($maintenanceAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
         }
@@ -714,7 +751,7 @@ function Update-CentralAvailabilityState {
         if ($null -ne $sidebarVersion) { $sidebarVersion.Text = "Central v$($script:AppVersion)" }
         if ($null -ne $todayLabel) { $todayLabel.Text = (Get-Date).ToString("dd/MM/yyyy") }
 
-        $signature = "$generatorAvailable|$maintenanceAvailable|$updaterAvailable|$generatorFolderAvailable|$maintenanceFolderAvailable|$($script:ModuleLoading)"
+        $signature = "$generatorAvailable|$maintenanceAvailable|$updaterAvailable|$generatorFolderAvailable|$maintenanceFolderAvailable|$(@($health.GeneratorMissing).Count)|$(@($health.MaintenanceMissing).Count)|$(@($health.UpdaterMissing).Count)|$($script:ModuleLoading)"
         if ($script:LastAvailabilitySignature -ne $signature) {
             $script:LastAvailabilitySignature = $signature
             try { $form.Invalidate($false) } catch {}
