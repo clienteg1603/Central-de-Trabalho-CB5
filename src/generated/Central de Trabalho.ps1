@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.19.0"
+$script:AppVersion = "0.19.1"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.3"
 $script:MaintenanceVersion = "0.6.1"
@@ -1112,6 +1112,20 @@ try {
     $settings = Get-AppSettings
 
     $form = New-Object Windows.Forms.Form
+
+# A janela usa a mesma identidade visual gravada no Central de Trabalho.exe.
+# Assim, Explorador, barra de tarefas, Alt+Tab e a própria janela mostram o ícone CT.
+try {
+    $executablePath = [Windows.Forms.Application]::ExecutablePath
+    if ([IO.File]::Exists($executablePath)) {
+        $applicationIcon = [Drawing.Icon]::ExtractAssociatedIcon($executablePath)
+        if ($null -ne $applicationIcon) { $form.Icon = $applicationIcon }
+    }
+}
+catch {
+    # A identidade visual não pode impedir a abertura da Central.
+}
+
 $form.Text = "Central de Trabalho"
 $form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
 $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
