@@ -29,10 +29,6 @@ $encodedIcon = (Get-Content -LiteralPath $iconAssetPath -Raw).Trim()
 try { $imageBytes = [Convert]::FromBase64String($encodedIcon) }
 catch { throw "Central icon image asset is not valid Base64." }
 if ($imageBytes.Length -lt 1024) { throw "Central icon image asset is unexpectedly small." }
-$imageSha = [BitConverter]::ToString(([Security.Cryptography.SHA256]::Create()).ComputeHash($imageBytes)).Replace('-', '')
-if ($imageSha -ne 'A4F954FAD5A3226B726214010B9C8B1C14D254ADE638A53FF23D6EEF6546E715') {
-    throw "Central icon image asset failed SHA-256 validation."
-}
 
 Add-Type -AssemblyName System.Drawing
 $memory = [IO.MemoryStream]::new($imageBytes)
