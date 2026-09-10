@@ -78,7 +78,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.5.1"
+$script:AppVersion = "3.5.2"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -350,7 +350,10 @@ function Get-RepairComponentKey {
 }
 
 function Get-CB5RepairInfo {
-    param([string]$Text)
+    param(
+        [string]$Text,
+        [switch]$AllowUnknownRepair
+    )
 
     $match = [Text.RegularExpressions.Regex]::Match(
         (Normalize-Text $Text),
@@ -358,6 +361,13 @@ function Get-CB5RepairInfo {
         [Text.RegularExpressions.RegexOptions]::IgnoreCase
     )
     if (-not $match.Success) {
+        if ($AllowUnknownRepair) {
+            return [pscustomobject]@{
+                Level = 0
+                Codes = [Collections.Generic.List[string]]::new()
+                LastAction = ""
+            }
+        }
         throw "REPARO '$Text' não reconhecido para CB5. Comece com ASTEC, ASTEC 1, ASTEC 2 ou ASTEC 3 e separe as manutenções por vírgulas."
     }
 
@@ -389,6 +399,7 @@ function Get-CB5RepairInfo {
                 $catalogComponent = Get-BillingComponentForRepairPart $script:BillingComponentStore "CB5" $componentText
                 $code = if ($null -ne $catalogComponent) { [string]$catalogComponent.CodigoPlanilha } else { "" }
                 if ([string]::IsNullOrWhiteSpace($code)) {
+                    if ($AllowUnknownRepair) { continue }
                     throw "Manutenção '$componentText' não reconhecida no REPARO '$Text'. Confira o texto e, se for um componente novo, cadastre-o em Componentes a faturar com o código da planilha."
                 }
             }
@@ -432,7 +443,8 @@ function Read-MasterWorkbook {
     param(
         $Excel,
         [string]$Path,
-        [switch]$RequireInvoices
+        [switch]$RequireInvoices,
+        [switch]$AllowUnknownRepair
     )
 
     $workbooks = $null
@@ -505,7 +517,7 @@ function Read-MasterWorkbook {
             if ($null -eq $operator2Name) { $operator2Name = $currentOperator2Name }
             elseif ($operator2Name -ne $currentOperator2Name) { throw "A coluna OPERADORA2 mistura operadoras diferentes: '$operator2Name' e '$currentOperator2Name'." }
 
-            $repairInfo = Get-CB5RepairInfo $repair
+            $repairInfo = Get-CB5RepairInfo $repair -AllowUnknownRepair:$AllowUnknownRepair
             $items.Add([pscustomobject]@{
                 Series = $series
                 Lot = $lot
@@ -542,7 +554,10 @@ function Read-MasterWorkbook {
 }
 
 function Get-TV5RepairInfo {
-    param([string]$Text)
+    param(
+        [string]$Text,
+        [switch]$AllowUnknownRepair
+    )
 
     $match = [Text.RegularExpressions.Regex]::Match(
         (Normalize-Text $Text),
@@ -550,6 +565,12 @@ function Get-TV5RepairInfo {
         [Text.RegularExpressions.RegexOptions]::IgnoreCase
     )
     if (-not $match.Success) {
+        if ($AllowUnknownRepair) {
+            return [pscustomobject]@{
+                Codes = [Collections.Generic.List[string]]::new()
+                LastAction = ""
+            }
+        }
         throw "REPARO '$Text' não reconhecido para TV5. Comece com ASTEC TV5 e separe as manutenções por vírgulas."
     }
 
@@ -597,6 +618,7 @@ function Get-TV5RepairInfo {
                 $catalogComponent = Get-BillingComponentForRepairPart $script:BillingComponentStore "TV5" $componentText
                 $code = if ($null -ne $catalogComponent) { [string]$catalogComponent.CodigoPlanilha } else { "" }
                 if ([string]::IsNullOrWhiteSpace($code)) {
+                    if ($AllowUnknownRepair) { continue }
                     throw "Manutenção '$componentText' não reconhecida no REPARO '$Text'. Confira o texto e, se for um componente novo, cadastre-o em Componentes a faturar com o código da planilha."
                 }
             }
@@ -616,7 +638,8 @@ function Read-TV5MasterWorkbook {
     param(
         $Excel,
         [string]$Path,
-        [switch]$AllowBlankInvoices
+        [switch]$AllowBlankInvoices,
+        [switch]$AllowUnknownRepair
     )
 
     $workbooks = $null
@@ -668,7 +691,7 @@ function Read-TV5MasterWorkbook {
             if ($null -eq $lotValue) { $lotValue = $lot }
             elseif ($lotValue -ne $lot) { throw "Foram encontrados lotes diferentes na mestre TV5: '$lotValue' e '$lot'." }
 
-            $repairInfo = Get-TV5RepairInfo $repair
+            $repairInfo = Get-TV5RepairInfo $repair -AllowUnknownRepair:$AllowUnknownRepair
             $codes = [Collections.Generic.List[string]]::new()
             foreach ($code in $repairInfo.Codes) { $codes.Add($code) }
             $items.Add([pscustomobject]@{
@@ -3222,7 +3245,7 @@ $combineConsumeBalanceCheck.Size = New-Object Drawing.Size(420, 24)
 $combineConsumeBalanceCheck.Font = New-Object Drawing.Font("Segoe UI Semibold", 9.5)
 $combineConsumeBalanceCheck.Anchor = "Top,Left"
 $tabCombine.Controls.Add($combineConsumeBalanceCheck)
-$toolTip.SetToolTip($combineConsumeBalanceCheck, "Marcado: consulta, valida e baixa o saldo somente após a união concluir. Desmarcado: junta os lotes sem consultar nem alterar o saldo e registra essa escolha.")
+$toolTip.SetToolTip($combineConsumeBalanceCheck, "Marcado: valida os reparos, consulta e baixa o saldo após a união. Desmarcado: não consulta o saldo e permite textos de REPARO não cadastrados, preservando-os na planilha unida.")
 
 $combineGrid = New-Object Windows.Forms.DataGridView
 $combineGrid.Location = New-Object Drawing.Point(18, 149)
@@ -4462,10 +4485,10 @@ $previewCombineButton.Add_Click({
             }
 
             if ($product -eq "TV5") {
-                $masterData = Read-TV5MasterWorkbook $excel $masterPath
+                $masterData = Read-TV5MasterWorkbook $excel $masterPath -AllowUnknownRepair:(-not $consumeBalance)
             }
             else {
-                $masterData = Read-MasterWorkbook $excel $masterPath -RequireInvoices
+                $masterData = Read-MasterWorkbook $excel $masterPath -RequireInvoices -AllowUnknownRepair:(-not $consumeBalance)
             }
             Assert-ValidFilePart $masterData.Lot "lote"
             if (-not $lotSeen.Add($masterData.Lot)) {
@@ -4534,7 +4557,7 @@ $previewCombineButton.Add_Click({
             $summary.Add("Esta união já foi processada; nenhum saldo seria descontado novamente.")
         }
         elseif (-not [bool]$deductionPlan.ConsumirSaldo) {
-            $summary.Add("Opção desmarcada: o saldo não seria consultado nem alterado. A união seria registrada como sem consumo.")
+            $summary.Add("Opção desmarcada: o saldo não seria consultado nem alterado. Textos de REPARO não cadastrados seriam preservados sem bloquear a união.")
         }
         elseif (@($deductionPlan.Linhas).Count -eq 0) {
             $summary.Add("Nenhum componente controlado foi encontrado; a união seria apenas registrada contra repetição.")
@@ -4659,10 +4682,10 @@ $combineGenerateButton.Add_Click({
             }
 
             if ($product -eq "TV5") {
-                $masterData = Read-TV5MasterWorkbook $excel $masterPath
+                $masterData = Read-TV5MasterWorkbook $excel $masterPath -AllowUnknownRepair:(-not $consumeBalance)
             }
             else {
-                $masterData = Read-MasterWorkbook $excel $masterPath -RequireInvoices
+                $masterData = Read-MasterWorkbook $excel $masterPath -RequireInvoices -AllowUnknownRepair:(-not $consumeBalance)
             }
             Assert-ValidFilePart $masterData.Lot "lote"
             if (-not $lotSeen.Add($masterData.Lot)) {
@@ -4879,7 +4902,7 @@ $combineGenerateButton.Add_Click({
             $summary.Add("Baixa já registrada anteriormente; nenhum saldo foi descontado novamente.")
         }
         elseif (-not [bool]$deductionPlan.ConsumirSaldo) {
-            $summary.Add("Consumo desmarcado: o saldo não foi consultado nem alterado. A união foi registrada como sem consumo.")
+            $summary.Add("Consumo desmarcado: o saldo não foi consultado nem alterado. Textos de REPARO não cadastrados foram preservados na união.")
         }
         elseif (@($deductionPlan.Linhas).Count -eq 0) {
             $summary.Add("Nenhum componente cadastrado foi encontrado nos reparos. A união foi registrada para impedir uma baixa futura duplicada.")
