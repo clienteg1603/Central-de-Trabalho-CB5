@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build native Windows host
+      - name: Build native Windows hosts
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
@@ -31,19 +31,29 @@ jobs:
           Invoke-WebRequest -UseBasicParsing -Uri $baseUrl -OutFile $baseZip
           Expand-Archive -LiteralPath $baseZip -DestinationPath (Join-Path $work "base") -Force
 
-          $referenceExe = Join-Path $work "base\Central-de-Trabalho-v0.8.5\Central de Trabalho.exe"
+          $baseRoot = Join-Path $work "base\Central-de-Trabalho-v0.8.5"
+          $referenceExe = Join-Path $baseRoot "Central de Trabalho.exe"
+          $referenceUpdaterExe = Join-Path $baseRoot "Atualizador\Central de Trabalho Updater.exe"
           $outDir = Join-Path $work "out"
+
           & ".\src\launcher\build-host.ps1" -Version $version -OutputDirectory $outDir -ReferenceExe $referenceExe
+          & ".\src\launcher\build-updater-host.ps1" -Version $version -OutputDirectory $outDir -ReferenceExe $referenceUpdaterExe
 
           $hostExe = Join-Path $outDir "Central de Trabalho.exe"
-          if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { throw "Host nativo não foi gerado." }
-          Write-Host "Host nativo pronto: $hostExe"
+          $updaterExe = Join-Path $outDir "Central de Trabalho Updater.exe"
+          if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { throw "Host nativo da Central não foi gerado." }
+          if (-not (Test-Path -LiteralPath $updaterExe -PathType Leaf)) { throw "Host nativo do Atualizador não foi gerado." }
+          Write-Host "Hosts nativos prontos:"
+          Write-Host "  $hostExe"
+          Write-Host "  $updaterExe"
 
-      - name: Upload native host
+      - name: Upload native hosts
         uses: actions/upload-artifact@v4
         with:
           name: central-native-host
-          path: ${{ runner.temp }}/central-native-host/out/Central de Trabalho.exe
+          path: |
+            ${{ runner.temp }}/central-native-host/out/Central de Trabalho.exe
+            ${{ runner.temp }}/central-native-host/out/Central de Trabalho Updater.exe
           if-no-files-found: error
           retention-days: 1
 
@@ -56,7 +66,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download native host
+      - name: Download native hosts
         uses: actions/download-artifact@v4
         with:
           name: central-native-host
@@ -71,10 +81,12 @@ jobs:
           BASE_URL="https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v${BASE_VERSION}.zip"
           BUILD_DIR="$RUNNER_TEMP/central-build"
           NATIVE_HOST="$RUNNER_TEMP/central-native-host/Central de Trabalho.exe"
+          NATIVE_UPDATER_HOST="$RUNNER_TEMP/central-native-host/Central de Trabalho Updater.exe"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
 
           test -f "$NATIVE_HOST"
+          test -f "$NATIVE_UPDATER_HOST"
           curl -L --fail --retry 5 --retry-all-errors --connect-timeout 20 \
             -o "$BUILD_DIR/base.zip" "$BASE_URL"
           unzip -q "$BUILD_DIR/base.zip" -d "$BUILD_DIR/base"
@@ -127,7 +139,7 @@ jobs:
           cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
           cp "$BASE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
           cp "$BASE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
-          cp "$BASE_ROOT/Atualizador/Central de Trabalho Updater.exe" "$OUT_ROOT/Atualizador/"
+          cp "$NATIVE_UPDATER_HOST" "$OUT_ROOT/Atualizador/Central de Trabalho Updater.exe"
           cp "$BASE_ROOT/Atualizador/Central de Trabalho Updater.ps1" "$OUT_ROOT/Atualizador/"
           cp "$BASE_ROOT/Atualizador/Update.Core.ps1" "$OUT_ROOT/Atualizador/"
           cp "$BASE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
@@ -139,6 +151,20 @@ jobs:
           python3 src/ci/audit_release.py tree "$OUT_ROOT" "$VERSION"
           python3 src/ci/regression_contracts.py "$OUT_ROOT"
           pwsh -NoProfile -NonInteractive -File src/ci/parse_powershell.ps1 -Root "$OUT_ROOT"
+
+          # O pacote de Teste não pode voltar a carregar um lançador de PowerShell no Atualizador.
+          python3 - "$OUT_ROOT" <<'PY'
+          import pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          central = (root / 'Central de Trabalho.ps1').read_text(encoding='utf-8-sig').lower()
+          if 'powershell.exe' in central or 'pwsh.exe' in central:
+              raise SystemExit('Central voltou a referenciar um executável PowerShell externo.')
+          updater = (root / 'Atualizador/Central de Trabalho Updater.exe').read_bytes().lower()
+          forbidden = [b'powershell.exe', 'powershell.exe'.encode('utf-16le'), b'pwsh.exe', 'pwsh.exe'.encode('utf-16le')]
+          if any(marker in updater for marker in forbidden):
+              raise SystemExit('Atualizador empacotado ainda contém lançador para PowerShell externo.')
+          print('HOSTS NATIVOS: OK — Central e Atualizador sem lançador PowerShell externo.')
+          PY
 
           python3 - "$OUT_ROOT" "$VERSION" <<'PY'
           import hashlib, json, pathlib, sys, zipfile
