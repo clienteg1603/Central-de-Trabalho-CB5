@@ -1,6 +1,6 @@
 {
   "version": "0.11.3",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Limpeza ampla de duplicações visuais na Central de Trabalho e na Central de Manutenção CB5.",
     "Na Central de Trabalho, Programas e Backup deixam de aparecer como navegações separadas; Atualizações passa a concentrar atualização, backup e restauração.",
