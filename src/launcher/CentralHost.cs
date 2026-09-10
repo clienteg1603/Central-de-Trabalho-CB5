@@ -39,7 +39,11 @@ internal static class Program
                 {
                     ps.Runspace = runspace;
                     string escapedScriptPath = scriptPath.Replace("'", "''");
-                    ps.AddScript("& '" + escapedScriptPath + "'");
+
+                    // O script principal precisa viver no escopo persistente do runspace.
+                    // Isso mantém funções e comandos disponíveis para callbacks WinForms
+                    // disparados depois que a construção inicial da janela terminou.
+                    ps.AddScript(". '" + escapedScriptPath + "'");
                     ps.Invoke();
 
                     if (ps.InvocationStateInfo != null && ps.InvocationStateInfo.State == PSInvocationState.Failed)
