@@ -137,7 +137,9 @@ foreach ($required in @(
     'RunspaceFactory.CreateRunspace',
     'UpdaterRuntime',
     'CentralDeTrabalho_Atualizador',
-    'Central de Trabalho Updater.ps1'
+    'Central de Trabalho Updater.ps1',
+    '--self-test',
+    'Parser.ParseFile'
 )) {
     if ($sourceText -notmatch [regex]::Escape($required)) {
         throw "Native updater host is missing required contract: $required"
@@ -164,4 +166,4 @@ foreach ($entry in $expectedMetadata.GetEnumerator()) {
     }
 }
 
-Write-Host "NATIVE UPDATER HOST: OK - Central de Trabalho Updater.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, temporary self-hosted runtime, in-process PowerShell engine."
+Write-Host "NATIVE UPDATER HOST: OK - Central de Trabalho Updater.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, self-test contract, temporary self-hosted runtime, in-process PowerShell engine."
