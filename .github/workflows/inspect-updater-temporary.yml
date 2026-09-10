@@ -9,35 +9,58 @@ permissions:
   contents: read
 
 jobs:
-  hidden-runtime-test:
+  full-cycle-core-test:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Reproduce install-root validation with hidden runtime
+        with:
+          fetch-depth: 0
+      - name: Reproduce v0.19.3 to v0.19.4 core update
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $zip = Join-Path $PWD 'updates\packages\Central-de-Trabalho-v0.19.4.zip'
-          $dest = Join-Path $env:RUNNER_TEMP 'central-hidden-test'
-          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
-          Expand-Archive -LiteralPath $zip -DestinationPath $dest
-          $root = Get-ChildItem -LiteralPath $dest -Directory | Select-Object -First 1
-          if ($null -eq $root) { throw 'Package root not found' }
-          $rootPath = $root.FullName
-          $centralPs1 = Join-Path $rootPath 'Central de Trabalho.ps1'
-          $updaterDir = Join-Path $rootPath 'Atualizador'
-          $core = Join-Path $updaterDir 'Update.Core.ps1'
-          Write-Host "ROOT=$rootPath"
-          Write-Host "Before hide: central=$([IO.File]::Exists($centralPs1)) core=$([IO.File]::Exists($core))"
-          [IO.File]::SetAttributes($centralPs1, ([IO.File]::GetAttributes($centralPs1) -bor [IO.FileAttributes]::Hidden))
-          [IO.File]::SetAttributes($updaterDir, ([IO.File]::GetAttributes($updaterDir) -bor [IO.FileAttributes]::Hidden))
-          Write-Host "After hide: central=$([IO.File]::Exists($centralPs1)) core=$([IO.File]::Exists($core))"
-          . $core
+          $work = Join-Path $env:RUNNER_TEMP 'central-update-cycle-test'
+          if (Test-Path $work) { Remove-Item $work -Recurse -Force }
+          New-Item -ItemType Directory -Path $work | Out-Null
+
+          $oldZip = Join-Path $work 'old.zip'
+          $newZip = Join-Path $PWD 'updates\packages\Central-de-Trabalho-v0.19.4.zip'
+          git show ae5e2c8:updates/packages/Central-de-Trabalho-v0.19.3.zip > $oldZip
+          if (-not (Test-Path $oldZip)) { throw 'Could not recover v0.19.3 package' }
+
+          $oldExtract = Join-Path $work 'old'
+          $newExtract = Join-Path $work 'new'
+          Expand-Archive -LiteralPath $oldZip -DestinationPath $oldExtract
+          Expand-Archive -LiteralPath $newZip -DestinationPath $newExtract
+          $installRoot = (Get-ChildItem -LiteralPath $oldExtract -Directory | Select-Object -First 1).FullName
+          $payloadRoot = (Get-ChildItem -LiteralPath $newExtract -Directory | Select-Object -First 1).FullName
+
+          foreach ($path in @(
+            (Join-Path $installRoot 'Central de Trabalho.ps1'),
+            (Join-Path $installRoot 'PACOTE-MANIFESTO.json'),
+            (Join-Path $installRoot 'Atualizador'),
+            (Join-Path $installRoot 'Modulos')
+          )) {
+            $attr = [IO.File]::GetAttributes($path)
+            [IO.File]::SetAttributes($path, ($attr -bor [IO.FileAttributes]::Hidden))
+          }
+
+          $oldCore = Join-Path $installRoot 'Atualizador\Update.Core.ps1'
+          . $oldCore
+          $script:CentralUpdateApplicationDataRootOverride = Join-Path $work 'localappdata'
+          New-Item -ItemType Directory -Force -Path $script:CentralUpdateApplicationDataRootOverride | Out-Null
+
+          Write-Host "INSTALL_ROOT=$installRoot"
+          Write-Host "PAYLOAD_ROOT=$payloadRoot"
+          Write-Host "Central exists=$([IO.File]::Exists((Join-Path $installRoot 'Central de Trabalho.ps1')))"
+          Write-Host "Core exists=$([IO.File]::Exists($oldCore))"
           try {
-            $validated = Assert-CentralUpdateInstallRoot -InstallRoot $rootPath
-            Write-Host "ASSERT_OK=$validated"
+            $result = Install-CentralUpdatePayload -PayloadRoot $payloadRoot -InstallRoot $installRoot -CurrentVersion '0.19.3' -TargetVersion '0.19.4'
+            Write-Host 'FULL_CYCLE_CORE_OK=true'
+            $manifest = Get-Content -LiteralPath (Join-Path $installRoot 'PACOTE-MANIFESTO.json') -Raw | ConvertFrom-Json
+            Write-Host "INSTALLED_VERSION=$($manifest.Version)"
           }
           catch {
-            Write-Host "ASSERT_FAIL=$($_.Exception.Message)"
+            Write-Host "FULL_CYCLE_CORE_FAIL=$($_.Exception.ToString())"
             throw
           }
