@@ -1,13 +1,14 @@
 {
-  "version": "0.17.1",
+  "version": "0.18.0",
   "buildRevision": 1,
   "releaseNotes": [
-    "Correção imediata da primeira versão com o motor PowerShell incorporado.",
-    "O script principal agora é carregado no escopo persistente do runspace interno, mantendo funções disponíveis para eventos WinForms disparados após a abertura da janela.",
-    "Corrigido o erro repetido 'Set-RoundedRegion não é reconhecido' que podia gerar várias caixas de exceção em sequência ao abrir a Central pela v0.17.0.",
-    "O callback de arredondamento também passa a capturar diretamente o ScriptBlock da função, evitando depender da resolução de nome dentro de GetNewClosure().",
-    "A arquitetura do EXE verdadeiro permanece: a Central continua hospedando o Windows PowerShell dentro do próprio processo gráfico, sem precisar manter um powershell.exe externo aberto.",
-    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra funcional ou dado do usuário foi alterado.",
-    "A versão Estável permanece v0.8.5; esta correção é publicada somente no canal Teste."
+    "Segunda etapa do executável Windows definitivo: o Atualizador também passa a usar um host gráfico nativo com o motor do Windows PowerShell incorporado.",
+    "A Central deixa de iniciar powershell.exe para abrir a tela de Atualizações e passa a chamar diretamente Central de Trabalho Updater.exe.",
+    "O Atualizador nativo copia temporariamente seu runtime para fora da pasta instalada antes da troca de arquivos, permitindo atualizar o próprio executável com segurança sem deixá-lo bloqueado pelo Windows.",
+    "O runtime temporário mantém instância única do Atualizador e carrega o script em um runspace STA interno; não é necessário manter powershell.exe, pwsh.exe, cmd.exe, cscript.exe ou wscript.exe como lançador.",
+    "A reabertura após a instalação continua priorizando diretamente Central de Trabalho.exe, preservando o fluxo de backup, validação, restauração e proteção contra módulos abertos.",
+    "O pipeline agora compila e valida dois hosts Windows: Central de Trabalho.exe e Central de Trabalho Updater.exe, além de bloquear regressão que volte a empacotar um lançador PowerShell externo.",
+    "Gerenciador de Planilhas permanece em v3.7.2 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional nem dado do usuário foi alterado.",
+    "A versão Estável permanece v0.8.5; esta etapa é publicada somente no canal Teste."
   ]
 }
