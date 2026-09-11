@@ -1,14 +1,14 @@
 {
-  "version": "0.21.15",
-  "buildRevision": 2,
+  "version": "0.21.16",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 12 do Controle de NF de Entrada: exportação operacional das consultas.",
-    "A aba Movimentações ganha EXPORTAR CSV para salvar exatamente as linhas visíveis com os filtros atuais.",
-    "A aba Histórico também ganha EXPORTAR CSV, respeitando pesquisa e tipo selecionados.",
-    "Os arquivos usam separador ponto e vírgula e UTF-8 com BOM para melhor abertura no Excel em português do Brasil.",
-    "Colunas internas ocultas não são exportadas; somente os dados visíveis ao usuário entram no arquivo.",
-    "A exportação é somente leitura e não altera a base, saldos, movimentações ou histórico.",
-    "Controle de NF de Entrada passa para v2.3.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A versão Estável permanece v0.20.2; a v0.21.15 é publicada somente no canal Teste."
+    "Etapa 13 do Controle de NF de Entrada: exportação rápida das listas de produto.",
+    "As abas Computador de Bordo CB5 e Teclado V5 ganham EXPORTAR LISTA.",
+    "A exportação respeita exatamente a pesquisa, o status e o código aplicados na tela.",
+    "O arquivo contém apenas as linhas e colunas visíveis e usa o mesmo CSV compatível com Excel introduzido na Etapa 12.",
+    "O atalho Ctrl+E exporta a lista da aba de produto atual; Ctrl+N, Enter, Ctrl+S e Ctrl+F permanecem inalterados.",
+    "A exportação é somente leitura e não modifica a base, saldos, NFs, movimentações ou histórico.",
+    "Controle de NF de Entrada passa para v2.4.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A versão Estável permanece v0.20.2; a v0.21.16 é publicada somente no canal Teste."
   ]
 }
