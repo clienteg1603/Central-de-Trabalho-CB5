@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.5.0"
+$script:ModuleVersion = "2.6.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -526,6 +526,22 @@ function Convert-NFSnapshotToText {
     ) -join "`r`n"
 }
 
+function Get-NFHistoryActionLabel {
+    param([string]$Type)
+    $label = switch ($Type) {
+        "Adicao" { "Adição" }
+        "Edicao" { "Edição" }
+        "Exclusao" { "Exclusão" }
+        "Importacao" { "Importação" }
+        "RestauracaoBackup" { "Restauração" }
+        "Saida" { "Saída" }
+        "EstornoSaida" { "Estorno de saída" }
+        "Exportacao" { "Exportação" }
+        default { $Type }
+    }
+    return $label
+}
+
 function Refresh-NFHistory {
     if ($null -eq $historyGrid) { return }
     $filter = if ($null -ne $historyFilter) { ([string]$historyFilter.Text).Trim().ToLowerInvariant() } else { "" }
@@ -544,17 +560,7 @@ function Refresh-NFHistory {
             if ($period -eq "Últimos 7 dias" -and $when -lt $today.AddDays(-6)) { continue }
             if ($period -eq "Últimos 30 dias" -and $when -lt $today.AddDays(-29)) { continue }
         }
-        $label = switch ([string]$event.Tipo) {
-            "Adicao" { "Adição" }
-            "Edicao" { "Edição" }
-            "Exclusao" { "Exclusão" }
-            "Importacao" { "Importação" }
-            "RestauracaoBackup" { "Restauração" }
-            "Saida" { "Saída" }
-            "EstornoSaida" { "Estorno de saída" }
-            "Exportacao" { "Exportação" }
-            default { [string]$event.Tipo }
-        }
+        $label = Get-NFHistoryActionLabel ([string]$event.Tipo)
         if ($type -ne "Todos" -and $label -ne $type) { continue }
         $search = (($label + " " + (Get-NFEntradaProductDisplayName ([string]$event.Produto)) + " " + [string]$event.NFEntrada + " " + [string]$event.Detalhes)).ToLowerInvariant()
         if (-not [string]::IsNullOrWhiteSpace($filter) -and -not $search.Contains($filter)) { continue }
@@ -588,7 +594,7 @@ function Show-NFHistoryDetails {
     [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 44)))
     $dialog.Controls.Add($layout)
     $headerText = New-Object Windows.Forms.Label
-    $headerText.Text = (Format-NFHistoryDate ([string]$event.DataHora)) + "  •  " + [string]$event.Tipo + "`r`nNF: " + [string]$event.NFEntrada + "    Produto: " + (Get-NFEntradaProductDisplayName ([string]$event.Produto)) + $(if ([string]::IsNullOrWhiteSpace([string]$event.Detalhes)) { "" } else { "`r`n" + [string]$event.Detalhes })
+    $headerText.Text = (Format-NFHistoryDate ([string]$event.DataHora)) + "  •  " + (Get-NFHistoryActionLabel ([string]$event.Tipo)) + "`r`nNF: " + [string]$event.NFEntrada + "    Produto: " + (Get-NFEntradaProductDisplayName ([string]$event.Produto)) + $(if ([string]::IsNullOrWhiteSpace([string]$event.Detalhes)) { "" } else { "`r`n" + [string]$event.Detalhes })
     $headerText.Dock = [Windows.Forms.DockStyle]::Fill
     $headerText.ForeColor = $script:CurrentPalette.Text
     $layout.Controls.Add($headerText, 0, 0)
@@ -840,6 +846,7 @@ function Refresh-NFSummary {
     $piecesSevenValue.Text = ([int]$operational.PecasSaida7Dias).ToString("N0")
     $reviewIssuesValue.Text = ([int]$operational.Pendencias).ToString("N0")
     $reviewIssuesValue.ForeColor = if ([int]$operational.Pendencias -eq 0) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Danger }
+    $reviewIssuesButton.Enabled = ([int]$operational.Pendencias -gt 0)
     $exportStatusValue.Text = [string]$exportState.Situacao
     $exportStatusValue.ForeColor = if ($exportState.Situacao -eq "PRONTO") { $script:CurrentPalette.Success } elseif ($exportState.Situacao -eq "REVISAR") { $script:CurrentPalette.Warning } else { $script:CurrentPalette.Danger }
     if ($null -ne $operational.UltimaMovimentacaoEm) {
@@ -878,10 +885,10 @@ function Refresh-NFAll {
     if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }
     if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups }
     $exportReadiness = Get-NFEntradaExportReadiness -Store $script:Store -DataDirectory $script:DataDirectory
-    $exportButton.Enabled = [bool]$exportReadiness.PodeExportar
+    $exportButton.Enabled = $true
     $summary = Get-NFEntradaSummary -Store $script:Store
     $totalRecords = [int]$summary.Produtos[$script:ComputerProduct].Registros + [int]$summary.Produtos[$script:KeyboardProduct].Registros
-    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • Em estoque por padrão") "Normal"
+    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s)") "Normal"
 }
 
 function Show-NFRecordDialog {
@@ -954,11 +961,14 @@ function Show-NFRecordDialog {
     $codeCombo.Dock = [Windows.Forms.DockStyle]::Fill
     $layout.Controls.Add($codeCombo, 1, 4)
 
-    Add-DialogLabel "NF de Saída / movimentações" 5
+    Add-DialogLabel "NF de Saída / movimentações (automático)" 5
     $outBox = New-Object Windows.Forms.TextBox
     $outBox.Multiline = $true
     $outBox.ScrollBars = [Windows.Forms.ScrollBars]::Vertical
     $outBox.Dock = [Windows.Forms.DockStyle]::Fill
+    $outBox.ReadOnly = $true
+    $outBox.TabStop = $false
+    $outBox.BackColor = $script:CurrentPalette.Surface
     $layout.Controls.Add($outBox, 1, 5)
 
     $validationLabel = New-Object Windows.Forms.Label
@@ -1056,7 +1066,6 @@ function Show-NFRecordDialog {
     $nfBox.Add_TextChanged($validateDialog)
     $balanceBox.Add_ValueChanged($validateDialog)
     $codeCombo.Add_SelectedIndexChanged($validateDialog)
-    $outBox.Add_TextChanged($validateDialog)
     [void](& $validateDialog)
     $dialog.Add_Shown({ $qtyBox.Focus() }.GetNewClosure())
 
@@ -1670,22 +1679,15 @@ $summaryActionPanel = New-Object Windows.Forms.FlowLayoutPanel
 $summaryActionPanel.Dock = [Windows.Forms.DockStyle]::Fill
 $summaryActionPanel.FlowDirection = [Windows.Forms.FlowDirection]::TopDown
 $summaryActionPanel.WrapContents = $false
-$summaryActionPanel.Padding = [Windows.Forms.Padding]::new(4, 7, 4, 4)
+$summaryActionPanel.Padding = [Windows.Forms.Padding]::new(4, 22, 4, 4)
 $summaryActionPanel.BackColor = $script:CurrentPalette.Card
 $reviewIssuesButton = New-Object Windows.Forms.Button
 $reviewIssuesButton.Text = "PENDÊNCIAS"
 $reviewIssuesButton.Width = 145
 $reviewIssuesButton.Height = 32
-$reviewIssuesButton.Margin = [Windows.Forms.Padding]::new(2, 2, 2, 5)
+$reviewIssuesButton.Margin = [Windows.Forms.Padding]::new(2)
 Set-NFButtonStyle $reviewIssuesButton "Secondary"
-$exportCheckButton = New-Object Windows.Forms.Button
-$exportCheckButton.Text = "VALIDAR EXCEL"
-$exportCheckButton.Width = 145
-$exportCheckButton.Height = 32
-$exportCheckButton.Margin = [Windows.Forms.Padding]::new(2)
-Set-NFButtonStyle $exportCheckButton "Secondary"
 $summaryActionPanel.Controls.Add($reviewIssuesButton)
-$summaryActionPanel.Controls.Add($exportCheckButton)
 $activityLayout.Controls.Add($summaryActionPanel, 4, 0)
 
 # MOVIMENTAÇÕES
@@ -1883,7 +1885,7 @@ $editButton.Text = "EDITAR"; $editButton.Width = 82; $editButton.Height = 34; Se
 $outputButton = New-Object Windows.Forms.Button
 $outputButton.Text = "SAÍDA"; $outputButton.Width = 78; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"
 $clearFiltersButton = New-Object Windows.Forms.Button
-$clearFiltersButton.Text = "FILTROS"; $clearFiltersButton.Width = 82; $clearFiltersButton.Height = 34; Set-NFButtonStyle $clearFiltersButton "Secondary"
+$clearFiltersButton.Text = "LIMPAR"; $clearFiltersButton.Width = 82; $clearFiltersButton.Height = 34; Set-NFButtonStyle $clearFiltersButton "Secondary"
 $exportListButton = New-Object Windows.Forms.Button
 $exportListButton.Text = "CSV"; $exportListButton.Width = 68; $exportListButton.Height = 34; Set-NFButtonStyle $exportListButton "Secondary"
 $deleteButton = New-Object Windows.Forms.Button
@@ -1936,6 +1938,8 @@ $toolTip.SetToolTip($newButton, "Nova NF (Ctrl+N).")
 $toolTip.SetToolTip($editButton, "Editar a NF selecionada (Enter ou duplo clique).")
 $toolTip.SetToolTip($outputButton, "Registrar saída da NF selecionada (Ctrl+S).")
 $toolTip.SetToolTip($clearFiltersButton, "Limpa pesquisa, status e código; volta para Em estoque.")
+$toolTip.SetToolTip($exportButton, "Exporta o Excel oficial. Se houver algum bloqueio, o motivo será mostrado antes de gerar o arquivo.")
+$toolTip.SetToolTip($reviewIssuesButton, "Abre somente os registros que precisam de conferência.")
 $toolTip.SetToolTip($exportListButton, "Exporta a visão atual em CSV (Ctrl+E). Diferente do Excel oficial completo.")
 $toolTip.SetToolTip($deleteButton, "Excluir o registro selecionado; o Histórico é preservado.")
 $toolTip.SetToolTip($movementReverseButton, "Estorna a saída ativa sem apagar a movimentação original (Ctrl+Z).")
@@ -1972,7 +1976,6 @@ $movementExportButton.Add_Click({ Export-NFGridViewToCsv -Grid $movementGrid -Ba
 $movementOpenButton.Add_Click({ Open-NFFromMovement })
 $movementReverseButton.Add_Click({ Reverse-NFMovementFromUI })
 $reviewIssuesButton.Add_Click({ Show-NFReviewIssues })
-$exportCheckButton.Add_Click({ Show-NFExportReadiness })
 $historyFilter.Add_TextChanged({ Refresh-NFHistory })
 $historyFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $historyFilter.Clear() } })
 $historyTypeFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
