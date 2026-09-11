@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.20.2",
+  "Version": "0.20.3",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.20.2.zip",
-  "PackageSha256": "51A3E82A84940C4BCAF3735F0D413398F8AE3BA99F5DF92B17B9BDA56290BEC9",
-  "PackageSize": 132811,
-  "PackageRoot": "Central-de-Trabalho-v0.20.2",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.20.3.zip",
+  "PackageSha256": "E63E420A33989E475C45A79E1FA750A7B8139B7FEC1D5D3749C7F422E272D9EA",
+  "PackageSize": 295626,
+  "PackageRoot": "Central-de-Trabalho-v0.20.3",
   "ReleaseNotes": [
-    "Candidata final da fase 0.20, criada após a v0.20.0 ter atualizado e reaberto corretamente em uso real.",
-    "Central de Trabalho.exe e Central de Trabalho Updater.exe passam a possuir um modo interno de autoteste silencioso usado somente pelo processo de build e diagnóstico.",
-    "Antes de publicar uma nova versão, o workflow agora monta uma instalação temporária completa no Windows e executa os dois EXEs em modo de smoke test.",
-    "O smoke test confirma a presença dos arquivos operacionais, valida a sintaxe dos scripts pelo parser do próprio Windows PowerShell e abre a engine PowerShell em processo sem exibir a interface gráfica.",
-    "Se o executável principal, o Atualizador, um script obrigatório ou a engine interna falhar nesse teste, a publicação é bloqueada antes da criação do pacote de Teste.",
-    "Os contratos do autoteste também passam a ser verificados durante a compilação dos hosts nativos para impedir que essa barreira desapareça silenciosamente em versões futuras.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra de planilhas, saldo, REPARO, duplicidade, manutenção, histórico ou dados do usuário foi alterada.",
-    "A versão Estável permanece v0.8.5; a v0.20.2 continua exclusivamente no canal Teste até aprovação explícita do usuário."
+    "Correção pós-Estável focada exclusivamente no comportamento do ícone quando a Central de Trabalho é fixada na barra de tarefas do Windows.",
+    "Central de Trabalho.exe passa a usar um ICO real com múltiplas resoluções: 16, 20, 24, 32, 40, 48, 64, 128 e 256 pixels, em vez de depender de uma única imagem de 64 pixels convertida pelo GDI.",
+    "A identidade do processo principal passa a ser explicitada para o Windows com o AppUserModelID CentralDeTrabalho.Desktop, melhorando a associação entre a janela aberta e o item fixado na barra de tarefas.",
+    "Central de Trabalho Updater.exe também recebe o ICO multirresolução para manter a identidade visual consistente nos diferentes contextos do Windows.",
+    "O gerador de ícones valida cabeçalho e quantidade de quadros antes da compilação, bloqueando o build se o arquivo ICO multirresolução não for criado corretamente.",
+    "Os hosts nativos, o Atualizador seguro, smoke tests, auditorias, rollback e distribuição limpa permanecem preservados.",
+    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; nenhuma regra operacional ou dado do usuário foi alterado.",
+    "A v0.20.2 permanece Estável; a v0.20.3 é publicada somente no canal Teste até validação do ícone fixado no Windows."
   ]
 }
