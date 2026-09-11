@@ -1,12 +1,15 @@
 {
-  "version": "0.21.5",
+  "version": "0.21.6",
   "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 4 do Controle de NF de Entrada.",
-    "Computador de Bordo CB5 e Teclado V5 passam a abrir com status Em estoque.",
-    "Resumo passa a ficar por último nas abas.",
-    "Computador de Bordo V5 é corrigido visualmente para Computador de Bordo CB5.",
-    "Histórico, segurança, importação e exportação permanecem preservados.",
-    "A versão Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
+    "Conclusão da Etapa 4 do Controle de NF de Entrada: fluxo operacional diário para incluir, editar e registrar saídas com menos digitação manual.",
+    "As alterações pedidas na v0.21.5 permanecem: Computador de Bordo CB5 abre primeiro, CB5 e Teclado V5 iniciam em Em estoque e Resumo continua por último.",
+    "Nova ação REGISTRAR SAÍDA permite escolher uma NF em estoque, informar a quantidade retirada e a NF de saída/referência; o saldo é reduzido automaticamente sem alterar a quantidade original da entrada.",
+    "A saída é bloqueada quando a quantidade é inválida, maior que o saldo ou quando a NF já está encerrada.",
+    "Cada saída recebe evento próprio no Histórico com estado anterior, estado posterior, quantidade e referência informada.",
+    "Atalhos nas grades: Ctrl+N abre novo registro, Enter edita a seleção e Ctrl+F leva o foco para a pesquisa.",
+    "As regras de importação, exportação fiel ao XLSX, histórico, backups e restauração protegida continuam preservadas.",
+    "Controle de NF de Entrada passa para v1.5.0; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
+    "A versão Estável permanece v0.20.2; a v0.21.6 é publicada somente no canal Teste."
   ]
 }
