@@ -53,21 +53,18 @@ try {
     Assert-S11 (@($reviewReport.Avisos).Count -ge 1) 'Pendencia deveria produzir pelo menos um aviso.'
 
     foreach ($i in 1..22) {
-        [void](New-NFEntradaSafetyBackup -DataDirectory $temp -Reason 'Automatico')
+        [void](New-NFEntradaSafetyBackup -DataDirectory $temp)
         Start-Sleep -Milliseconds 3
     }
     [void](New-NFEntradaSafetyBackup -DataDirectory $temp -Reason 'Manual')
-    $backups = @(Get-NFEntradaSafetyBackups -DataDirectory $temp)
-    $automatic = @($backups | Where-Object { [string]$_.Motivo -eq 'Automatico' })
-    $manual = @($backups | Where-Object { [string]$_.Motivo -eq 'Manual' })
     [void](Invoke-NFEntradaBackupRetention -DataDirectory $temp -MaxAutomaticBackups 20)
     $afterTwenty = @(Get-NFEntradaSafetyBackups -DataDirectory $temp)
-    Assert-S11 (@($afterTwenty | Where-Object { [string]$_.Motivo -eq 'Automatico' }).Count -le 20) 'Retencao deixou mais de 20 backups automaticos.'
+    Assert-S11 (@($afterTwenty | Where-Object { [string]$_.Motivo -ne 'Manual' }).Count -le 20) 'Retencao deixou mais de 20 backups automaticos.'
     Assert-S11 (@($afterTwenty | Where-Object { [string]$_.Motivo -eq 'Manual' }).Count -ge 1) 'Retencao removeu backup manual.'
 
     [void](Invoke-NFEntradaBackupRetention -DataDirectory $temp -MaxAutomaticBackups 10)
     $afterRetention = @(Get-NFEntradaSafetyBackups -DataDirectory $temp)
-    Assert-S11 (@($afterRetention | Where-Object { [string]$_.Motivo -eq 'Automatico' }).Count -le 10) 'Retencao explicita nao respeitou o limite solicitado.'
+    Assert-S11 (@($afterRetention | Where-Object { [string]$_.Motivo -ne 'Manual' }).Count -le 10) 'Retencao explicita nao respeitou o limite solicitado.'
     Assert-S11 (@($afterRetention | Where-Object { [string]$_.Motivo -eq 'Manual' }).Count -ge 1) 'Retencao explicita removeu backup manual.'
 
     $ui = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $UiPath),[Text.Encoding]::UTF8)
