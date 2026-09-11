@@ -33,10 +33,10 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.23"
+$script:AppVersion = "0.21.24"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.7.5"
-$script:MaintenanceVersion = "0.6.4"
+$script:GeneratorVersion = "3.7.6"
+$script:MaintenanceVersion = "0.6.5"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -52,7 +52,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.6.3"
+$script:NFEntradaVersion = "2.6.4"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -124,6 +124,7 @@ $script:EmbeddedClosing = $false
 $script:ModuleLoading = $false
 $script:UpdaterProcess = $null
 $script:LastAvailabilitySignature = ""
+$script:LastThemeSyncError = ""
 
 $script:SingleInstanceMutex = $null
 $script:OwnsSingleInstanceMutex = $false
@@ -376,27 +377,68 @@ function Close-EmbeddedModule {
 }
 
 function Sync-HostedModuleTheme {
-    if ($null -eq $script:HostedModule -or [string]::IsNullOrWhiteSpace($script:EmbeddedModule)) { return }
-    if ($null -eq $script:HostedForm) { return }
+    $script:LastThemeSyncError = ""
+    if ($null -eq $script:HostedModule -or [string]::IsNullOrWhiteSpace($script:EmbeddedModule)) { return $true }
+    if ($null -eq $script:HostedForm) { return $true }
+
     try {
-        if ($script:HostedForm.IsDisposed -or $script:HostedForm.Disposing -or $null -eq $script:HostedForm.Parent) { return }
+        if ($script:HostedForm.IsDisposed -or $script:HostedForm.Disposing -or $null -eq $script:HostedForm.Parent) { return $true }
     }
-    catch { return }
+    catch {
+        $script:LastThemeSyncError = $_.Exception.Message
+        return $false
+    }
+
     $theme = [string]$themeCombo.SelectedItem
+    if ([string]::IsNullOrWhiteSpace($theme)) { $theme = "Escuro profissional" }
+
     try {
-        & $script:HostedModule {
+        $handled = & $script:HostedModule {
             param($hostTheme)
+
             $maintenanceCmd = Get-Command -Name Set-HostedMaintenanceTheme -ErrorAction SilentlyContinue
             if ($null -ne $maintenanceCmd) {
-                Set-HostedMaintenanceTheme $hostTheme
-                return
+                [void](Set-HostedMaintenanceTheme $hostTheme)
+                return $true
             }
+
             $generatorCmd = Get-Command -Name Set-HostedGeneratorTheme -ErrorAction SilentlyContinue
-            if ($null -ne $generatorCmd) { Set-HostedGeneratorTheme $hostTheme; return }
+            if ($null -ne $generatorCmd) {
+                [void](Set-HostedGeneratorTheme $hostTheme)
+                return $true
+            }
+
             $nfEntradaCmd = Get-Command -Name Set-HostedNFEntradaTheme -ErrorAction SilentlyContinue
-            if ($null -ne $nfEntradaCmd) { Set-HostedNFEntradaTheme $hostTheme }
+            if ($null -ne $nfEntradaCmd) {
+                [void](Set-HostedNFEntradaTheme $hostTheme)
+                return $true
+            }
+
+            return $false
         } $theme
-    } catch {}
+
+        if (-not [bool]$handled) {
+            throw "O módulo aberto não expôs um aplicador de aparência compatível."
+        }
+
+        # CURA 2: depois que o módulo reaplica sua aparência, a Central força um
+        # ciclo completo de layout e pintura no controle já hospedado. Não é
+        # necessário fechar e abrir novamente para a mudança aparecer.
+        $script:HostedForm.SuspendLayout()
+        try {
+            $script:HostedForm.PerformLayout()
+            $script:HostedForm.Invalidate($true)
+        }
+        finally {
+            $script:HostedForm.ResumeLayout($true)
+        }
+        $script:HostedForm.Update()
+        return $true
+    }
+    catch {
+        $script:LastThemeSyncError = $_.Exception.Message
+        return $false
+    }
 }
 
 function Show-Dashboard {
@@ -1720,10 +1762,25 @@ $embeddedFolderButton.TabIndex = 1
 
 # Eventos
 $themeCombo.Add_SelectedIndexChanged({
-    try { Apply-AppTheme } catch {}
-    try { Save-AppSettings } catch {}
-    try { Sync-HostedModuleTheme } catch {}
-    try { Set-StatusMessage ("Aparência aplicada: " + [string]$themeCombo.SelectedItem + ".") "Success" } catch {}
+    try {
+        Apply-AppTheme
+        Save-AppSettings
+        $synced = Sync-HostedModuleTheme
+        $form.PerformLayout()
+        $form.Invalidate($true)
+        $form.Update()
+
+        if ($synced) {
+            Set-StatusMessage ("Aparência aplicada: " + [string]$themeCombo.SelectedItem + ".") "Success"
+        }
+        else {
+            $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
+            Set-StatusMessage ("Aparência aplicada na Central, mas o módulo aberto não atualizou: " + $detail) "Warning"
+        }
+    }
+    catch {
+        Set-StatusMessage ("Não foi possível aplicar a aparência: " + $_.Exception.Message) "Error"
+    }
 })
 $openGeneratorButton.Add_Click({ Start-GeneratorModule })
 $openMaintenanceButton.Add_Click({ Start-MaintenanceModule })

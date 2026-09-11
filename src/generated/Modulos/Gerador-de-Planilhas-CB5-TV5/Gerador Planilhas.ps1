@@ -18,6 +18,7 @@ $script:HostedControlExport = $null
 $script:EmbeddedParentHandle = [IntPtr]::new($EmbeddedParentHandle)
 $script:EmbeddedResizeTimer = $null
 $script:GeneratorHostedShell = $null
+$script:HostedCentralTheme = ""
 
 if ($script:IsEmbedded -and -not ("CentralModuleEmbed.Native" -as [type])) {
     Add-Type -TypeDefinition @"
@@ -79,7 +80,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.5"
+$script:AppVersion = "3.7.6"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1750,15 +1751,24 @@ function Get-GeneratorThemeFromHost {
 
 function Set-HostedGeneratorTheme {
     param([string]$CentralTheme)
-    if (-not $script:IsInProcessHosted) { return }
+    if (-not $script:IsInProcessHosted) { return $false }
+    if ([string]::IsNullOrWhiteSpace($CentralTheme)) { $CentralTheme = "Escuro profissional" }
+
     $mapped = Get-GeneratorThemeFromHost $CentralTheme
-    try {
-        if ($themeCombo.Items.Contains($mapped)) { $themeCombo.SelectedItem = $mapped }
-        else { $themeCombo.SelectedItem = "Escuro grafite" }
-        Apply-AppTheme
-        Update-GeneratorResponsiveLayout
-        Update-RootLayout
-    } catch {}
+    if (-not $themeCombo.Items.Contains($mapped)) { $mapped = "Escuro grafite" }
+
+    $script:HostedCentralTheme = $CentralTheme
+    if ([string]$themeCombo.SelectedItem -ne $mapped) {
+        $themeCombo.SelectedItem = $mapped
+    }
+
+    Apply-AppTheme
+    Update-GeneratorResponsiveLayout
+    Update-RootLayout
+    $form.PerformLayout()
+    $form.Invalidate($true)
+    $form.Update()
+    return $true
 }
 
 function New-AppLogoBitmap {

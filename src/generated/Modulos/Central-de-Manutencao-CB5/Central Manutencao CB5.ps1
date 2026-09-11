@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.6.4"
+$script:AppVersion = "0.6.5"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -141,6 +141,7 @@ $script:HostedOverviewPanel = $null
 $script:HostedOverviewLayout = $null
 $script:HostedSectionNavPanel = $null
 $script:HostedShell = $null
+$script:HostedCentralTheme = ""
 
 try {
     $script:DatabasePath = Initialize-CB5DataStore -DataDirectory $script:DataDirectory
@@ -308,14 +309,23 @@ function Get-MaintenanceThemeFromHost {
 
 function Set-HostedMaintenanceTheme {
     param([string]$CentralTheme)
-    if (-not $script:IsInProcessHosted) { return }
+    if (-not $script:IsInProcessHosted) { return $false }
+    if ([string]::IsNullOrWhiteSpace($CentralTheme)) { $CentralTheme = "Escuro profissional" }
+
     $mapped = Get-MaintenanceThemeFromHost $CentralTheme
-    try {
-        if ($themeCombo.Items.Contains($mapped)) { $themeCombo.SelectedItem = $mapped }
-        else { $themeCombo.SelectedItem = "Escuro grafite" }
-        Apply-MaintenanceTheme
-        Update-MaintenanceResponsiveLayout
-    } catch {}
+    if (-not $themeCombo.Items.Contains($mapped)) { $mapped = "Escuro grafite" }
+
+    $script:HostedCentralTheme = $CentralTheme
+    if ([string]$themeCombo.SelectedItem -ne $mapped) {
+        $themeCombo.SelectedItem = $mapped
+    }
+
+    Apply-MaintenanceTheme
+    Update-MaintenanceResponsiveLayout
+    $form.PerformLayout()
+    $form.Invalidate($true)
+    $form.Update()
+    return $true
 }
 
 function Set-MaintenanceButtonStyle {
