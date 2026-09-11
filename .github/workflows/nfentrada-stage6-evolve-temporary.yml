@@ -20,8 +20,8 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          git apply --check "src/current/patches/0218_nfentrada_stage6.patch"
-          git apply "src/current/patches/0218_nfentrada_stage6.patch"
+          git apply --check --unidiff-zero "src/current/patches/0218_nfentrada_stage6.patch"
+          git apply --unidiff-zero "src/current/patches/0218_nfentrada_stage6.patch"
 
       - name: Validar resumo operacional e conferência
         shell: powershell
