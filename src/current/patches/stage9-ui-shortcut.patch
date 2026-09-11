@@ -1,0 +1,7 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -1748,2 +1748,3 @@
+ $movementGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Open-NFFromMovement } })
++$movementGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::Z) { $_.SuppressKeyPress=$true; Correct-NFMovementFromUI } })
+ $movementOpenButton.Add_Click({ Open-NFFromMovement })
