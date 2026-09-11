@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.1.0"
+$script:ModuleVersion = "2.2.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -677,6 +677,32 @@ function Show-NFExportReadiness {
     ) -join "`r`n"
     $icon = if ($state.Situacao -eq "PRONTO") { [Windows.Forms.MessageBoxIcon]::Information } elseif ($state.Situacao -eq "REVISAR") { [Windows.Forms.MessageBoxIcon]::Warning } else { [Windows.Forms.MessageBoxIcon]::Error }
     [Windows.Forms.MessageBox]::Show($details, "Conferir exportação", [Windows.Forms.MessageBoxButtons]::OK, $icon) | Out-Null
+}
+
+function Show-NFIntegrityReport {
+    try {
+        $report = Get-NFEntradaIntegrityReport -Store $script:Store -DataDirectory $script:DataDirectory
+        $lines = [Collections.Generic.List[string]]::new()
+        [void]$lines.Add("Situação: " + [string]$report.Situacao)
+        [void]$lines.Add("Registros: " + [string]$report.Registros + " • Pendências: " + [string]$report.Pendencias + " • Duplicidades: " + [string]$report.Duplicidades)
+        [void]$lines.Add("Backups: " + [string]$report.Backups + " • Automáticos: " + [string]$report.BackupsAutomaticos + " • Inválidos: " + [string]$report.BackupsInvalidos)
+        [void]$lines.Add("")
+        foreach ($error in @($report.Erros)) { [void]$lines.Add("ERRO • " + [string]$error) }
+        foreach ($warning in @($report.Avisos)) { [void]$lines.Add("ATENÇÃO • " + [string]$warning) }
+        if (@($report.Erros).Count -eq 0 -and @($report.Avisos).Count -eq 0) {
+            [void]$lines.Add("Nenhuma inconsistência foi encontrada na base, no modelo e nos backups atuais.")
+        }
+        $icon = if ($report.Situacao -eq "ERRO") { [Windows.Forms.MessageBoxIcon]::Error } elseif ($report.Situacao -eq "ATENÇÃO") { [Windows.Forms.MessageBoxIcon]::Warning } else { [Windows.Forms.MessageBoxIcon]::Information }
+        [Windows.Forms.MessageBox]::Show(($lines -join "`r`n"), "Verificação de integridade", [Windows.Forms.MessageBoxButtons]::OK, $icon) | Out-Null
+        $statusKind = "Success"
+        if ($report.Situacao -eq "ERRO") { $statusKind = "Error" }
+        elseif ($report.Situacao -eq "ATENÇÃO") { $statusKind = "Warning" }
+        Set-NFStatus ("Integridade: " + [string]$report.Situacao + " • " + [string]$report.Erros.Count + " erro(s) • " + [string]$report.Avisos.Count + " aviso(s)") $statusKind
+    }
+    catch {
+        Set-NFStatus $_.Exception.Message "Error"
+        [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha na verificação de integridade", 0, 16) | Out-Null
+    }
 }
 
 function Refresh-NFBackups {
@@ -1716,7 +1742,7 @@ $securityLayout.Dock = [Windows.Forms.DockStyle]::Fill; $securityLayout.Padding 
 [void]$securityLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 46)))
 $securityTab.Controls.Add($securityLayout)
 $securityInfo = New-Object Windows.Forms.Label
-$securityInfo.Text = "Os backups guardam a base e, quando disponível, o modelo Excel. Antes de restaurar um backup, o estado atual é salvo automaticamente em outra cópia de segurança."
+$securityInfo.Text = "Os backups guardam a base e o modelo Excel. O sistema mantém no máximo 20 backups automáticos; backups manuais e de recuperação não são removidos por essa retenção. Antes de restaurar, o estado atual é protegido."
 $securityInfo.Dock = [Windows.Forms.DockStyle]::Fill; $securityInfo.ForeColor = $script:CurrentPalette.Muted; $securityInfo.Font = [Drawing.Font]::new("Segoe UI", 9)
 $securityLayout.Controls.Add($securityInfo, 0, 0)
 $backupGrid = New-NFGrid
@@ -1737,11 +1763,13 @@ $backupCountLabel.Text = "0 backup(s) disponível(is)"; $backupCountLabel.Dock =
 $securityActions.Controls.Add($backupCountLabel, 0, 0)
 $backupButtons = New-Object Windows.Forms.FlowLayoutPanel
 $backupButtons.AutoSize = $true; $backupButtons.WrapContents = $false; $backupButtons.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
+$integrityButton = New-Object Windows.Forms.Button
+$integrityButton.Text = "VERIFICAR INTEGRIDADE"; $integrityButton.Width = 165; $integrityButton.Height = 32; Set-NFButtonStyle $integrityButton "Secondary"
 $manualBackupButton = New-Object Windows.Forms.Button
 $manualBackupButton.Text = "CRIAR BACKUP AGORA"; $manualBackupButton.Width = 150; $manualBackupButton.Height = 32; Set-NFButtonStyle $manualBackupButton "Secondary"
 $restoreBackupButton = New-Object Windows.Forms.Button
 $restoreBackupButton.Text = "RESTAURAR SELECIONADO"; $restoreBackupButton.Width = 175; $restoreBackupButton.Height = 32; $restoreBackupButton.Enabled = $false; Set-NFButtonStyle $restoreBackupButton "Primary"
-$backupButtons.Controls.Add($manualBackupButton); $backupButtons.Controls.Add($restoreBackupButton)
+$backupButtons.Controls.Add($integrityButton); $backupButtons.Controls.Add($manualBackupButton); $backupButtons.Controls.Add($restoreBackupButton)
 $securityActions.Controls.Add($backupButtons, 1, 0); $securityLayout.Controls.Add($securityActions, 0, 2)
 
 $computerGrid = $null; $computerFilter = $null; $computerStatusFilter = $null; $computerCodeFilter = $null; $computerCountLabel = $null
@@ -1814,6 +1842,7 @@ $toolTip.SetToolTip($outputButton, "Registrar saída da NF selecionada (Ctrl+S).
 $toolTip.SetToolTip($clearFiltersButton, "Limpa a pesquisa e volta para Em estoque / Todos os códigos.")
 $toolTip.SetToolTip($deleteButton, "Excluir o registro selecionado; o Histórico é preservado.")
 $toolTip.SetToolTip($movementReverseButton, "Estorna a saída ativa sem apagar a movimentação original (Ctrl+Z).")
+$toolTip.SetToolTip($integrityButton, "Audita base, duplicidades, pendências, modelo Excel, backups e arquivos temporários.")
 
 $computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })
 $computerFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $computerFilter.Clear() } })
@@ -1851,6 +1880,7 @@ $historyGrid.Add_SelectionChanged({ $historyDetailsButton.Enabled = ($historyGri
 $historyGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Show-NFHistoryDetails } })
 $historyDetailsButton.Add_Click({ Show-NFHistoryDetails })
 $backupGrid.Add_SelectionChanged({ $restoreBackupButton.Enabled = ($backupGrid.SelectedRows.Count -gt 0 -and [string]$backupGrid.SelectedRows[0].Cells["BackupStatus"].Value -eq "Pronto") })
+$integrityButton.Add_Click({ Show-NFIntegrityReport })
 $manualBackupButton.Add_Click({ New-NFManualBackupFromUI })
 $restoreBackupButton.Add_Click({ Restore-NFBackupFromUI })
 $newButton.Add_Click({ Add-NFRecordFromUI })

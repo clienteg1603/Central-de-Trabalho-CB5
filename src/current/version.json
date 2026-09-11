@@ -1,0 +1,13 @@
+{
+    "version":  "0.21.14",
+    "buildRevision":  1,
+    "releaseNotes":  [
+                         "Etapa 11 do Controle de NF de Entrada: auditoria final e proteÃ§Ã£o dos dados.",
+                         "A aba SeguranÃ§a ganha VERIFICAR INTEGRIDADE para conferir base JSON, duplicidades, pendÃªncias, modelo Excel, backups e arquivos temporÃ¡rios.",
+                         "A verificaÃ§Ã£o classifica o estado como OK, ATENÃ‡ÃƒO ou ERRO sem corrigir dados automaticamente.",
+                         "Backups automÃ¡ticos passam a ter retenÃ§Ã£o controlada de atÃ© 20 cÃ³pias; backups manuais e de recuperaÃ§Ã£o sÃ£o preservados.",
+                         "A auditoria final cobre importaÃ§Ã£o, histÃ³rico, backup e restauraÃ§Ã£o, movimentaÃ§Ãµes, duplicidades, saÃ­da e estorno.",
+                         "Controle de NF de Entrada passa para v2.2.0; Central de ManutenÃ§Ã£o permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+                         "A versÃ£o EstÃ¡vel permanece v0.20.2; a v0.21.14 Ã© publicada somente no canal Teste."
+                     ]
+}
