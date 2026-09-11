@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not (Test-Path -LiteralPath $Root -PathType Container)) {
-    throw "Pasta do pacote não encontrada: $Root"
+    throw "Pasta do pacote nao encontrada: $Root"
 }
 
 $files = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Filter *.ps1 | Sort-Object FullName)
@@ -34,4 +34,4 @@ if ($allErrors.Count -gt 0) {
     exit 1
 }
 
-Write-Host "SINTAXE POWERSHELL: OK — $($files.Count) scripts analisados sem erro de parser."
+Write-Host "SINTAXE POWERSHELL: OK - $($files.Count) scripts analisados sem erro de parser."
