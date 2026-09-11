@@ -1,0 +1,5 @@
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@
+-$script:ModuleVersion = "1.9.0"
++$script:ModuleVersion = "2.0.0"
