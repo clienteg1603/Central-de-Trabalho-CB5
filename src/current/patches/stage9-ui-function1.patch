@@ -1,0 +1,14 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -376,1 +376,8 @@
+ function Correct-NFMovementFromUI {
++    if ($movementGrid.SelectedRows.Count -eq 0) { return }
++    $id = [string]$movementGrid.SelectedRows[0].Cells["MovementId"].Value
++    $movement = Get-NFEntradaMovementById -Store $script:Store -MovementId $id
++    if ($null -eq $movement) { return }
++    if ((Get-NFEntradaMovementStatus -Movement $movement) -eq "Estornada") {
++        [Windows.Forms.MessageBox]::Show("Esta saída já foi corrigida e permanece visível para auditoria.", "Controle de NF de Entrada", 0, 64) | Out-Null
++        return
++    }
+ }
