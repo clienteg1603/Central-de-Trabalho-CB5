@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.6.2"
+$script:AppVersion = "0.6.3"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -1445,7 +1445,8 @@ if ($script:IsInProcessHosted) {
     # conhece somente a área EXATA que a Central de Trabalho reservou para ela.
     $form = New-Object Windows.Forms.UserControl
     $form.Name = "MaintenanceHostedControl"
-    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::None
+    $form.AutoScaleDimensions = [Drawing.SizeF]::new(96.0, 96.0)
+    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
     $form.Font = [Drawing.Font]::new("Segoe UI", 9.0)
     $form.MinimumSize = [Drawing.Size]::new(1, 1)
     $form.Margin = [Windows.Forms.Padding]::new(0)
@@ -2856,12 +2857,9 @@ function Get-MaintenanceLogicalViewport {
     $w = [Math]::Max(1, [int]$form.ClientSize.Width)
     $h = [Math]::Max(1, [int]$form.ClientSize.Height)
 
-    # Em modo hospedado as coordenadas já são as coordenadas finais do controle
-    # dentro da Central; dividir novamente pelo DPI fazia o módulo acreditar que
-    # tinha menos espaço e, pior, mascarava o fato de o Form antigo estar maior
-    # do que seu painel pai.
-    $logicalW = if ($script:IsInProcessHosted) { $w } else { [int][Math]::Round($w * 96.0 / $dpi) }
-    $logicalH = if ($script:IsInProcessHosted) { $h } else { [int][Math]::Round($h * 96.0 / $dpi) }
+    # CURA 1: perfis responsivos usam sempre a mesma base lógica de 96 DPI.
+    $logicalW = [int][Math]::Round($w * 96.0 / $dpi)
+    $logicalH = [int][Math]::Round($h * 96.0 / $dpi)
 
     [pscustomobject]@{
         Dpi = $dpi

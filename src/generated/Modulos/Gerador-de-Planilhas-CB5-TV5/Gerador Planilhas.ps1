@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
     [string]$HostTheme = ""
@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.3"
+$script:AppVersion = "3.7.4"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -2532,8 +2532,8 @@ $minimumHeight = [Math]::Min(560, $workingArea.Height)
 if ($script:IsInProcessHosted) {
     $form = New-Object Windows.Forms.UserControl
     $form.Name = "GeneratorHostedControl"
-    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::None
     $form.AutoScaleDimensions = New-Object Drawing.SizeF(96, 96)
+    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
     $form.MinimumSize = New-Object Drawing.Size(1, 1)
     $form.Margin = New-Object Windows.Forms.Padding(0)
     $form.Dock = [Windows.Forms.DockStyle]::Fill

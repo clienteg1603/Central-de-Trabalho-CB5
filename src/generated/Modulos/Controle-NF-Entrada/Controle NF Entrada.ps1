@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.6.1"
+$script:ModuleVersion = "2.6.2"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -1437,6 +1437,8 @@ $script:CurrentPalette = Get-NFEntradaPalette $(if ([string]::IsNullOrWhiteSpace
 if ($script:IsInProcessHosted) {
     $form = New-Object Windows.Forms.UserControl
     $form.Name = "NFEntradaHostedControl"
+    $form.AutoScaleDimensions = [Drawing.SizeF]::new(96.0, 96.0)
+    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
     $form.Dock = [Windows.Forms.DockStyle]::Fill
     $form.Margin = [Windows.Forms.Padding]::new(0)
     $form.Padding = [Windows.Forms.Padding]::new(0)
@@ -1445,6 +1447,8 @@ else {
     $form = New-Object Windows.Forms.Form
     $form.Text = "Controle de NF de Entrada"
     $form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
+    $form.AutoScaleDimensions = [Drawing.SizeF]::new(96.0, 96.0)
+    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
     $form.MinimumSize = [Drawing.Size]::new(980, 680)
     $form.Size = [Drawing.Size]::new(1280, 820)
 }

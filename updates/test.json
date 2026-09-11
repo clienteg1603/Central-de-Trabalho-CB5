@@ -2,20 +2,19 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.21",
+  "Version": "0.21.22",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.21.zip",
-  "PackageSha256": "524073DEABCAB810298AC3D70697DC27CD4C82BBCBA3D51110516260BA521828",
-  "PackageSize": 329788,
-  "PackageRoot": "Central-de-Trabalho-v0.21.21",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.22.zip",
+  "PackageSha256": "EA1616B04DB6ABED7791EEA786B941BEB427BE9C683C8EE2BB8B4DB5F357A919",
+  "PackageSize": 330084,
+  "PackageRoot": "Central-de-Trabalho-v0.21.22",
   "ReleaseNotes": [
-    "Etapa 17 do Controle de NF de Entrada: fechamento e auditoria final da versão atual.",
-    "O fluxo completo do módulo passa a ter uma auditoria funcional permanente executada em cada novo pacote de Teste.",
-    "A auditoria final cobre cadastro, edição, saída, estorno, histórico, persistência, integridade, backup, restauração e detecção de duplicidades.",
-    "Também são verificados os contratos atuais da interface, incluindo Excel oficial, limpeza de filtros, período do Histórico, tema ao vivo e o campo automático de movimentações.",
-    "A proteção final impede a volta silenciosa do botão redundante VALIDAR EXCEL e de comportamentos removidos na auditoria da Etapa 16.",
-    "Esta etapa não adiciona novas funções operacionais; ela consolida e protege o estado final do Controle de NF de Entrada.",
-    "Controle de NF de Entrada passa para v2.6.1; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A versão Estável permanece v0.20.2; a v0.21.21 é publicada somente no canal Teste."
+    "CURA 1: fundação de DPI e escala da Central de Trabalho.",
+    "O host principal passa a configurar DPI moderno antes de criar a interface.",
+    "Central e módulos integrados passam a usar baseline explícito de 96 DPI.",
+    "A Central de Manutenção passa a calcular o perfil responsivo pela área lógica da tela.",
+    "Nenhuma regra de negócio ou dado do usuário foi alterado.",
+    "Central de Manutenção v0.6.3, Gerenciador v3.7.4 e Controle de NF v2.6.2.",
+    "A Estável permanece v0.20.2; esta versão é somente Teste."
   ]
 }

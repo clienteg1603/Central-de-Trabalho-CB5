@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$InstallRoot = "",
     [string]$CurrentVersion = "",
     [int]$ParentProcessId = 0
@@ -384,6 +384,7 @@ function Invoke-LatestBackupRestore {
 $form = New-Object Windows.Forms.Form
 $form.Text = "Central de Trabalho — Atualizações"
 $form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
+$form.AutoScaleDimensions = [Drawing.SizeF]::new(96.0, 96.0)
 $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
 $form.Font = [Drawing.Font]::new("Segoe UI", 9.5)
 $form.MinimumSize = [Drawing.Size]::new(720, 560)
