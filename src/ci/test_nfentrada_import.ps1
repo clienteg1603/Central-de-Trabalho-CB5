@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 if (-not (Test-Path -LiteralPath $CorePath -PathType Leaf)) {
-    throw "NFEntrada.Core.ps1 não encontrado: $CorePath"
+    throw "NFEntrada.Core.ps1 not found: $CorePath"
 }
 
 . $CorePath
@@ -55,27 +55,27 @@ try {
     $beforeHash = (Get-FileHash -LiteralPath $xlsx -Algorithm SHA256).Hash
     $result = Import-NFEntradaSourceWorkbook -SourcePath $xlsx -DataDirectory $dataDir
 
-    if (-not (Test-Path -LiteralPath $xlsx -PathType Leaf)) { throw "A importação removeu a planilha original." }
+    if (-not (Test-Path -LiteralPath $xlsx -PathType Leaf)) { throw "Import removed the original workbook." }
     $afterHash = (Get-FileHash -LiteralPath $xlsx -Algorithm SHA256).Hash
-    if ($beforeHash -ne $afterHash) { throw "A importação alterou a planilha original." }
-    if (-not (Test-Path -LiteralPath $result.TemplatePath -PathType Leaf)) { throw "A cópia protegida do modelo não foi criada." }
-    if (-not (Test-Path -LiteralPath $result.StorePath -PathType Leaf)) { throw "A base local não foi criada." }
+    if ($beforeHash -ne $afterHash) { throw "Import changed the original workbook." }
+    if (-not (Test-Path -LiteralPath $result.TemplatePath -PathType Leaf)) { throw "Protected template copy was not created." }
+    if (-not (Test-Path -LiteralPath $result.StorePath -PathType Leaf)) { throw "Local data store was not created." }
 
     $templateHash = (Get-FileHash -LiteralPath $result.TemplatePath -Algorithm SHA256).Hash
-    if ($templateHash -ne $beforeHash) { throw "A cópia protegida não é idêntica à planilha original." }
+    if ($templateHash -ne $beforeHash) { throw "Protected template is not identical to the original workbook." }
 
     $store = Read-NFEntradaStore -Path $result.StorePath
     $cb = @(Get-NFEntradaProductRecords -Store $store -Product "COMPUTADOR DE BORDO V5")
     $tk = @(Get-NFEntradaProductRecords -Store $store -Product "TECLADO V5")
-    if ($cb.Count -ne 1 -or $tk.Count -ne 1) { throw "Quantidade de registros importados incorreta: CB=$($cb.Count), TK=$($tk.Count)." }
+    if ($cb.Count -ne 1 -or $tk.Count -ne 1) { throw "Wrong imported record count: CB=$($cb.Count), TK=$($tk.Count)." }
     if ([string]$cb[0].NFEntrada -ne "12345" -or [int]$cb[0].QuantidadeSaldo -ne 4 -or [string]$cb[0].Codigo -ne "800") {
-        throw "Registro de Computador de Bordo importado incorretamente."
+        throw "Computer board record was imported incorrectly."
     }
     if ([string]$tk[0].NFEntrada -ne "67890" -or [int]$tk[0].QuantidadeSaldo -ne 3 -or [string]$tk[0].Codigo -ne "850") {
-        throw "Registro de Teclado importado incorretamente."
+        throw "Keyboard record was imported incorrectly."
     }
 
-    Write-Host "IMPORTAÇÃO NF ENTRADA: OK — original preservado, modelo copiado e registros importados."
+    Write-Host "NF ENTRADA IMPORT: OK - original preserved, template copied, records imported."
 }
 finally {
     if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
