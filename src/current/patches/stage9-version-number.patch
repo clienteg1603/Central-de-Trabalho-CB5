@@ -1,0 +1,6 @@
+diff --git a/src/current/version.json b/src/current/version.json
+--- a/src/current/version.json
++++ b/src/current/version.json
+@@ -2,1 +2,1 @@
+-  "version": "0.21.10",
++  "version": "0.21.11",
