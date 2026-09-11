@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.3.0"
+$script:ModuleVersion = "1.4.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -348,9 +348,9 @@ function Refresh-NFHistory {
             default { [string]$event.Tipo }
         }
         if ($type -ne "Todos" -and $label -ne $type) { continue }
-        $search = (($label + " " + [string]$event.Produto + " " + [string]$event.NFEntrada + " " + [string]$event.Detalhes)).ToLowerInvariant()
+        $search = (($label + " " + (Get-NFEntradaProductDisplayName ([string]$event.Produto)) + " " + [string]$event.NFEntrada + " " + [string]$event.Detalhes)).ToLowerInvariant()
         if (-not [string]::IsNullOrWhiteSpace($filter) -and -not $search.Contains($filter)) { continue }
-        [void]$historyGrid.Rows.Add([string]$event.Id, (Format-NFHistoryDate ([string]$event.DataHora)), $label, [string]$event.Produto, [string]$event.NFEntrada, [string]$event.Detalhes)
+        [void]$historyGrid.Rows.Add([string]$event.Id, (Format-NFHistoryDate ([string]$event.DataHora)), $label, (Get-NFEntradaProductDisplayName ([string]$event.Produto)), [string]$event.NFEntrada, [string]$event.Detalhes)
         $shown++
     }
     $historyCountLabel.Text = "$shown de $($events.Count)"
@@ -380,7 +380,7 @@ function Show-NFHistoryDetails {
     [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 44)))
     $dialog.Controls.Add($layout)
     $headerText = New-Object Windows.Forms.Label
-    $headerText.Text = (Format-NFHistoryDate ([string]$event.DataHora)) + "  •  " + [string]$event.Tipo + "`r`nNF: " + [string]$event.NFEntrada + "    Produto: " + [string]$event.Produto + $(if ([string]::IsNullOrWhiteSpace([string]$event.Detalhes)) { "" } else { "`r`n" + [string]$event.Detalhes })
+    $headerText.Text = (Format-NFHistoryDate ([string]$event.DataHora)) + "  •  " + [string]$event.Tipo + "`r`nNF: " + [string]$event.NFEntrada + "    Produto: " + (Get-NFEntradaProductDisplayName ([string]$event.Produto)) + $(if ([string]::IsNullOrWhiteSpace([string]$event.Detalhes)) { "" } else { "`r`n" + [string]$event.Detalhes })
     $headerText.Dock = [Windows.Forms.DockStyle]::Fill
     $headerText.ForeColor = $script:CurrentPalette.Text
     $layout.Controls.Add($headerText, 0, 0)
@@ -466,7 +466,7 @@ function Refresh-NFSummary {
     $openNFsValue.Text = ([int]$summary.NFsAbertas).ToString("N0")
 
     $productSummaryGrid.Rows.Clear()
-    [void]$productSummaryGrid.Rows.Add("Computador de bordo V5", [int]$summary.Produtos[$script:ComputerProduct].NFsAbertas, [int]$summary.Produtos[$script:ComputerProduct].Saldo)
+    [void]$productSummaryGrid.Rows.Add("Computador de bordo CB5", [int]$summary.Produtos[$script:ComputerProduct].NFsAbertas, [int]$summary.Produtos[$script:ComputerProduct].Saldo)
     [void]$productSummaryGrid.Rows.Add("Teclado V5", [int]$summary.Produtos[$script:KeyboardProduct].NFsAbertas, [int]$summary.Produtos[$script:KeyboardProduct].Saldo)
     [void]$productSummaryGrid.Rows.Add("TOTAL", [int]$summary.NFsAbertas, [int]$summary.SaldoTotal)
 
@@ -482,7 +482,7 @@ function Refresh-NFSummary {
     $overEntryValue.Text = [string][int]$summary.SaldoMaiorQueEntrada
     $generalStatusValue.Text = [string]$summary.Situacao
     $generalStatusValue.ForeColor = if ($summary.Situacao -eq "OK") { $script:CurrentPalette.Success } else { $script:CurrentPalette.Danger }
-    $computerTab.Text = "COMPUTADOR DE BORDO V5 ($([int]$summary.Produtos[$script:ComputerProduct].Registros))"
+    $computerTab.Text = "COMPUTADOR DE BORDO CB5 ($([int]$summary.Produtos[$script:ComputerProduct].Registros))"
     $keyboardTab.Text = "TECLADO V5 ($([int]$summary.Produtos[$script:KeyboardProduct].Registros))"
 }
 
@@ -496,13 +496,14 @@ function Refresh-NFAll {
     $exportButton.Enabled = $templateReady
     $summary = Get-NFEntradaSummary -Store $script:Store
     $totalRecords = [int]$summary.Produtos[$script:ComputerProduct].Registros + [int]$summary.Produtos[$script:KeyboardProduct].Registros
-    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • base local protegida") "Normal"
+    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • abas operacionais iniciam em Em estoque") "Normal"
 }
 
 function Show-NFRecordDialog {
     param([string]$Product, $Existing = $null)
     $dialog = New-Object Windows.Forms.Form
-    $dialog.Text = if ($null -eq $Existing) { "Novo registro — $Product" } else { "Editar registro — $Product" }
+    $displayProduct = Get-NFEntradaProductDisplayName $Product
+    $dialog.Text = if ($null -eq $Existing) { "Novo registro — $displayProduct" } else { "Editar registro — $displayProduct" }
     $dialog.StartPosition = [Windows.Forms.FormStartPosition]::CenterParent
     $dialog.FormBorderStyle = [Windows.Forms.FormBorderStyle]::FixedDialog
     $dialog.MaximizeBox = $false
@@ -672,7 +673,7 @@ function Remove-NFRecordFromUI {
     $record = Find-NFRecordById -Product $product -Id $id
     if ($null -eq $record) { return }
     $answer = [Windows.Forms.MessageBox]::Show(
-        "Excluir a NF de Entrada $($record.NFEntrada) de $product?`r`n`r`nEssa ação altera somente a base local do módulo e será refletida na próxima exportação.",
+        "Excluir a NF de Entrada $($record.NFEntrada) de $(Get-NFEntradaProductDisplayName $product)?`r`n`r`nEssa ação altera somente a base local do módulo e será refletida na próxima exportação.",
         "Confirmar exclusão",
         [Windows.Forms.MessageBoxButtons]::YesNo,
         [Windows.Forms.MessageBoxIcon]::Warning
@@ -846,7 +847,7 @@ function New-ProductTabContent {
     $statusFilter = New-Object Windows.Forms.ComboBox
     $statusFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
     [void]$statusFilter.Items.AddRange(@("Todos", "Em estoque", "Encerrada", "Revisar"))
-    $statusFilter.SelectedIndex = 0
+    $statusFilter.SelectedIndex = 1
     $statusFilter.Dock = [Windows.Forms.DockStyle]::Fill
     $statusFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 12, 8)
     $statusFilter.BackColor = $script:CurrentPalette.Input
@@ -975,7 +976,7 @@ foreach ($i in 0..3) { [void]$cards.ColumnStyles.Add((New-Object Windows.Forms.C
 $root.Controls.Add($cards, 0, 1)
 $saldoTotalValue = $null; $computerBalanceValue = $null; $keyboardBalanceValue = $null; $openNFsValue = $null
 $cards.Controls.Add((New-NFSummaryCard "SALDO TOTAL" "peças disponíveis" ([ref]$saldoTotalValue)), 0, 0)
-$cards.Controls.Add((New-NFSummaryCard "COMPUTADOR DE BORDO V5" "saldo atual" ([ref]$computerBalanceValue)), 1, 0)
+$cards.Controls.Add((New-NFSummaryCard "COMPUTADOR DE BORDO CB5" "saldo atual" ([ref]$computerBalanceValue)), 1, 0)
 $cards.Controls.Add((New-NFSummaryCard "TECLADO V5" "saldo atual" ([ref]$keyboardBalanceValue)), 2, 0)
 $cards.Controls.Add((New-NFSummaryCard "NFs EM ABERTO" "com saldo maior que zero" ([ref]$openNFsValue)), 3, 0)
 
@@ -984,12 +985,8 @@ $mainTabs.Dock = [Windows.Forms.DockStyle]::Fill
 $mainTabs.Font = [Drawing.Font]::new("Segoe UI Semibold", 9)
 $root.Controls.Add($mainTabs, 0, 2)
 
-$summaryTab = New-Object Windows.Forms.TabPage
-$summaryTab.Text = "RESUMO"
-$summaryTab.BackColor = $script:CurrentPalette.Background
-$mainTabs.TabPages.Add($summaryTab)
 $computerTab = New-Object Windows.Forms.TabPage
-$computerTab.Text = "COMPUTADOR DE BORDO V5"
+$computerTab.Text = "COMPUTADOR DE BORDO CB5"
 $computerTab.BackColor = $script:CurrentPalette.Background
 $mainTabs.TabPages.Add($computerTab)
 $keyboardTab = New-Object Windows.Forms.TabPage
@@ -1004,6 +1001,11 @@ $securityTab = New-Object Windows.Forms.TabPage
 $securityTab.Text = "SEGURANÇA"
 $securityTab.BackColor = $script:CurrentPalette.Background
 $mainTabs.TabPages.Add($securityTab)
+$summaryTab = New-Object Windows.Forms.TabPage
+$summaryTab.Text = "RESUMO"
+$summaryTab.BackColor = $script:CurrentPalette.Background
+$mainTabs.TabPages.Add($summaryTab)
+$mainTabs.SelectedTab = $computerTab
 
 $summaryLayout = New-Object Windows.Forms.TableLayoutPanel
 $summaryLayout.Dock = [Windows.Forms.DockStyle]::Fill

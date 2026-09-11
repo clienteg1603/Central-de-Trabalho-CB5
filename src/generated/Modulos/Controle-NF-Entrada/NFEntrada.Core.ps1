@@ -7,6 +7,12 @@ function ConvertTo-NFEntradaText {
     return ([string]$Value).Trim()
 }
 
+function Get-NFEntradaProductDisplayName {
+    param([string]$Product)
+    if ([string]::Equals($Product, "COMPUTADOR DE BORDO V5", [StringComparison]::OrdinalIgnoreCase)) { return "COMPUTADOR DE BORDO CB5" }
+    return $Product
+}
+
 function Get-NFEntradaDefaultDataDirectory {
     return [IO.Path]::Combine(
         [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData),
@@ -565,7 +571,7 @@ function Test-NFEntradaRecord {
     foreach ($existing in Get-NFEntradaProductRecords -Store $Store -Product $Product) {
         if ([int]$existing.Id -eq $IgnoreId) { continue }
         if ([string]::Equals((ConvertTo-NFEntradaText $existing.NFEntrada), $nf, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "A NF de Entrada $nf já está cadastrada em $Product."
+            throw "A NF de Entrada $nf já está cadastrada em $(Get-NFEntradaProductDisplayName $Product)."
         }
     }
     return $true
