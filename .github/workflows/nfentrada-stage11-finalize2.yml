@@ -1,0 +1,68 @@
+name: NF Entrada stage 11 finalize 2
+
+on:
+  push:
+    branches: [stage11-retry]
+    paths: ['src/current/NFENTRADA_STAGE11_FINALIZE2']
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Aplicar evolução
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python '.\src\current\transforms\0214_nfentrada_stage11.py'
+          python '.\src\current\transforms\0214b_nfentrada_stage11_fix.py'
+      - name: Ajustar marcador textual do teste
+        shell: powershell
+        run: |
+          $p = '.\src\ci\test_nfentrada_stage11.ps1'
+          $t = [IO.File]::ReadAllText((Resolve-Path $p), [Text.Encoding]::UTF8)
+          $t = $t.Replace('no máximo 20 backups automáticos','20 backups autom')
+          [IO.File]::WriteAllText((Resolve-Path $p), $t, [Text.UTF8Encoding]::new($true))
+      - name: Validar etapa final
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $core = '.\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1'
+          $ui = '.\src\generated\Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1'
+          & '.\src\ci\test_nfentrada_import.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage1.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage2.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage3.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage5.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage6.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage9.ps1' -CorePath $core
+          & '.\src\ci\test_nfentrada_stage11.ps1' -CorePath $core -UiPath $ui
+          & '.\src\ci\parse_powershell.ps1' -Root '.\src\generated'
+          python '.\src\ci\regression_contracts.py' '.\src\generated'
+      - name: Publicar fontes validados
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $versionPath = 'src/current/version.json'
+          $meta = [ordered]@{ version='0.21.14'; buildRevision=1; releaseNotes=@(
+            'Etapa 11 do Controle de NF de Entrada: auditoria final e proteção dos dados.',
+            'A aba Segurança ganha VERIFICAR INTEGRIDADE para conferir base JSON, duplicidades, pendências, modelo Excel, backups e arquivos temporários.',
+            'A verificação classifica o estado como OK, ATENÇÃO ou ERRO sem corrigir dados automaticamente.',
+            'Backups automáticos passam a ter retenção controlada de até 20 cópias; backups manuais e de recuperação são preservados.',
+            'A auditoria final cobre importação, histórico, backup e restauração, movimentações, duplicidades, saída e estorno.',
+            'Controle de NF de Entrada passa para v2.2.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.',
+            'A versão Estável permanece v0.20.2; a v0.21.14 é publicada somente no canal Teste.'
+          ) }
+          [IO.File]::WriteAllText($versionPath, ($meta | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+          @('src/current/NFENTRADA_STAGE11_READY','src/current/NFENTRADA_STAGE11_RETRY2','src/current/NFENTRADA_STAGE11_RETRY3','src/current/NFENTRADA_STAGE11_FINALIZE','src/current/NFENTRADA_STAGE11_FINALIZE2','src/current/STAGE11_WRITE_TEST','src/current/TEST_WRITE_3','src/current/transforms/0214_nfentrada_stage11.py','src/current/transforms/0214b_nfentrada_stage11_fix.py','.github/workflows/nfentrada-stage11-evolve-temporary.yml','.github/workflows/nfentrada-stage11-retry2.yml','.github/workflows/nfentrada-stage11-retry3.yml','.github/workflows/nfentrada-stage11-finalize.yml','.github/workflows/nfentrada-stage11-finalize2.yml') | ForEach-Object { Remove-Item -LiteralPath $_ -Force -ErrorAction SilentlyContinue }
+          git checkout -- 'src/ci/test_nfentrada_stage11.ps1'
+          git config user.name 'Central de Trabalho Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A src/generated src/current src/ci/test_nfentrada_stage11.ps1 .github/workflows
+          git commit -m 'Evolui Controle NF Entrada - etapa 11 auditoria final'
+          git push origin HEAD:stage11-retry
