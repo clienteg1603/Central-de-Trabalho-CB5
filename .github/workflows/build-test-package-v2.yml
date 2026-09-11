@@ -241,9 +241,9 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
-          STABLE_VERSION="0.8.5"
+          STABLE_VERSION="$(python3 -c 'import json; print(json.load(open("updates/stable.json", encoding="utf-8"))["Version"])')"
 
-          # Mantém somente 1 Estável + 1 Teste atual no repositório.
+          # Mantém somente o pacote da Estável declarada e o pacote de Teste atual.
           for package in updates/packages/Central-de-Trabalho-v*.zip; do
             [ -e "$package" ] || continue
             name="$(basename "$package")"
