@@ -10,20 +10,9 @@ internal static class Program
 {
     private const string SelfTestSwitch = "--self-test";
     private const string AppUserModelId = "CentralDeTrabalho.Desktop";
-    private const int ProcessPerMonitorDpiAware = 2;
-    private static readonly IntPtr DpiAwarenessContextPerMonitorAwareV2 = new IntPtr(-4);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetProcessDpiAwarenessContext(IntPtr dpiContext);
-
-    [DllImport("shcore.dll")]
-    private static extern int SetProcessDpiAwareness(int awareness);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetProcessDPIAware();
 
     [STAThread]
     private static int Main(string[] args)
@@ -36,7 +25,6 @@ internal static class Program
             return RunSelfTest(appRoot);
         }
 
-        ConfigureDpiAwareness();
         ApplyShellIdentity();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
@@ -89,36 +77,6 @@ internal static class Program
             ShowFatal(ex.Message);
             return 1;
         }
-    }
-
-    private static void ConfigureDpiAwareness()
-    {
-        // Preferência: Per-Monitor V2 no Windows 10+. Se o sistema não oferecer
-        // essa API, recuamos progressivamente sem impedir a abertura da Central.
-        try
-        {
-            if (SetProcessDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2))
-            {
-                return;
-            }
-        }
-        catch (EntryPointNotFoundException) { }
-        catch (DllNotFoundException) { }
-        catch { }
-
-        try
-        {
-            if (SetProcessDpiAwareness(ProcessPerMonitorDpiAware) == 0)
-            {
-                return;
-            }
-        }
-        catch (EntryPointNotFoundException) { }
-        catch (DllNotFoundException) { }
-        catch { }
-
-        try { SetProcessDPIAware(); }
-        catch { }
     }
 
     private static void ApplyShellIdentity()
