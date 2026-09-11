@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.9.0"
+$script:ModuleVersion = "2.0.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -319,6 +319,7 @@ function Refresh-NFMovements {
     $movementGrid.Rows.Clear()
     $shown = 0
     $qtyShown = 0
+    $reversedShown = 0
     $today = [DateTime]::Today
     foreach ($item in $items) {
         $when = [DateTime]::MinValue
@@ -331,9 +332,10 @@ function Refresh-NFMovements {
         }
         $displayProduct = Get-NFEntradaProductDisplayName ([string]$item.Produto)
         if ($productFilter -ne "Todos" -and $displayProduct -ne $productFilter) { continue }
-        $search = (($displayProduct + " " + [string]$item.NFEntrada + " " + [string]$item.Referencia)).ToLowerInvariant()
+        $status = Get-NFEntradaMovementStatus -Movement $item
+        $search = (($displayProduct + " " + [string]$item.NFEntrada + " " + [string]$item.Referencia + " " + $status + " " + [string]$item.MotivoEstorno)).ToLowerInvariant()
         if (-not [string]::IsNullOrWhiteSpace($filter) -and -not $search.Contains($filter)) { continue }
-        [void]$movementGrid.Rows.Add(
+        $rowIndex = $movementGrid.Rows.Add(
             [string]$item.Id,
             [string]$item.Produto,
             (Format-NFHistoryDate ([string]$item.DataHora)),
@@ -342,14 +344,21 @@ function Refresh-NFMovements {
             [int]$item.Quantidade,
             [int]$item.SaldoAntes,
             [int]$item.SaldoDepois,
+            $status,
             [string]$item.Referencia
         )
         $shown++
-        $qtyShown += [int]$item.Quantidade
+        if ($status -eq "Estornada") {
+            $reversedShown++
+            $row = $movementGrid.Rows[$rowIndex]
+            $row.DefaultCellStyle.BackColor = $script:CurrentPalette.DangerBack
+            $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Danger
+        } else { $qtyShown += [int]$item.Quantidade }
     }
-    $movementCountLabel.Text = "$shown movimentação(ões) • $qtyShown peça(s) • período: $periodFilter"
+    $movementCountLabel.Text = "$shown movimentação(ões) • $qtyShown peça(s) ativas • $reversedShown estornada(s) • período: $periodFilter • Ctrl+Z estorna a selecionada"
     $movementGrid.ClearSelection()
     $movementOpenButton.Enabled = $false
+    if ($null -ne $movementReverseButton) { $movementReverseButton.Enabled = $false }
 }
 
 function Open-NFFromMovement {
@@ -369,6 +378,32 @@ function Open-NFFromMovement {
         $mainTabs.SelectedTab = $keyboardTab
         $keyboardFilter.Focus()
     }
+}
+
+function Reverse-NFMovementFromUI {
+    if ($movementGrid.SelectedRows.Count -eq 0) { return }
+    $id = [string]$movementGrid.SelectedRows[0].Cells["MovementId"].Value
+    $movement = Get-NFEntradaMovementById -Store $script:Store -MovementId $id
+    if ($null -eq $movement) { return }
+    if ((Get-NFEntradaMovementStatus -Movement $movement) -eq "Estornada") {
+        [Windows.Forms.MessageBox]::Show("Esta saída já foi estornada e continua visível para auditoria.", "Controle de NF de Entrada", 0, 64) | Out-Null
+        return
+    }
+    $answer = [Windows.Forms.MessageBox]::Show(
+        "Estornar a saída de $([int]$movement.Quantidade) peça(s) da NF $([string]$movement.NFEntrada)?`r`n`r`nA quantidade voltará para o saldo. A movimentação original não será apagada e o estorno ficará registrado no Histórico.",
+        "Confirmar estorno de saída",
+        [Windows.Forms.MessageBoxButtons]::YesNo,
+        [Windows.Forms.MessageBoxIcon]::Warning
+    )
+    if ($answer -ne [Windows.Forms.DialogResult]::Yes) { return }
+    try {
+        $result = Register-NFEntradaReversal -Store $script:Store -MovementId $id -Motivo "Correção operacional"
+        Save-NFStore
+        Refresh-NFAll
+        Refresh-NFMovements
+        Set-NFStatus ("Saída estornada. Saldo da NF " + [string]$result.Record.NFEntrada + ": " + [string]$result.Record.QuantidadeSaldo) "Warning"
+    }
+    catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha ao estornar saída", 0, 16) | Out-Null }
 }
 
 function Get-NFHistoryEventById {
@@ -407,6 +442,7 @@ function Refresh-NFHistory {
             "Importacao" { "Importação" }
             "RestauracaoBackup" { "Restauração" }
             "Saida" { "Saída" }
+            "EstornoSaida" { "Estorno de saída" }
             "Exportacao" { "Exportação" }
             default { [string]$event.Tipo }
         }
@@ -1566,11 +1602,13 @@ Add-NFGridColumn $movementGrid "MovementNF" "NF DE ENTRADA" 110
 Add-NFGridColumn $movementGrid "MovementQty" "SAÍDA" 75
 Add-NFGridColumn $movementGrid "MovementBefore" "SALDO ANTES" 95
 Add-NFGridColumn $movementGrid "MovementAfter" "SALDO DEPOIS" 100
+Add-NFGridColumn $movementGrid "MovementStatus" "STATUS" 90
 Add-NFGridColumn $movementGrid "MovementReference" "NF DE SAÍDA / REFERÊNCIA" 240 $true
 $movementLayout.Controls.Add($movementGrid,0,1)
 $movementFooter=New-Object Windows.Forms.TableLayoutPanel
-$movementFooter.Dock=[Windows.Forms.DockStyle]::Fill; $movementFooter.ColumnCount=2
+$movementFooter.Dock=[Windows.Forms.DockStyle]::Fill; $movementFooter.ColumnCount=3
 [void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent,100)))
+[void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 [void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 $movementCountLabel=New-Object Windows.Forms.Label
 $movementCountLabel.Text="0 movimentação(ões)"; $movementCountLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementCountLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementCountLabel.ForeColor=$script:CurrentPalette.Muted
@@ -1578,6 +1616,9 @@ $movementFooter.Controls.Add($movementCountLabel,0,0)
 $movementOpenButton=New-Object Windows.Forms.Button
 $movementOpenButton.Text="ABRIR NF"; $movementOpenButton.Width=110; $movementOpenButton.Height=32; $movementOpenButton.Enabled=$false; Set-NFButtonStyle $movementOpenButton "Secondary"
 $movementFooter.Controls.Add($movementOpenButton,1,0)
+$movementReverseButton=New-Object Windows.Forms.Button
+$movementReverseButton.Text="ESTORNAR SAÍDA"; $movementReverseButton.Width=135; $movementReverseButton.Height=32; $movementReverseButton.Enabled=$false; Set-NFButtonStyle $movementReverseButton "Danger"
+$movementFooter.Controls.Add($movementReverseButton,2,0)
 $movementLayout.Controls.Add($movementFooter,0,2)
 # HISTÓRICO — consulta auditável das alterações do módulo.
 $historyLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1608,7 +1649,7 @@ $historyTypeLabel.Text = "Tipo"; $historyTypeLabel.Dock = [Windows.Forms.DockSty
 $historyFilters.Controls.Add($historyTypeLabel, 2, 0)
 $historyTypeFilter = New-Object Windows.Forms.ComboBox
 $historyTypeFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
-[void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Saída", "Exclusão", "Importação", "Restauração", "Exportação"))
+[void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Saída", "Estorno de saída", "Exclusão", "Importação", "Restauração", "Exportação"))
 $historyTypeFilter.SelectedIndex = 0; $historyTypeFilter.Dock = [Windows.Forms.DockStyle]::Fill; $historyTypeFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 8, 8); $historyTypeFilter.BackColor = $script:CurrentPalette.Input; $historyTypeFilter.ForeColor = $script:CurrentPalette.Text
 $historyFilters.Controls.Add($historyTypeFilter, 3, 0)
 $historyCountLabel = New-Object Windows.Forms.Label
@@ -1740,9 +1781,14 @@ $mainTabs.Add_SelectedIndexChanged({ Update-NFActions; if ($mainTabs.SelectedTab
 $movementFilter.Add_TextChanged({ Refresh-NFMovements })
 $movementProductFilter.Add_SelectedIndexChanged({ Refresh-NFMovements })
 $movementPeriodFilter.Add_SelectedIndexChanged({ Refresh-NFMovements })
-$movementGrid.Add_SelectionChanged({ $movementOpenButton.Enabled = ($movementGrid.SelectedRows.Count -gt 0) })
+$movementGrid.Add_SelectionChanged({
+    $movementOpenButton.Enabled = ($movementGrid.SelectedRows.Count -gt 0)
+    $movementReverseButton.Enabled = ($movementGrid.SelectedRows.Count -gt 0 -and [string]$movementGrid.SelectedRows[0].Cells["MovementStatus"].Value -eq "Ativa")
+})
 $movementGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Open-NFFromMovement } })
+$movementGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::Z) { $_.SuppressKeyPress=$true; Reverse-NFMovementFromUI } })
 $movementOpenButton.Add_Click({ Open-NFFromMovement })
+$movementReverseButton.Add_Click({ Reverse-NFMovementFromUI })
 $reviewIssuesButton.Add_Click({ Show-NFReviewIssues })
 $exportCheckButton.Add_Click({ Show-NFExportReadiness })
 $historyFilter.Add_TextChanged({ Refresh-NFHistory })

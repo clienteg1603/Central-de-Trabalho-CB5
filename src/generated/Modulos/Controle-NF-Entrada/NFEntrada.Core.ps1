@@ -69,6 +69,13 @@ function Ensure-NFEntradaStoreShape {
     elseif ($null -eq $Store.Movimentacoes) {
         $Store.Movimentacoes = @()
     }
+    foreach ($movement in @($Store.Movimentacoes)) {
+        if ($null -eq $movement.PSObject.Properties["Estornada"]) { $movement | Add-Member -NotePropertyName Estornada -NotePropertyValue $false }
+        if ($null -eq $movement.PSObject.Properties["EstornadaEm"]) { $movement | Add-Member -NotePropertyName EstornadaEm -NotePropertyValue "" }
+        if ($null -eq $movement.PSObject.Properties["MotivoEstorno"]) { $movement | Add-Member -NotePropertyName MotivoEstorno -NotePropertyValue "" }
+        if ($null -eq $movement.PSObject.Properties["EstornoSaldoAntes"]) { $movement | Add-Member -NotePropertyName EstornoSaldoAntes -NotePropertyValue 0 }
+        if ($null -eq $movement.PSObject.Properties["EstornoSaldoDepois"]) { $movement | Add-Member -NotePropertyName EstornoSaldoDepois -NotePropertyValue 0 }
+    }
     if ($null -eq $Store.PSObject.Properties["Meta"]) {
         $Store | Add-Member -NotePropertyName Meta -NotePropertyValue ([pscustomobject]@{
             CriadoEm = [DateTime]::Now.ToString("o")
@@ -155,9 +162,74 @@ function Add-NFEntradaMovement {
         SaldoAntes = $SaldoAntes
         SaldoDepois = $SaldoDepois
         Origem = "Operação"
+        Estornada = $false
+        EstornadaEm = ""
+        MotivoEstorno = ""
+        EstornoSaldoAntes = 0
+        EstornoSaldoDepois = 0
     }
     $Store.Movimentacoes = @($Store.Movimentacoes) + $movement
     return $movement
+}
+
+function Get-NFEntradaMovementById {
+    param([Parameter(Mandatory = $true)]$Store,[Parameter(Mandatory = $true)][string]$MovementId)
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    foreach ($movement in @($Store.Movimentacoes)) {
+        if ([string]::Equals([string]$movement.Id, $MovementId, [StringComparison]::OrdinalIgnoreCase)) { return $movement }
+    }
+    return $null
+}
+
+function Get-NFEntradaMovementStatus {
+    param([Parameter(Mandatory = $true)]$Movement)
+    if ($null -ne $Movement.PSObject.Properties["Estornada"] -and [bool]$Movement.Estornada) { return "Estornada" }
+    return "Ativa"
+}
+
+function Register-NFEntradaReversal {
+    param(
+        [Parameter(Mandatory = $true)]$Store,
+        [Parameter(Mandatory = $true)][string]$MovementId,
+        [Parameter(Mandatory = $true)][string]$Motivo
+    )
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $reason = ConvertTo-NFEntradaText $Motivo
+    if ([string]::IsNullOrWhiteSpace($reason)) { throw "Informe o motivo do estorno." }
+    $movement = Get-NFEntradaMovementById -Store $Store -MovementId $MovementId
+    if ($null -eq $movement) { throw "A movimentação selecionada não foi encontrada." }
+    if ((Get-NFEntradaMovementStatus -Movement $movement) -eq "Estornada") { throw "Esta saída já foi estornada." }
+
+    $product = ConvertTo-NFEntradaText $movement.Produto
+    $records = @(Get-NFEntradaProductRecords -Store $Store -Product $product)
+    $target = $null
+    foreach ($record in $records) {
+        if ([int]$record.Id -eq [int]$movement.RegistroId -and [string]::Equals((ConvertTo-NFEntradaText $record.NFEntrada), (ConvertTo-NFEntradaText $movement.NFEntrada), [StringComparison]::OrdinalIgnoreCase)) { $target = $record; break }
+    }
+    if ($null -eq $target) {
+        foreach ($record in $records) {
+            if ([string]::Equals((ConvertTo-NFEntradaText $record.NFEntrada), (ConvertTo-NFEntradaText $movement.NFEntrada), [StringComparison]::OrdinalIgnoreCase)) { $target = $record; break }
+        }
+    }
+    if ($null -eq $target) { throw "A NF original desta saída não existe mais na base ativa. O estorno foi bloqueado para não alterar outro registro por engano." }
+
+    $quantity = [int]$movement.Quantidade
+    if ($quantity -le 0) { throw "A movimentação possui quantidade inválida e não pode ser estornada automaticamente." }
+    $currentBalance = [int]$target.QuantidadeSaldo
+    $newBalance = $currentBalance + $quantity
+    if ($newBalance -gt [int]$target.QuantidadeNaNF) { throw "O estorno elevaria o saldo acima da quantidade original da NF. Revise a NF antes de estornar." }
+
+    $before = Copy-NFEntradaRecordSnapshot $target
+    $target.QuantidadeSaldo = $newBalance
+    $after = Copy-NFEntradaRecordSnapshot $target
+    $movement.Estornada = $true
+    $movement.EstornadaEm = [DateTime]::Now.ToString("o")
+    $movement.MotivoEstorno = $reason
+    $movement.EstornoSaldoAntes = $currentBalance
+    $movement.EstornoSaldoDepois = $newBalance
+    $Store.Produtos.PSObject.Properties[$product].Value = @($records)
+    [void](Add-NFEntradaHistoryEvent -Store $Store -Tipo "EstornoSaida" -Produto $product -RegistroId ([int]$target.Id) -NFEntrada ([string]$target.NFEntrada) -Antes $before -Depois $after -Detalhes ("Estorno de " + $quantity + " peça(s) • movimento " + [string]$movement.Id + " • motivo: " + $reason))
+    return [pscustomobject]@{ Movement = $movement; Record = $after }
 }
 
 function Get-NFEntradaReviewItems {
@@ -198,9 +270,12 @@ function Get-NFEntradaOperationalMetrics {
     $movementSeven = 0
     $piecesSeven = 0
     $piecesTotal = 0
+    $activeMovements = 0
     $lastDate = [DateTime]::MinValue
     $lastNF = ""
     foreach ($movement in $movements) {
+        if ((Get-NFEntradaMovementStatus -Movement $movement) -eq "Estornada") { continue }
+        $activeMovements++
         $piecesTotal += [int]$movement.Quantidade
         $when = [DateTime]::MinValue
         if (-not [DateTime]::TryParse([string]$movement.DataHora, [ref]$when)) { continue }
@@ -223,7 +298,7 @@ function Get-NFEntradaOperationalMetrics {
         PecasSaidaHoje = $piecesToday
         Movimentacoes7Dias = $movementSeven
         PecasSaida7Dias = $piecesSeven
-        MovimentacoesTotal = $movements.Count
+        MovimentacoesTotal = $activeMovements
         PecasMovimentadasTotal = $piecesTotal
         NFsEmEstoque = $open
         NFsEncerradas = $closed
