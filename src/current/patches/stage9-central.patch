@@ -1,0 +1,9 @@
+diff --git a/src/generated/Central de Trabalho.ps1 b/src/generated/Central de Trabalho.ps1
+--- a/src/generated/Central de Trabalho.ps1
++++ b/src/generated/Central de Trabalho.ps1
+@@ -32,1 +32,1 @@
+-$script:AppVersion = "0.21.9"
++$script:AppVersion = "0.21.11"
+@@ -52,1 +52,1 @@
+-$script:NFEntradaVersion = "1.8.0"
++$script:NFEntradaVersion = "2.0.0"
