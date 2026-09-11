@@ -1,14 +1,14 @@
 {
-  "version": "0.21.18",
+  "version": "0.21.19",
   "buildRevision": 1,
   "releaseNotes": [
-    "Revisão visual e de usabilidade do Controle de NF de Entrada baseada na validação em uso real.",
-    "A barra inferior foi aumentada e recebeu mais respiro para que NOVA NF, EDITAR, SAÍDA, FILTROS, CSV e EXCLUIR não pareçam cortados no rodapé.",
-    "O cabeçalho ganhou mais altura para manter o subtítulo totalmente visível e impedir que os cards de saldo avancem sobre o texto.",
-    "A troca de Aparência da Central agora é aplicada ao Controle de NF de Entrada em tempo real, sem precisar voltar para a Central e reabrir o módulo.",
-    "Grades, filtros, textos, superfícies, cards, botões e destaques são atualizados junto com a nova paleta e as linhas são redesenhadas após a troca de tema.",
-    "A faixa de destaque do Controle de NF de Entrada foi alinhada às cores da própria Central, removendo a última faixa roxa remanescente.",
-    "Controle de NF de Entrada passa para v2.4.2; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A versão Estável permanece v0.20.2; a v0.21.18 é publicada somente no canal Teste."
+    "Etapa 14 do Controle de NF de Entrada: filtro de período no Histórico.",
+    "A aba Histórico ganha o filtro Período com Todos, Hoje, Últimos 7 dias e Últimos 30 dias.",
+    "O novo período funciona junto com a pesquisa e o filtro de tipo já existentes.",
+    "O contador do Histórico passa a indicar também o período aplicado.",
+    "A exportação CSV do Histórico continua exportando exatamente a visão filtrada, agora incluindo o recorte por período.",
+    "O novo filtro acompanha a troca de Aparência em tempo real do módulo.",
+    "Controle de NF de Entrada passa para v2.5.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A versão Estável permanece v0.20.2; a v0.21.19 é publicada somente no canal Teste."
   ]
 }
