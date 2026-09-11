@@ -19,6 +19,10 @@ $iconAssetPath = Join-Path $srcRoot "assets\Central-de-Trabalho.png.b64"
 if (-not (Test-Path -LiteralPath $iconAssetPath -PathType Leaf)) {
     throw "Central icon asset not found: $iconAssetPath"
 }
+$iconBuildScript = Join-Path $PSScriptRoot "Icon.Build.ps1"
+if (-not (Test-Path -LiteralPath $iconBuildScript -PathType Leaf)) {
+    throw "Multi-size icon builder not found: $iconBuildScript"
+}
 
 [void](New-Item -ItemType Directory -Force -Path $OutputDirectory)
 $outExe = Join-Path $OutputDirectory "Central de Trabalho.exe"
@@ -53,6 +57,12 @@ finally {
 if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf) -or (Get-Item -LiteralPath $iconPath).Length -lt 512) {
     throw "Central ICO was not generated correctly from the CT image."
 }
+
+# O ícone simples acima preserva a compatibilidade do asset histórico; em seguida
+# ele é substituído por um ICO real com múltiplas resoluções para Explorer,
+# atalhos e itens fixados na barra de tarefas do Windows.
+. $iconBuildScript
+New-CentralMultiSizeIcon -Base64AssetPath $iconAssetPath -OutputPath $iconPath
 
 $parts = @($Version.Split('.'))
 while ($parts.Count -lt 4) { $parts += '0' }
@@ -136,7 +146,9 @@ foreach ($required in @(
     'RunspaceFactory.CreateRunspace',
     '--self-test',
     'Parser.ParseFile',
-    'Central de Trabalho.ps1'
+    'Central de Trabalho.ps1',
+    'SetCurrentProcessExplicitAppUserModelID',
+    'CentralDeTrabalho.Desktop'
 )) {
     if ($sourceText -notmatch [regex]::Escape($required)) {
         throw "Native host is missing required contract: $required"
@@ -163,4 +175,4 @@ foreach ($entry in $expectedMetadata.GetEnumerator()) {
     }
 }
 
-Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, self-test contract, in-process PowerShell engine."
+Write-Host "NATIVE HOST: OK - Central de Trabalho.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, multi-size CT icon, explicit taskbar identity, professional Windows metadata, self-test contract, in-process PowerShell engine."
