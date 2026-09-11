@@ -17,4 +17,19 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          & ".\src\ci\parse_powershell.ps1" -Root ".\src\generated"
+          $allErrors = New-Object System.Collections.Generic.List[string]
+          $files = @(Get-ChildItem -LiteralPath ".\src\generated" -Recurse -File -Filter *.ps1 | Sort-Object FullName)
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
+            foreach ($e in @($errors)) {
+              $allErrors.Add("$($file.FullName) | line $($e.Extent.StartLineNumber), col $($e.Extent.StartColumnNumber) | $($e.Message)")
+            }
+          }
+          if ($allErrors.Count -gt 0) {
+            Write-Host "PARSE FAILED"
+            foreach ($item in $allErrors) { Write-Host $item }
+            exit 1
+          }
+          Write-Host "PARSE OK: $($files.Count) scripts"
