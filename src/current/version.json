@@ -1,6 +1,6 @@
 {
   "version": "0.21.24",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "CURA 2: aparência sincronizada entre a Central e os módulos integrados.",
     "A troca de tema passa a atualizar o módulo aberto imediatamente e refazer o layout e a pintura da interface.",
