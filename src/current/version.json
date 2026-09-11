@@ -1,6 +1,6 @@
 {
   "version": "0.21.2",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Inicia a Etapa 1 de evolução focada no Controle de NF de Entrada: segurança operacional, histórico auditável e clareza das ações.",
     "Inclusões, edições e exclusões passam a registrar histórico interno com data/hora, produto, NF, estado anterior e estado posterior quando aplicável.",
