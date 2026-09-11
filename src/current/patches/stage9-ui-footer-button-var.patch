@@ -1,0 +1,6 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -1584,1 +1584,2 @@
+ $movementFooter.Controls.Add($movementCountLabel,0,0)
++$movementUndoButton=New-Object Windows.Forms.Button
