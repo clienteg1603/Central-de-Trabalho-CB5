@@ -1,0 +1,6 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1 b/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1
+@@ -179,1 +179,1 @@
+-function Undo-NFEntradaOutput {
++function Register-NFEntradaReversal {
