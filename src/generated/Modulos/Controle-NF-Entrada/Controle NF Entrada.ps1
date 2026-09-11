@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.2.0"
+$script:ModuleVersion = "2.3.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -438,6 +438,62 @@ function Reverse-NFMovementFromUI {
         Set-NFStatus ("Saída estornada. Saldo da NF " + [string]$result.Record.NFEntrada + ": " + [string]$result.Record.QuantidadeSaldo) "Warning"
     }
     catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha ao estornar saída", 0, 16) | Out-Null }
+}
+
+function ConvertTo-NFCsvField {
+    param($Value)
+    $text = if ($null -eq $Value) { "" } else { [string]$Value }
+    return '"' + $text.Replace('"', '""') + '"'
+}
+
+function Export-NFGridViewToCsv {
+    param(
+        [Parameter(Mandatory = $true)][Windows.Forms.DataGridView]$Grid,
+        [Parameter(Mandatory = $true)][string]$BaseName,
+        [Parameter(Mandatory = $true)][string]$Title
+    )
+    if ($null -eq $Grid -or $Grid.Rows.Count -eq 0) {
+        [Windows.Forms.MessageBox]::Show("Não há linhas visíveis para exportar.", "Controle de NF de Entrada", 0, 64) | Out-Null
+        return
+    }
+    $columns = @($Grid.Columns | Where-Object { $_.Visible } | Sort-Object DisplayIndex)
+    if ($columns.Count -eq 0) { return }
+
+    $dialog = New-Object Windows.Forms.SaveFileDialog
+    $dialog.Title = "Exportar $Title"
+    $dialog.Filter = "Arquivo CSV (*.csv)|*.csv"
+    $dialog.AddExtension = $true
+    $dialog.DefaultExt = "csv"
+    $dialog.FileName = $BaseName + "-" + [DateTime]::Now.ToString("yyyy-MM-dd-HHmm") + ".csv"
+    try {
+        if ($dialog.ShowDialog() -ne [Windows.Forms.DialogResult]::OK) { return }
+        $lines = New-Object 'System.Collections.Generic.List[string]'
+        $header = @($columns | ForEach-Object { ConvertTo-NFCsvField $_.HeaderText }) -join ";"
+        [void]$lines.Add($header)
+        foreach ($row in @($Grid.Rows)) {
+            if ($row.IsNewRow) { continue }
+            $values = foreach ($column in $columns) {
+                ConvertTo-NFCsvField $row.Cells[$column.Index].Value
+            }
+            [void]$lines.Add((@($values) -join ";"))
+        }
+        $encoding = New-Object System.Text.UTF8Encoding($true)
+        [IO.File]::WriteAllText($dialog.FileName, (($lines -join "`r`n") + "`r`n"), $encoding)
+        Set-NFStatus ("$Title exportado(s) para " + $dialog.FileName) "Success"
+        [Windows.Forms.MessageBox]::Show(
+            "$Title exportado(s) com sucesso.`r`n`r`n$($dialog.FileName)`r`n`r`nForam exportadas apenas as linhas que estão visíveis com os filtros atuais.",
+            "Exportação concluída",
+            [Windows.Forms.MessageBoxButtons]::OK,
+            [Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+    }
+    catch {
+        Set-NFStatus ("Falha ao exportar ${Title}: " + $_.Exception.Message) "Error"
+        [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha ao exportar CSV", 0, 16) | Out-Null
+    }
+    finally {
+        $dialog.Dispose()
+    }
 }
 
 function Get-NFHistoryEventById {
@@ -1670,19 +1726,23 @@ Add-NFGridColumn $movementGrid "MovementStatus" "STATUS" 90
 Add-NFGridColumn $movementGrid "MovementReference" "NF DE SAÍDA / REFERÊNCIA" 240 $true
 $movementLayout.Controls.Add($movementGrid,0,1)
 $movementFooter=New-Object Windows.Forms.TableLayoutPanel
-$movementFooter.Dock=[Windows.Forms.DockStyle]::Fill; $movementFooter.ColumnCount=3
+$movementFooter.Dock=[Windows.Forms.DockStyle]::Fill; $movementFooter.ColumnCount=4
 [void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent,100)))
+[void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 [void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 [void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
 $movementCountLabel=New-Object Windows.Forms.Label
 $movementCountLabel.Text="0 movimentação(ões)"; $movementCountLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementCountLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementCountLabel.ForeColor=$script:CurrentPalette.Muted
 $movementFooter.Controls.Add($movementCountLabel,0,0)
+$movementExportButton=New-Object Windows.Forms.Button
+$movementExportButton.Text="EXPORTAR CSV"; $movementExportButton.Width=115; $movementExportButton.Height=32; Set-NFButtonStyle $movementExportButton "Secondary"
+$movementFooter.Controls.Add($movementExportButton,1,0)
 $movementOpenButton=New-Object Windows.Forms.Button
 $movementOpenButton.Text="ABRIR NF"; $movementOpenButton.Width=110; $movementOpenButton.Height=32; $movementOpenButton.Enabled=$false; Set-NFButtonStyle $movementOpenButton "Secondary"
-$movementFooter.Controls.Add($movementOpenButton,1,0)
+$movementFooter.Controls.Add($movementOpenButton,2,0)
 $movementReverseButton=New-Object Windows.Forms.Button
 $movementReverseButton.Text="ESTORNAR SAÍDA"; $movementReverseButton.Width=135; $movementReverseButton.Height=32; $movementReverseButton.Enabled=$false; Set-NFButtonStyle $movementReverseButton "Danger"
-$movementFooter.Controls.Add($movementReverseButton,2,0)
+$movementFooter.Controls.Add($movementReverseButton,3,0)
 $movementLayout.Controls.Add($movementFooter,0,2)
 # HISTÓRICO — consulta auditável das alterações do módulo.
 $historyLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1732,7 +1792,9 @@ $historyButtons = New-Object Windows.Forms.FlowLayoutPanel
 $historyButtons.Dock = [Windows.Forms.DockStyle]::Fill; $historyButtons.FlowDirection = [Windows.Forms.FlowDirection]::RightToLeft
 $historyDetailsButton = New-Object Windows.Forms.Button
 $historyDetailsButton.Text = "VER DETALHES"; $historyDetailsButton.Width = 125; $historyDetailsButton.Height = 32; $historyDetailsButton.Enabled = $false; Set-NFButtonStyle $historyDetailsButton "Secondary"
-$historyButtons.Controls.Add($historyDetailsButton); $historyLayout.Controls.Add($historyButtons, 0, 2)
+$historyExportButton = New-Object Windows.Forms.Button
+$historyExportButton.Text = "EXPORTAR CSV"; $historyExportButton.Width = 115; $historyExportButton.Height = 32; Set-NFButtonStyle $historyExportButton "Secondary"
+$historyButtons.Controls.Add($historyDetailsButton); $historyButtons.Controls.Add($historyExportButton); $historyLayout.Controls.Add($historyButtons, 0, 2)
 
 # SEGURANÇA — backups internos e restauração protegida.
 $securityLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1842,6 +1904,8 @@ $toolTip.SetToolTip($outputButton, "Registrar saída da NF selecionada (Ctrl+S).
 $toolTip.SetToolTip($clearFiltersButton, "Limpa a pesquisa e volta para Em estoque / Todos os códigos.")
 $toolTip.SetToolTip($deleteButton, "Excluir o registro selecionado; o Histórico é preservado.")
 $toolTip.SetToolTip($movementReverseButton, "Estorna a saída ativa sem apagar a movimentação original (Ctrl+Z).")
+$toolTip.SetToolTip($movementExportButton, "Exporta somente as movimentações visíveis com os filtros atuais para CSV compatível com Excel.")
+$toolTip.SetToolTip($historyExportButton, "Exporta somente os eventos visíveis do Histórico para CSV compatível com Excel.")
 $toolTip.SetToolTip($integrityButton, "Audita base, duplicidades, pendências, modelo Excel, backups e arquivos temporários.")
 
 $computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })
@@ -1869,6 +1933,7 @@ $movementGrid.Add_SelectionChanged({
 })
 $movementGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Open-NFFromMovement } })
 $movementGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::Z) { $_.SuppressKeyPress=$true; Reverse-NFMovementFromUI } })
+$movementExportButton.Add_Click({ Export-NFGridViewToCsv -Grid $movementGrid -BaseName "Movimentacoes-NF-Entrada" -Title "Movimentações" })
 $movementOpenButton.Add_Click({ Open-NFFromMovement })
 $movementReverseButton.Add_Click({ Reverse-NFMovementFromUI })
 $reviewIssuesButton.Add_Click({ Show-NFReviewIssues })
@@ -1878,6 +1943,7 @@ $historyFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { 
 $historyTypeFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
 $historyGrid.Add_SelectionChanged({ $historyDetailsButton.Enabled = ($historyGrid.SelectedRows.Count -gt 0) })
 $historyGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Show-NFHistoryDetails } })
+$historyExportButton.Add_Click({ Export-NFGridViewToCsv -Grid $historyGrid -BaseName "Historico-NF-Entrada" -Title "Histórico" })
 $historyDetailsButton.Add_Click({ Show-NFHistoryDetails })
 $backupGrid.Add_SelectionChanged({ $restoreBackupButton.Enabled = ($backupGrid.SelectedRows.Count -gt 0 -and [string]$backupGrid.SelectedRows[0].Cells["BackupStatus"].Value -eq "Pronto") })
 $integrityButton.Add_Click({ Show-NFIntegrityReport })
