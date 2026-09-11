@@ -31,7 +31,7 @@ old_anchor = '''function Refresh-NFHistory {
     if ($null -eq $historyGrid) { return }'''
 new_anchor = '''function Get-NFHistoryActionLabel {
     param([string]$Type)
-    return switch ($Type) {
+    $label = switch ($Type) {
         "Adicao" { "Adição" }
         "Edicao" { "Edição" }
         "Exclusao" { "Exclusão" }
@@ -42,6 +42,7 @@ new_anchor = '''function Get-NFHistoryActionLabel {
         "Exportacao" { "Exportação" }
         default { $Type }
     }
+    return $label
 }
 
 function Refresh-NFHistory {
