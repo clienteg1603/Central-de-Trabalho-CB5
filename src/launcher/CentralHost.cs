@@ -2,12 +2,17 @@ using System;
 using System.IO;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
 internal static class Program
 {
     private const string SelfTestSwitch = "--self-test";
+    private const string AppUserModelId = "CentralDeTrabalho.Desktop";
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
 
     [STAThread]
     private static int Main(string[] args)
@@ -20,6 +25,7 @@ internal static class Program
             return RunSelfTest(appRoot);
         }
 
+        ApplyShellIdentity();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
@@ -70,6 +76,19 @@ internal static class Program
         {
             ShowFatal(ex.Message);
             return 1;
+        }
+    }
+
+    private static void ApplyShellIdentity()
+    {
+        try
+        {
+            SetCurrentProcessExplicitAppUserModelID(AppUserModelId);
+        }
+        catch
+        {
+            // A identidade explícita melhora agrupamento/fixação na barra de tarefas,
+            // mas nunca deve impedir a abertura da Central em Windows incompatível.
         }
     }
 
