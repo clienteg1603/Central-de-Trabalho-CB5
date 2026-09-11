@@ -1,0 +1,18 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -310,6 +310,7 @@ function Refresh-NFMovements {
+     $movementGrid.Rows.Clear()
+     $shown = 0
+     $qtyShown = 0
++    $reversedShown = 0
+     $today = [DateTime]::Today
+@@ -328,8 +329,9 @@ function Refresh-NFMovements {
+         $displayProduct = Get-NFEntradaProductDisplayName ([string]$item.Produto)
+         if ($productFilter -ne "Todos" -and $displayProduct -ne $productFilter) { continue }
+-        $search = (($displayProduct + " " + [string]$item.NFEntrada + " " + [string]$item.Referencia)).ToLowerInvariant()
++        $status = Get-NFEntradaMovementStatus -Movement $item
++        $search = (($displayProduct + " " + [string]$item.NFEntrada + " " + [string]$item.Referencia + " " + $status + " " + [string]$item.MotivoEstorno)).ToLowerInvariant()
+         if (-not [string]::IsNullOrWhiteSpace($filter) -and -not $search.Contains($filter)) { continue }
+-        [void]$movementGrid.Rows.Add(
++        $rowIndex = $movementGrid.Rows.Add(
