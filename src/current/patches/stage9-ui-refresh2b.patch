@@ -1,0 +1,15 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -348,7 +348,14 @@
+         )
+         $shown++
+-        $qtyShown += [int]$item.Quantidade
++        if ($status -eq "Estornada") {
++            $reversedShown++
++            $row = $movementGrid.Rows[$rowIndex]
++            $row.DefaultCellStyle.BackColor = $script:CurrentPalette.DangerBack
++            $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Danger
++        }
++        else { $qtyShown += [int]$item.Quantidade }
+     }
