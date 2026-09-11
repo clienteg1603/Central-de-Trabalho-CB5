@@ -1,0 +1,88 @@
+name: Fix NF Entrada import runtime temporary
+
+on:
+  push:
+    paths:
+      - 'src/current/NFIMPORT_FIX_READY'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir importação e preparar v0.21.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          core = Path(r'src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1')
+          text = core.read_text(encoding='utf-8-sig')
+          replacements = {
+              'New-Object IO.StreamReader($stream, [Text.Encoding]::UTF8, $true)': '[IO.StreamReader]::new($stream, [Text.Encoding]::UTF8, $true)',
+              'New-Object Xml.XmlNamespaceManager($doc.NameTable)': '[Xml.XmlNamespaceManager]::new($doc.NameTable)',
+              'New-Object Collections.Generic.List[string]': '[Collections.Generic.List[string]]::new()',
+              'New-Object Collections.Generic.List[object]': '[Collections.Generic.List[object]]::new()',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Trecho esperado não encontrado no core: {old}')
+              text = text.replace(old, new)
+          core.write_text(text, encoding='utf-8')
+
+          central = Path(r'src/generated/Central de Trabalho.ps1')
+          c = central.read_text(encoding='utf-8-sig')
+          if '$script:AppVersion = "0.21.0"' not in c:
+              raise SystemExit('Versão 0.21.0 da Central não encontrada.')
+          c = c.replace('$script:AppVersion = "0.21.0"', '$script:AppVersion = "0.21.1"', 1)
+          c = c.replace('$script:NFEntradaVersion = "1.0.0"', '$script:NFEntradaVersion = "1.0.1"', 1)
+          central.write_text(c, encoding='utf-8')
+
+          module = Path(r'src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1')
+          m = module.read_text(encoding='utf-8-sig')
+          if '$script:ModuleVersion = "1.0.0"' not in m:
+              raise SystemExit('Versão 1.0.0 do módulo NF Entrada não encontrada.')
+          module.write_text(m.replace('$script:ModuleVersion = "1.0.0"', '$script:ModuleVersion = "1.0.1"', 1), encoding='utf-8')
+
+          workflow = Path(r'.github/workflows/build-test-package-v2.yml')
+          w = workflow.read_text(encoding='utf-8')
+          test_line = '          & ".\\src\\ci\\test_nfentrada_import.ps1" -CorePath ".\\src\\generated\\Modulos\\Controle-NF-Entrada\\NFEntrada.Core.ps1"\n\n'
+          marker = '          $centralSmoke = Start-Process -FilePath (Join-Path $smokeRoot "Central de Trabalho.exe")'
+          if 'test_nfentrada_import.ps1' not in w:
+              if marker not in w:
+                  raise SystemExit('Ponto de inserção do teste de importação não encontrado no workflow.')
+              w = w.replace(marker, test_line + marker, 1)
+              workflow.write_text(w, encoding='utf-8')
+
+          meta = {
+              'version': '0.21.1',
+              'buildRevision': 1,
+              'releaseNotes': [
+                  'Corrige a falha ao importar a planilha NF DE ENTRADA que exibia “Os tipos de argumento não correspondem” no Windows PowerShell.',
+                  'A leitura interna do arquivo XLSX passa a usar construtores .NET explícitos para StreamReader, XmlNamespaceManager e coleções genéricas, evitando incompatibilidade do binder do Windows PowerShell.',
+                  'A importação continua trabalhando por cópia: a planilha escolhida pelo usuário não é movida, renomeada nem excluída; uma cópia idêntica é mantida como modelo protegido em AppData.',
+                  'Foi adicionado um teste automático real que cria uma planilha XLSX de controle, importa os dois produtos, confere os registros e verifica por SHA-256 que o arquivo original permaneceu no lugar e sem alterações.',
+                  'Controle de NF de Entrada passa para v1.0.1; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.',
+                  'A v0.20.2 permanece Estável; a v0.21.1 é publicada somente no canal Teste até validação no computador do usuário.'
+              ]
+          }
+          Path(r'src/current/version.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+          & ".\src\ci\test_nfentrada_import.ps1" -CorePath ".\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
+          & ".\src\ci\parse_powershell.ps1" -Root ".\src\generated"
+
+          Remove-Item -LiteralPath "src/current/NFIMPORT_FIX_READY" -Force
+          git config user.name "Central de Trabalho Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Corrige importação da planilha NF de Entrada e prepara v0.21.1"
+          git push
