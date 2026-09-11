@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.20.3"
+$script:AppVersion = "0.21.0"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.3"
 $script:MaintenanceVersion = "0.6.1"
@@ -52,6 +52,14 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
+$script:NFEntradaVersion = "1.0.0"
+$script:NFEntradaDirectory = [IO.Path]::Combine(
+    $script:RootPath,
+    "Modulos",
+    "Controle-NF-Entrada"
+)
+$script:NFEntradaScript = [IO.Path]::Combine($script:NFEntradaDirectory, "Controle NF Entrada.ps1")
+$script:NFEntradaCore = [IO.Path]::Combine($script:NFEntradaDirectory, "NFEntrada.Core.ps1")
 $script:UpdaterDirectory = [IO.Path]::Combine($script:RootPath, "Atualizador")
 $script:UpdaterExecutable = [IO.Path]::Combine($script:UpdaterDirectory, "Central de Trabalho Updater.exe")
 $script:UpdaterScript = [IO.Path]::Combine($script:UpdaterDirectory, "Central de Trabalho Updater.ps1")
@@ -307,18 +315,22 @@ function Set-StatusMessage {
 function Get-CentralHealthSnapshot {
     $generatorRequired = @($script:GeneratorScript, $script:GeneratorCore)
     $maintenanceRequired = @($script:MaintenanceScript, $script:MaintenanceCore)
+    $nfEntradaRequired = @($script:NFEntradaScript, $script:NFEntradaCore)
     $updaterRequired = @($script:UpdaterExecutable, $script:UpdaterScript, $script:UpdaterCore, $script:UpdaterChannels)
 
     $generatorMissing = @($generatorRequired | Where-Object { -not [IO.File]::Exists($_) })
     $maintenanceMissing = @($maintenanceRequired | Where-Object { -not [IO.File]::Exists($_) })
+    $nfEntradaMissing = @($nfEntradaRequired | Where-Object { -not [IO.File]::Exists($_) })
     $updaterMissing = @($updaterRequired | Where-Object { -not [IO.File]::Exists($_) })
 
     [pscustomobject]@{
         GeneratorAvailable = ($generatorMissing.Count -eq 0)
         MaintenanceAvailable = ($maintenanceMissing.Count -eq 0)
+        NFEntradaAvailable = ($nfEntradaMissing.Count -eq 0)
         UpdaterAvailable = ($updaterMissing.Count -eq 0)
         GeneratorMissing = $generatorMissing
         MaintenanceMissing = $maintenanceMissing
+        NFEntradaMissing = $nfEntradaMissing
         UpdaterMissing = $updaterMissing
     }
 }
@@ -396,15 +408,32 @@ function Show-Dashboard {
 }
 
 function Start-EmbeddedModule {
-    param([ValidateSet("Generator", "Maintenance")][string]$Module)
+    param([ValidateSet("Generator", "Maintenance", "NFEntrada")][string]$Module)
 
-    $moduleScript = if ($Module -eq "Generator") { $script:GeneratorScript } else { $script:MaintenanceScript }
-    $moduleName = if ($Module -eq "Generator") { "Gerenciador de Planilhas" } else { "Central de Manutenção CB5" }
-    $moduleVersion = if ($Module -eq "Generator") { $script:GeneratorVersion } else { $script:MaintenanceVersion }
+    switch ($Module) {
+        "Generator" {
+            $moduleScript = $script:GeneratorScript
+            $moduleName = "Gerenciador de Planilhas"
+            $moduleVersion = $script:GeneratorVersion
+        }
+        "Maintenance" {
+            $moduleScript = $script:MaintenanceScript
+            $moduleName = "Central de Manutenção CB5"
+            $moduleVersion = $script:MaintenanceVersion
+        }
+        default {
+            $moduleScript = $script:NFEntradaScript
+            $moduleName = "Controle de NF de Entrada"
+            $moduleVersion = $script:NFEntradaVersion
+        }
+    }
 
     $health = Get-CentralHealthSnapshot
-    $moduleAvailable = if ($Module -eq "Generator") { $health.GeneratorAvailable } else { $health.MaintenanceAvailable }
-    $moduleMissing = if ($Module -eq "Generator") { @($health.GeneratorMissing) } else { @($health.MaintenanceMissing) }
+    switch ($Module) {
+        "Generator" { $moduleAvailable = $health.GeneratorAvailable; $moduleMissing = @($health.GeneratorMissing) }
+        "Maintenance" { $moduleAvailable = $health.MaintenanceAvailable; $moduleMissing = @($health.MaintenanceMissing) }
+        default { $moduleAvailable = $health.NFEntradaAvailable; $moduleMissing = @($health.NFEntradaMissing) }
+    }
     if (-not $moduleAvailable) {
         $missingText = Format-MissingCentralFiles $moduleMissing
         Set-StatusMessage "Não foi possível abrir: instalação do módulo incompleta." "Error"
@@ -468,7 +497,7 @@ function Start-EmbeddedModule {
         $script:EmbeddedModule = $Module
         try {
             if ($null -ne $embeddedAccentLine) {
-                $embeddedAccentLine.BackColor = if ($Module -eq "Generator") { Get-ModuleAccent "Generator" } else { Get-ModuleAccent "Maintenance" }
+                $embeddedAccentLine.BackColor = if ($Module -eq "Generator") { Get-ModuleAccent "Generator" } elseif ($Module -eq "Maintenance") { Get-ModuleAccent "Maintenance" } else { Get-ModuleAccent "NFEntrada" }
             }
         } catch {}
 
@@ -533,6 +562,10 @@ function Start-MaintenanceModule {
     Start-EmbeddedModule "Maintenance"
 }
 
+function Start-NFEntradaModule {
+    Start-EmbeddedModule "NFEntrada"
+}
+
 function Start-UpdaterModule {
     if ($null -ne $script:UpdaterProcess) {
         try {
@@ -589,13 +622,19 @@ function Get-SidebarColor {
 }
 
 function Get-ModuleAccent {
-    param([ValidateSet("Generator", "Maintenance")][string]$Module)
+    param([ValidateSet("Generator", "Maintenance", "NFEntrada")][string]$Module)
     $theme = [string]$themeCombo.SelectedItem
     if ($Module -eq "Generator") {
         if ($theme -eq "Claro corporativo") { return [Drawing.Color]::FromArgb(13, 142, 158) }
         if ($theme -eq "Técnico industrial") { return [Drawing.Color]::FromArgb(44, 189, 197) }
         if ($theme -eq "Alto contraste") { return [Drawing.Color]::Cyan }
         return [Drawing.Color]::FromArgb(33, 156, 211)
+    }
+    if ($Module -eq "NFEntrada") {
+        if ($theme -eq "Claro corporativo") { return [Drawing.Color]::FromArgb(117, 90, 200) }
+        if ($theme -eq "Técnico industrial") { return [Drawing.Color]::FromArgb(155, 120, 255) }
+        if ($theme -eq "Alto contraste") { return [Drawing.Color]::Fuchsia }
+        return [Drawing.Color]::FromArgb(139, 92, 246)
     }
     if ($theme -eq "Claro corporativo") { return [Drawing.Color]::FromArgb(220, 111, 24) }
     if ($theme -eq "Técnico industrial") { return [Drawing.Color]::FromArgb(244, 142, 40) }
@@ -716,10 +755,12 @@ function Update-CentralAvailabilityState {
         $health = Get-CentralHealthSnapshot
         $generatorAvailable = [bool]$health.GeneratorAvailable
         $maintenanceAvailable = [bool]$health.MaintenanceAvailable
+        $nfEntradaAvailable = [bool]$health.NFEntradaAvailable
         $updaterAvailable = [bool]$health.UpdaterAvailable
         $generatorFolderAvailable = [IO.Directory]::Exists($script:GeneratorDirectory)
         $maintenanceFolderAvailable = [IO.Directory]::Exists($script:MaintenanceDirectory)
-        $moduleCount = ([int]$generatorAvailable + [int]$maintenanceAvailable)
+        $nfEntradaFolderAvailable = [IO.Directory]::Exists($script:NFEntradaDirectory)
+        $moduleCount = ([int]$generatorAvailable + [int]$maintenanceAvailable + [int]$nfEntradaAvailable)
 
         if ($null -ne $script:UpdaterProcess) {
             try {
@@ -730,21 +771,19 @@ function Update-CentralAvailabilityState {
             } catch { $script:UpdaterProcess = $null }
         }
 
-        if ($null -ne $openGeneratorButton) {
-            $openGeneratorButton.Enabled = ($generatorAvailable -and -not $script:ModuleLoading)
-            $openGeneratorButton.Cursor = if ($openGeneratorButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
-        }
-        if ($null -ne $openMaintenanceButton) {
-            $openMaintenanceButton.Enabled = ($maintenanceAvailable -and -not $script:ModuleLoading)
-            $openMaintenanceButton.Cursor = if ($openMaintenanceButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
-        }
-        if ($null -ne $openGeneratorFolderButton) {
-            $openGeneratorFolderButton.Enabled = ($generatorFolderAvailable -and -not $script:ModuleLoading)
-            $openGeneratorFolderButton.Cursor = if ($openGeneratorFolderButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
-        }
-        if ($null -ne $openMaintenanceFolderButton) {
-            $openMaintenanceFolderButton.Enabled = ($maintenanceFolderAvailable -and -not $script:ModuleLoading)
-            $openMaintenanceFolderButton.Cursor = if ($openMaintenanceFolderButton.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+        foreach ($pair in @(
+            @($openGeneratorButton, $generatorAvailable),
+            @($openMaintenanceButton, $maintenanceAvailable),
+            @($openNFEntradaButton, $nfEntradaAvailable),
+            @($openGeneratorFolderButton, $generatorFolderAvailable),
+            @($openMaintenanceFolderButton, $maintenanceFolderAvailable),
+            @($openNFEntradaFolderButton, $nfEntradaFolderAvailable)
+        )) {
+            $button = $pair[0]
+            if ($null -ne $button) {
+                $button.Enabled = ([bool]$pair[1] -and -not $script:ModuleLoading)
+                $button.Cursor = if ($button.Enabled) { [Windows.Forms.Cursors]::Hand } else { [Windows.Forms.Cursors]::Default }
+            }
         }
         if ($null -ne $navUpdates) {
             $navUpdates.Enabled = ($updaterAvailable -and -not $script:ModuleLoading)
@@ -758,27 +797,31 @@ function Update-CentralAvailabilityState {
         }
         if ($null -ne $themeCombo) { $themeCombo.Enabled = (-not $script:ModuleLoading) }
 
-        if ($null -ne $generatorStatus) {
-            $generatorStatus.Text = if ($generatorAvailable) { "  DISPONÍVEL  " } elseif ($generatorFolderAvailable) { "  INCOMPLETO  " } else { "  INDISPONÍVEL  " }
-            $generatorStatus.BackColor = if ($generatorAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
-            $generatorStatus.ForeColor = if ($generatorAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
-        }
-        if ($null -ne $maintenanceStatus) {
-            $maintenanceStatus.Text = if ($maintenanceAvailable) { "  DISPONÍVEL  " } elseif ($maintenanceFolderAvailable) { "  INCOMPLETO  " } else { "  INDISPONÍVEL  " }
-            $maintenanceStatus.BackColor = if ($maintenanceAvailable) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
-            $maintenanceStatus.ForeColor = if ($maintenanceAvailable) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
+        foreach ($entry in @(
+            @($generatorStatus, $generatorAvailable, $generatorFolderAvailable),
+            @($maintenanceStatus, $maintenanceAvailable, $maintenanceFolderAvailable),
+            @($nfEntradaStatus, $nfEntradaAvailable, $nfEntradaFolderAvailable)
+        )) {
+            $status = $entry[0]
+            if ($null -ne $status) {
+                $available = [bool]$entry[1]
+                $folderAvailable = [bool]$entry[2]
+                $status.Text = if ($available) { "  DISPONÍVEL  " } elseif ($folderAvailable) { "  INCOMPLETO  " } else { "  INDISPONÍVEL  " }
+                $status.BackColor = if ($available) { $script:CurrentPalette.SuccessBack } else { $script:CurrentPalette.PlannedBack }
+                $status.ForeColor = if ($available) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Planned }
+            }
         }
 
         if ($null -ne $sidebarStatus -and $null -ne $sidebarStatusSub) {
-            if ($generatorAvailable -and $maintenanceAvailable -and $updaterAvailable) {
+            if ($generatorAvailable -and $maintenanceAvailable -and $nfEntradaAvailable -and $updaterAvailable) {
                 $sidebarStatus.Text = "●  Sistema pronto"
-                $sidebarStatusSub.Text = "2 módulos disponíveis"
+                $sidebarStatusSub.Text = "3 módulos disponíveis"
                 $sidebarStatus.ForeColor = $script:CurrentPalette.Success
             }
             else {
                 $sidebarStatus.Text = "●  Atenção"
-                if ($moduleCount -lt 2) {
-                    $sidebarStatusSub.Text = "$moduleCount de 2 módulos disponíveis"
+                if ($moduleCount -lt 3) {
+                    $sidebarStatusSub.Text = "$moduleCount de 3 módulos disponíveis"
                 }
                 elseif (-not $updaterAvailable) {
                     $sidebarStatusSub.Text = "Atualizador não localizado"
@@ -792,7 +835,7 @@ function Update-CentralAvailabilityState {
         if ($null -ne $sidebarVersion) { $sidebarVersion.Text = "Central v$($script:AppVersion)" }
         if ($null -ne $todayLabel) { $todayLabel.Text = (Get-Date).ToString("dd/MM/yyyy") }
 
-        $signature = "$generatorAvailable|$maintenanceAvailable|$updaterAvailable|$generatorFolderAvailable|$maintenanceFolderAvailable|$(@($health.GeneratorMissing).Count)|$(@($health.MaintenanceMissing).Count)|$(@($health.UpdaterMissing).Count)|$($script:ModuleLoading)"
+        $signature = "$generatorAvailable|$maintenanceAvailable|$nfEntradaAvailable|$updaterAvailable|$generatorFolderAvailable|$maintenanceFolderAvailable|$nfEntradaFolderAvailable|$(@($health.GeneratorMissing).Count)|$(@($health.MaintenanceMissing).Count)|$(@($health.NFEntradaMissing).Count)|$(@($health.UpdaterMissing).Count)|$($script:ModuleLoading)"
         if ($script:LastAvailabilitySignature -ne $signature) {
             $script:LastAvailabilitySignature = $signature
             try { $form.Invalidate($false) } catch {}
@@ -809,6 +852,7 @@ function Apply-AppTheme {
     $sidebarColor = Get-SidebarColor $selectedTheme
     $generatorAccent = Get-ModuleAccent "Generator"
     $maintenanceAccent = Get-ModuleAccent "Maintenance"
+    $nfEntradaAccent = Get-ModuleAccent "NFEntrada"
 
     try { Set-CentralTitleBarTheme ($selectedTheme -ne "Claro corporativo") } catch {}
     try {
@@ -833,21 +877,21 @@ function Apply-AppTheme {
         $sidebarStatusSub.ForeColor = [Drawing.Color]::FromArgb(161, 179, 197)
     } catch {}
     try {
-        foreach ($label in @($pageTitle, $programsTitle, $generatorTitle, $maintenanceTitle, $todayLabel, $embeddedTitle)) {
+        foreach ($label in @($pageTitle, $programsTitle, $generatorTitle, $maintenanceTitle, $nfEntradaTitle, $todayLabel, $embeddedTitle)) {
             if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Text }
         }
-        foreach ($label in @($pageSubtitle, $programsSubtitle, $generatorDescription, $generatorDetail, $maintenanceDescription, $maintenanceDetail, $embeddedSubtitle, $embeddedLoading)) {
+        foreach ($label in @($pageSubtitle, $programsSubtitle, $generatorDescription, $generatorDetail, $maintenanceDescription, $maintenanceDetail, $nfEntradaDescription, $nfEntradaDetail, $embeddedSubtitle, $embeddedLoading)) {
             if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Muted }
         }
     } catch {}
     try {
-        foreach ($panel in @($generatorCard, $maintenanceCard)) {
+        foreach ($panel in @($generatorCard, $maintenanceCard, $nfEntradaCard)) {
             if ($null -ne $panel) {
                 $panel.BackColor = $script:CurrentPalette.Card
                 $panel.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
             }
         }
-        foreach ($layout in @($generatorLayout, $maintenanceLayout)) {
+        foreach ($layout in @($generatorLayout, $maintenanceLayout, $nfEntradaLayout)) {
             if ($null -ne $layout) { $layout.BackColor = $script:CurrentPalette.Card }
         }
         $generatorAccentBar.BackColor = $generatorAccent
@@ -856,10 +900,15 @@ function Apply-AppTheme {
         $maintenanceAccentBar.BackColor = $maintenanceAccent
         $maintenanceIcon.BackColor = $maintenanceAccent
         $maintenanceIcon.ForeColor = [Drawing.Color]::White
+        $nfEntradaAccentBar.BackColor = $nfEntradaAccent
+        $nfEntradaIcon.BackColor = $nfEntradaAccent
+        $nfEntradaIcon.ForeColor = [Drawing.Color]::White
         $generatorStatus.BackColor = $script:CurrentPalette.SuccessBack
         $generatorStatus.ForeColor = $script:CurrentPalette.Success
         $maintenanceStatus.BackColor = $script:CurrentPalette.SuccessBack
         $maintenanceStatus.ForeColor = $script:CurrentPalette.Success
+        $nfEntradaStatus.BackColor = $script:CurrentPalette.SuccessBack
+        $nfEntradaStatus.ForeColor = $script:CurrentPalette.Success
     } catch {}
     try {
         $themeCombo.BackColor = $script:CurrentPalette.Input
@@ -873,20 +922,24 @@ function Apply-AppTheme {
         Set-PrimaryButtonStyle $openMaintenanceButton
         $openMaintenanceButton.BackColor = $maintenanceAccent
         $openMaintenanceButton.ForeColor = [Drawing.Color]::White
+        Set-PrimaryButtonStyle $openNFEntradaButton
+        $openNFEntradaButton.BackColor = $nfEntradaAccent
+        $openNFEntradaButton.ForeColor = [Drawing.Color]::White
         Set-SecondaryButtonStyle $openGeneratorFolderButton
         Set-SecondaryButtonStyle $openMaintenanceFolderButton
+        Set-SecondaryButtonStyle $openNFEntradaFolderButton
         if ($null -ne $embeddedBackButton) { Set-SecondaryButtonStyle $embeddedBackButton }
         if ($null -ne $embeddedFolderButton) { Set-SecondaryButtonStyle $embeddedFolderButton }
     } catch {}
     try {
         $headerAccent.BackColor = $script:CurrentPalette.Accent
         if ($null -ne $embeddedAccentLine) {
-            $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } else { $script:CurrentPalette.Accent }
+            $embeddedAccentLine.BackColor = if ($script:EmbeddedModule -eq "Generator") { $generatorAccent } elseif ($script:EmbeddedModule -eq "Maintenance") { $maintenanceAccent } elseif ($script:EmbeddedModule -eq "NFEntrada") { $nfEntradaAccent } else { $script:CurrentPalette.Accent }
         }
     } catch {}
     try { Update-CentralAvailabilityState } catch {}
     try {
-        foreach ($rounded in @($generatorCard,$maintenanceCard,$brandMark,$generatorIcon,$maintenanceIcon,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton)) {
+        foreach ($rounded in @($generatorCard,$maintenanceCard,$nfEntradaCard,$brandMark,$generatorIcon,$maintenanceIcon,$nfEntradaIcon,$openGeneratorButton,$openMaintenanceButton,$openNFEntradaButton,$openGeneratorFolderButton,$openMaintenanceFolderButton,$openNFEntradaFolderButton)) {
             if ($null -ne $rounded) { Set-RoundedRegion $rounded 10 }
         }
     } catch {}
@@ -902,14 +955,14 @@ function Update-ResponsiveLayout {
 
         if ($twoColumns) {
             $moduleWidth = [int](($availableWidth - 22) / 2)
-            $moduleHeight = [Math]::Min(252, [Math]::Max(220, $availableHeight - 10))
+            $moduleHeight = [Math]::Min(230, [Math]::Max(205, [int](($availableHeight - 22) / 2)))
         }
         else {
             $moduleWidth = $availableWidth
-            $moduleHeight = [Math]::Min(238, [Math]::Max(205, [int](($availableHeight - 26) / 2)))
+            $moduleHeight = [Math]::Min(215, [Math]::Max(195, [int](($availableHeight - 40) / 3)))
         }
 
-        foreach ($card in @($generatorCard, $maintenanceCard)) {
+        foreach ($card in @($generatorCard, $maintenanceCard, $nfEntradaCard)) {
             if ($null -ne $card) {
                 $card.Width = $moduleWidth
                 $card.Height = $moduleHeight
@@ -917,20 +970,21 @@ function Update-ResponsiveLayout {
         }
 
         $compactCard = ($moduleWidth -lt 560)
-        foreach ($titleLabel in @($generatorTitle, $maintenanceTitle)) {
+        foreach ($titleLabel in @($generatorTitle, $maintenanceTitle, $nfEntradaTitle)) {
             if ($null -ne $titleLabel) {
                 $titleLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", $(if ($compactCard) { 12.5 } else { 14.5 }))
                 $titleLabel.AutoEllipsis = $true
             }
         }
-        foreach ($description in @($generatorDescription, $maintenanceDescription, $generatorDetail, $maintenanceDetail)) {
+        foreach ($description in @($generatorDescription, $maintenanceDescription, $generatorDetail, $maintenanceDetail, $nfEntradaDescription, $nfEntradaDetail)) {
             if ($null -ne $description) { $description.AutoEllipsis = $true }
         }
 
         $openGeneratorButton.Text = if ($moduleWidth -lt 470) { "ABRIR" } else { "ABRIR GERENCIADOR" }
         $openMaintenanceButton.Text = if ($moduleWidth -lt 470) { "ABRIR" } else { "ABRIR MANUTENÇÃO" }
+        $openNFEntradaButton.Text = if ($moduleWidth -lt 470) { "ABRIR" } else { "ABRIR CONTROLE" }
 
-        foreach ($openButton in @($openGeneratorButton, $openMaintenanceButton)) {
+        foreach ($openButton in @($openGeneratorButton, $openMaintenanceButton, $openNFEntradaButton)) {
             try {
                 $buttonHost = $openButton.Parent
                 if ($buttonHost -is [Windows.Forms.TableLayoutPanel] -and $buttonHost.ColumnStyles.Count -ge 2) {
@@ -1284,7 +1338,7 @@ $sidebarStatus.Font = [Drawing.Font]::new("Segoe UI Semibold", 9)
 $sidebarBottom.Controls.Add($sidebarStatus)
 
 $sidebarStatusSub = New-Object Windows.Forms.Label
-$sidebarStatusSub.Text = "2 módulos disponíveis"
+$sidebarStatusSub.Text = "3 módulos disponíveis"
 $sidebarStatusSub.Location = [Drawing.Point]::new(20, 98)
 $sidebarStatusSub.Size = [Drawing.Size]::new(170, 20)
 $sidebarStatusSub.Font = [Drawing.Font]::new("Segoe UI", 8)
@@ -1593,8 +1647,11 @@ $g = New-ModuleCard "XLS" "Gerenciador de Planilhas" "Prepara mestres CB5 e TV5,
 $generatorCard=$g[0]; $generatorOuter=$g[1]; $generatorLayout=$g[2]; $generatorAccentBar=$g[3]; $generatorIcon=$g[4]; $generatorStatus=$g[5]; $generatorTitle=$g[6]; $generatorDescription=$g[7]; $generatorDetail=$g[8]; $openGeneratorButton=$g[9]; $openGeneratorFolderButton=$g[10]
 $m = New-ModuleCard "CB5" "Central de Manutenção CB5" "Cadastro de peças por código, histórico automático por série, correção auditada, relatórios e apoio ao diagnóstico." "Versão integrada: $($script:MaintenanceVersion)   •   Histórico local por série" "ABRIR MANUTENÇÃO"
 $maintenanceCard=$m[0]; $maintenanceOuter=$m[1]; $maintenanceLayout=$m[2]; $maintenanceAccentBar=$m[3]; $maintenanceIcon=$m[4]; $maintenanceStatus=$m[5]; $maintenanceTitle=$m[6]; $maintenanceDescription=$m[7]; $maintenanceDetail=$m[8]; $openMaintenanceButton=$m[9]; $openMaintenanceFolderButton=$m[10]
+$n = New-ModuleCard "NF" "Controle de NF de Entrada" "Controla entradas, saldos e movimentações de Computador de Bordo V5 e Teclado V5 e exporta no modelo original." "Versão integrada: $($script:NFEntradaVersion)   •   Modelo original .xlsx" "ABRIR CONTROLE"
+$nfEntradaCard=$n[0]; $nfEntradaOuter=$n[1]; $nfEntradaLayout=$n[2]; $nfEntradaAccentBar=$n[3]; $nfEntradaIcon=$n[4]; $nfEntradaStatus=$n[5]; $nfEntradaTitle=$n[6]; $nfEntradaDescription=$n[7]; $nfEntradaDetail=$n[8]; $openNFEntradaButton=$n[9]; $openNFEntradaFolderButton=$n[10]
 $modulesFlow.Controls.Add($generatorCard)
 $modulesFlow.Controls.Add($maintenanceCard)
+$modulesFlow.Controls.Add($nfEntradaCard)
 
 $footerPanel = New-Object Windows.Forms.Panel
 $footerPanel.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1631,14 +1688,16 @@ $toolTip.SetToolTip($openGeneratorButton, "Abrir o Gerenciador de Planilhas dent
 $toolTip.SetToolTip($openGeneratorFolderButton, "Abrir a pasta do Gerenciador")
 $toolTip.SetToolTip($openMaintenanceButton, "Abrir a Central de Manutenção CB5 dentro da Central")
 $toolTip.SetToolTip($openMaintenanceFolderButton, "Abrir a pasta da Manutenção CB5")
+$toolTip.SetToolTip($openNFEntradaButton, "Abrir o Controle de NF de Entrada dentro da Central")
+$toolTip.SetToolTip($openNFEntradaFolderButton, "Abrir a pasta do Controle de NF de Entrada")
 $toolTip.SetToolTip($embeddedBackButton, "Voltar para a tela inicial da Central de Trabalho (Alt+←)")
 $toolTip.SetToolTip($embeddedFolderButton, "Abrir a pasta do módulo que está em uso")
 
-foreach ($roundedPanel in @($generatorCard,$maintenanceCard)) {
+foreach ($roundedPanel in @($generatorCard,$maintenanceCard,$nfEntradaCard)) {
     Enable-RoundedControl $roundedPanel 12
     Enable-CardHover $roundedPanel
 }
-foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$openGeneratorButton,$openMaintenanceButton,$openGeneratorFolderButton,$openMaintenanceFolderButton)) {
+foreach ($roundedSmall in @($brandMark,$generatorIcon,$maintenanceIcon,$nfEntradaIcon,$openGeneratorButton,$openMaintenanceButton,$openNFEntradaButton,$openGeneratorFolderButton,$openMaintenanceFolderButton,$openNFEntradaFolderButton)) {
     Enable-RoundedControl $roundedSmall 8
 }
 
@@ -1652,6 +1711,8 @@ $openGeneratorButton.TabIndex = 10
 $openGeneratorFolderButton.TabIndex = 11
 $openMaintenanceButton.TabIndex = 12
 $openMaintenanceFolderButton.TabIndex = 13
+$openNFEntradaButton.TabIndex = 14
+$openNFEntradaFolderButton.TabIndex = 15
 $embeddedBackButton.TabIndex = 0
 $embeddedFolderButton.TabIndex = 1
 
@@ -1664,15 +1725,17 @@ $themeCombo.Add_SelectedIndexChanged({
 })
 $openGeneratorButton.Add_Click({ Start-GeneratorModule })
 $openMaintenanceButton.Add_Click({ Start-MaintenanceModule })
+$openNFEntradaButton.Add_Click({ Start-NFEntradaModule })
 $openGeneratorFolderButton.Add_Click({ Open-ModuleFolder $script:GeneratorDirectory "Gerenciador de Planilhas" })
 $openMaintenanceFolderButton.Add_Click({ Open-ModuleFolder $script:MaintenanceDirectory "Central de Manutenção CB5" })
+$openNFEntradaFolderButton.Add_Click({ Open-ModuleFolder $script:NFEntradaDirectory "Controle de NF de Entrada" })
 $navUpdates.Add_Click({ Start-UpdaterModule; Set-ActiveNavigation "Home" })
 $navFolder.Add_Click({ Open-RootFolder; Set-ActiveNavigation "Home" })
 $navHome.Add_Click({ Show-Dashboard })
 $navAbout.Add_Click({
     Set-ActiveNavigation "About"
     [Windows.Forms.MessageBox]::Show(
-        "Central de Trabalho v$($script:AppVersion)`r`n`r`nIntegra o Gerenciador de Planilhas, a Central de Manutenção CB5 e o sistema de atualização.`r`n`r`nInterface integrada e responsiva para os módulos de trabalho, manutenção e atualização.",
+        "Central de Trabalho v$($script:AppVersion)`r`n`r`nIntegra o Gerenciador de Planilhas, a Central de Manutenção CB5, o Controle de NF de Entrada e o sistema de atualização.`r`n`r`nInterface integrada e responsiva para os módulos de trabalho, manutenção e atualização.",
         "Sobre a Central de Trabalho",
         [Windows.Forms.MessageBoxButtons]::OK,
         [Windows.Forms.MessageBoxIcon]::Information
@@ -1688,6 +1751,7 @@ $embeddedBackButton.Add_Click({ Show-Dashboard })
 $embeddedFolderButton.Add_Click({
     if ($script:EmbeddedModule -eq "Generator") { Open-ModuleFolder $script:GeneratorDirectory "Gerenciador de Planilhas" }
     elseif ($script:EmbeddedModule -eq "Maintenance") { Open-ModuleFolder $script:MaintenanceDirectory "Central de Manutenção CB5" }
+    elseif ($script:EmbeddedModule -eq "NFEntrada") { Open-ModuleFolder $script:NFEntradaDirectory "Controle de NF de Entrada" }
 })
 $embeddedHost.Add_SizeChanged({
     try { $embeddedFolderButton.Left = [Math]::Max(380, $embeddedToolbar.ClientSize.Width - $embeddedFolderButton.Width - 12); Update-CentralAdaptiveLayout } catch {}
