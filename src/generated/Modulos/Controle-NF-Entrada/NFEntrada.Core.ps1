@@ -106,7 +106,10 @@ function Get-NFEntradaHistory {
 }
 
 function New-NFEntradaSafetyBackup {
-    param([string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory))
+    param(
+        [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory),
+        [string]$Reason = "Automático"
+    )
     $storePath = Get-NFEntradaStorePath -DataDirectory $DataDirectory
     $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
     $storeExists = [IO.File]::Exists($storePath)
@@ -120,10 +123,23 @@ function New-NFEntradaSafetyBackup {
     [void][IO.Directory]::CreateDirectory($backupDirectory)
     if ($storeExists) { [IO.File]::Copy($storePath, [IO.Path]::Combine($backupDirectory, "nf-entrada.json"), $true) }
     if ($templateExists) { [IO.File]::Copy($templatePath, [IO.Path]::Combine($backupDirectory, "modelo-nf-entrada.xlsx"), $true) }
+    $info = [pscustomobject]@{
+        SchemaVersion = 1
+        DataHora = [DateTime]::Now.ToString("o")
+        Motivo = $Reason
+        StoreExisted = $storeExists
+        TemplateExisted = $templateExists
+    }
+    [IO.File]::WriteAllText(
+        [IO.Path]::Combine($backupDirectory, "backup-info.json"),
+        ($info | ConvertTo-Json -Depth 4),
+        ([Text.UTF8Encoding]::new($true))
+    )
     return [pscustomobject]@{
         Directory = $backupDirectory
         StoreExisted = $storeExists
         TemplateExisted = $templateExists
+        Reason = $Reason
     }
 }
 
@@ -140,6 +156,108 @@ function Restore-NFEntradaSafetyBackup {
     elseif (-not [bool]$Backup.StoreExisted -and [IO.File]::Exists($storePath)) { [IO.File]::Delete($storePath) }
     if ([bool]$Backup.TemplateExisted -and [IO.File]::Exists($backupTemplate)) { [IO.File]::Copy($backupTemplate, $templatePath, $true) }
     elseif (-not [bool]$Backup.TemplateExisted -and [IO.File]::Exists($templatePath)) { [IO.File]::Delete($templatePath) }
+}
+
+function Get-NFEntradaSafetyBackups {
+    param([string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory))
+    $backupRoot = Get-NFEntradaBackupsDirectory -DataDirectory $DataDirectory
+    if (-not [IO.Directory]::Exists($backupRoot)) { return @() }
+    $result = [Collections.Generic.List[object]]::new()
+    foreach ($directory in [IO.Directory]::GetDirectories($backupRoot)) {
+        $storePath = [IO.Path]::Combine($directory, "nf-entrada.json")
+        $templatePath = [IO.Path]::Combine($directory, "modelo-nf-entrada.xlsx")
+        $infoPath = [IO.Path]::Combine($directory, "backup-info.json")
+        $hasStore = [IO.File]::Exists($storePath)
+        $hasTemplate = [IO.File]::Exists($templatePath)
+        $validStore = $false
+        $recordCount = 0
+        if ($hasStore) {
+            try {
+                $stored = Read-NFEntradaStore -Path $storePath
+                $recordCount = @(Get-NFEntradaProductRecords -Store $stored -Product "COMPUTADOR DE BORDO V5").Count + @(Get-NFEntradaProductRecords -Store $stored -Product "TECLADO V5").Count
+                $validStore = $true
+            }
+            catch { $validStore = $false }
+        }
+        $date = [IO.DirectoryInfo]::new($directory).CreationTime
+        $reason = "Automático / legado"
+        if ([IO.File]::Exists($infoPath)) {
+            try {
+                $info = [IO.File]::ReadAllText($infoPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+                $parsed = [DateTime]::MinValue
+                if ([DateTime]::TryParse([string]$info.DataHora, [ref]$parsed)) { $date = $parsed }
+                if (-not [string]::IsNullOrWhiteSpace([string]$info.Motivo)) { $reason = [string]$info.Motivo }
+            }
+            catch {}
+        }
+        else {
+            $name = [IO.Path]::GetFileName($directory)
+            $parsedName = [DateTime]::MinValue
+            if ([DateTime]::TryParseExact($name, "yyyyMMdd-HHmmss-fff", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$parsedName)) { $date = $parsedName }
+        }
+        [void]$result.Add([pscustomobject]@{
+            Directory = $directory
+            DataHora = $date
+            Motivo = $reason
+            TemBase = $hasStore
+            TemModelo = $hasTemplate
+            BaseValida = $validStore
+            Registros = $recordCount
+            Situacao = if ($hasStore -and $validStore) { "Pronto" } else { "Inválido" }
+        })
+    }
+    return @($result | Sort-Object DataHora -Descending)
+}
+
+function Restore-NFEntradaBackupSet {
+    param(
+        [Parameter(Mandatory = $true)][string]$BackupDirectory,
+        [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory)
+    )
+    $backupRoot = [IO.Path]::GetFullPath((Get-NFEntradaBackupsDirectory -DataDirectory $DataDirectory)).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $selected = [IO.Path]::GetFullPath($BackupDirectory).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    if (-not $selected.StartsWith($backupRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "O backup selecionado não pertence ao Controle de NF de Entrada."
+    }
+    if (-not [IO.Directory]::Exists($selected)) { throw "O backup selecionado não foi encontrado." }
+    $backupStore = [IO.Path]::Combine($selected, "nf-entrada.json")
+    $backupTemplate = [IO.Path]::Combine($selected, "modelo-nf-entrada.xlsx")
+    if (-not [IO.File]::Exists($backupStore)) { throw "O backup não contém a base de NF de Entrada." }
+    [void](Read-NFEntradaStore -Path $backupStore)
+    if ([IO.File]::Exists($backupTemplate) -and ([IO.FileInfo]::new($backupTemplate)).Length -le 0) { throw "O modelo Excel do backup está vazio." }
+
+    $recovery = New-NFEntradaSafetyBackup -DataDirectory $DataDirectory -Reason "Antes de restaurar backup"
+    $storePath = Get-NFEntradaStorePath -DataDirectory $DataDirectory
+    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
+    $token = [guid]::NewGuid().ToString("N")
+    $tempStore = $storePath + ".restore-" + $token + ".tmp"
+    $tempTemplate = $templatePath + ".restore-" + $token + ".tmp"
+    try {
+        [IO.File]::Copy($backupStore, $tempStore, $true)
+        [void](Read-NFEntradaStore -Path $tempStore)
+        $restoreTemplate = [IO.File]::Exists($backupTemplate)
+        if ($restoreTemplate) { [IO.File]::Copy($backupTemplate, $tempTemplate, $true) }
+        [IO.File]::Copy($tempStore, $storePath, $true)
+        if ($restoreTemplate) { [IO.File]::Copy($tempTemplate, $templatePath, $true) }
+        elseif ([IO.File]::Exists($templatePath)) { [IO.File]::Delete($templatePath) }
+        $restored = Read-NFEntradaStore -Path $storePath
+        [void](Add-NFEntradaHistoryEvent -Store $restored -Tipo "RestauracaoBackup" -Detalhes ("Backup restaurado: " + [IO.Path]::GetFileName($selected)))
+        Write-NFEntradaStore -Store $restored -Path $storePath
+        return [pscustomobject]@{
+            Store = $restored
+            StorePath = $storePath
+            TemplatePath = $templatePath
+            RecoveryBackupDirectory = if ($null -ne $recovery) { [string]$recovery.Directory } else { "" }
+        }
+    }
+    catch {
+        if ($null -ne $recovery) { try { Restore-NFEntradaSafetyBackup -Backup $recovery -DataDirectory $DataDirectory } catch {} }
+        throw
+    }
+    finally {
+        if ([IO.File]::Exists($tempStore)) { try { [IO.File]::Delete($tempStore) } catch {} }
+        if ([IO.File]::Exists($tempTemplate)) { try { [IO.File]::Delete($tempTemplate) } catch {} }
+    }
 }
 
 function Get-NFEntradaZipEntryText {
