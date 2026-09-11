@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.7.0"
+$script:ModuleVersion = "1.8.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -407,6 +407,7 @@ function Refresh-NFHistory {
             "Importacao" { "Importação" }
             "RestauracaoBackup" { "Restauração" }
             "Saida" { "Saída" }
+            "Exportacao" { "Exportação" }
             default { [string]$event.Tipo }
         }
         if ($type -ne "Todos" -and $label -ne $type) { continue }
@@ -587,6 +588,27 @@ function Show-NFReviewIssues {
     }
 }
 
+function Show-NFExportReadiness {
+    $state = Get-NFEntradaExportReadiness -Store $script:Store -DataDirectory $script:DataDirectory
+    $model = if ($state.ModeloDisponivel) { "OK — modelo oficial disponível" } else { "AUSENTE — importe a planilha oficial novamente" }
+    $statusText = switch ([string]$state.Situacao) {
+        "PRONTO" { "A exportação está pronta. O modelo oficial comporta os registros atuais e não há pendências de conferência." }
+        "REVISAR" { "A exportação pode ser feita, mas existem pendências de conferência. O programa pedirá confirmação antes de gerar o Excel." }
+        default { "A exportação está bloqueada para não quebrar o formato oficial. Corrija o motivo indicado antes de tentar novamente." }
+    }
+    $details = @(
+        "Situação: " + [string]$state.Situacao,
+        "Modelo: " + $model,
+        "Computador de bordo CB5: " + [string]$state.RegistrosComputador + " de " + [string]$state.CapacidadePorProduto + " registros (restam " + [string]$state.RestanteComputador + ")",
+        "Teclado V5: " + [string]$state.RegistrosTeclado + " de " + [string]$state.CapacidadePorProduto + " registros (restam " + [string]$state.RestanteTeclado + ")",
+        "Pendências para revisar: " + [string]$state.Pendencias,
+        "",
+        $statusText
+    ) -join "`r`n"
+    $icon = if ($state.Situacao -eq "PRONTO") { [Windows.Forms.MessageBoxIcon]::Information } elseif ($state.Situacao -eq "REVISAR") { [Windows.Forms.MessageBoxIcon]::Warning } else { [Windows.Forms.MessageBoxIcon]::Error }
+    [Windows.Forms.MessageBox]::Show($details, "Conferir exportação", [Windows.Forms.MessageBoxButtons]::OK, $icon) | Out-Null
+}
+
 function Refresh-NFBackups {
     if ($null -eq $backupGrid) { return }
     $items = @(Get-NFEntradaSafetyBackups -DataDirectory $script:DataDirectory)
@@ -637,6 +659,7 @@ function Restore-NFBackupFromUI {
 function Refresh-NFSummary {
     $summary = Get-NFEntradaSummary -Store $script:Store
     $operational = Get-NFEntradaOperationalMetrics -Store $script:Store
+    $exportState = Get-NFEntradaExportReadiness -Store $script:Store -DataDirectory $script:DataDirectory
     $saldoTotalValue.Text = ([int]$summary.SaldoTotal).ToString("N0")
     $computerBalanceValue.Text = ([int]$summary.Produtos[$script:ComputerProduct].Saldo).ToString("N0")
     $keyboardBalanceValue.Text = ([int]$summary.Produtos[$script:KeyboardProduct].Saldo).ToString("N0")
@@ -646,6 +669,8 @@ function Refresh-NFSummary {
     $piecesSevenValue.Text = ([int]$operational.PecasSaida7Dias).ToString("N0")
     $reviewIssuesValue.Text = ([int]$operational.Pendencias).ToString("N0")
     $reviewIssuesValue.ForeColor = if ([int]$operational.Pendencias -eq 0) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Danger }
+    $exportStatusValue.Text = [string]$exportState.Situacao
+    $exportStatusValue.ForeColor = if ($exportState.Situacao -eq "PRONTO") { $script:CurrentPalette.Success } elseif ($exportState.Situacao -eq "REVISAR") { $script:CurrentPalette.Warning } else { $script:CurrentPalette.Danger }
     if ($null -ne $operational.UltimaMovimentacaoEm) {
         $lastMovementValue.Text = ([DateTime]$operational.UltimaMovimentacaoEm).ToString("dd/MM HH:mm") + " • NF " + [string]$operational.UltimaMovimentacaoNF
     }
@@ -681,8 +706,8 @@ function Refresh-NFAll {
     if ($mainTabs.SelectedTab -eq $movementTab) { Refresh-NFMovements }
     if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }
     if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups }
-    $templateReady = [IO.File]::Exists((Get-NFEntradaTemplatePath -DataDirectory $script:DataDirectory))
-    $exportButton.Enabled = $templateReady
+    $exportReadiness = Get-NFEntradaExportReadiness -Store $script:Store -DataDirectory $script:DataDirectory
+    $exportButton.Enabled = [bool]$exportReadiness.PodeExportar
     $summary = Get-NFEntradaSummary -Store $script:Store
     $totalRecords = [int]$summary.Produtos[$script:ComputerProduct].Registros + [int]$summary.Produtos[$script:KeyboardProduct].Registros
     Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • abas operacionais iniciam em Em estoque") "Normal"
@@ -970,6 +995,24 @@ function Import-NFSourceFromUI {
 }
 
 function Export-NFFromUI {
+    $readiness = Get-NFEntradaExportReadiness -Store $script:Store -DataDirectory $script:DataDirectory
+    if (-not [bool]$readiness.PodeExportar) {
+        Show-NFExportReadiness
+        Set-NFStatus "Exportação bloqueada pela conferência automática." "Error"
+        return
+    }
+    if ([int]$readiness.Pendencias -gt 0) {
+        $answer = [Windows.Forms.MessageBox]::Show(
+            "Existem $($readiness.Pendencias) NF(s) com pendências de conferência.`r`n`r`nA planilha pode ser exportada sem alterar o formato oficial, mas os dados marcados para revisão também serão levados para o Excel.`r`n`r`nDeseja exportar mesmo assim?",
+            "Exportação com pendências",
+            [Windows.Forms.MessageBoxButtons]::YesNo,
+            [Windows.Forms.MessageBoxIcon]::Warning
+        )
+        if ($answer -ne [Windows.Forms.DialogResult]::Yes) {
+            Set-NFStatus "Exportação cancelada para revisão das pendências." "Warning"
+            return
+        }
+    }
     $dialog = New-Object Windows.Forms.SaveFileDialog
     $dialog.Title = "Exportar planilha de NF de Entrada"
     $dialog.Filter = "Planilha do Excel (*.xlsx)|*.xlsx"
@@ -981,7 +1024,12 @@ function Export-NFFromUI {
     $dialog.Dispose()
     try {
         $exported = Export-NFEntradaWorkbook -Store $script:Store -DestinationPath $path
-        Set-NFStatus "Planilha exportada com sucesso." "Success"
+        $exportSummary = Get-NFEntradaSummary -Store $script:Store
+        $exportDetails = "Arquivo: " + [IO.Path]::GetFileName($exported) + " • CB5: " + [string]$exportSummary.Produtos[$script:ComputerProduct].Registros + " registro(s) • Teclado: " + [string]$exportSummary.Produtos[$script:KeyboardProduct].Registros + " registro(s) • Pendências: " + [string]$readiness.Pendencias
+        [void](Add-NFEntradaHistoryEvent -Store $script:Store -Tipo "Exportacao" -Detalhes $exportDetails)
+        Save-NFStore
+        Refresh-NFAll
+        Set-NFStatus "Planilha exportada com sucesso e registrada no histórico." "Success"
         [Windows.Forms.MessageBox]::Show(
             "Planilha exportada com o modelo original, fórmulas, resumo e formatação preservados.`r`n`r`n$exported",
             "Exportação concluída",
@@ -1282,7 +1330,7 @@ $summaryLayout.Controls.Add($conferenceGroup, 1, 0)
 $conference = New-Object Windows.Forms.TableLayoutPanel
 $conference.Dock = [Windows.Forms.DockStyle]::Fill
 $conference.ColumnCount = 2
-$conference.RowCount = 5
+$conference.RowCount = 6
 [void]$conference.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 70)))
 [void]$conference.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 30)))
 $conferenceGroup.Controls.Add($conference)
@@ -1290,12 +1338,14 @@ $missingDateValue = New-Object Windows.Forms.Label
 $negativeValue = New-Object Windows.Forms.Label
 $overEntryValue = New-Object Windows.Forms.Label
 $reviewIssuesValue = New-Object Windows.Forms.Label
+$exportStatusValue = New-Object Windows.Forms.Label
 $generalStatusValue = New-Object Windows.Forms.Label
 $conferenceRows = @(
     @("Datas ausentes", $missingDateValue),
     @("Saldos negativos", $negativeValue),
     @("Saldo maior que a entrada", $overEntryValue),
     @("Pendências para revisar", $reviewIssuesValue),
+    @("Exportação Excel", $exportStatusValue),
     @("Situação geral", $generalStatusValue)
 )
 for ($i = 0; $i -lt $conferenceRows.Count; $i++) {
@@ -1377,12 +1427,27 @@ $lastMovementValue.ForeColor = $script:CurrentPalette.Text
 $lastLayout.Controls.Add($lastMovementValue, 0, 1)
 $activityLayout.Controls.Add($lastPanel, 3, 0)
 
+$summaryActionPanel = New-Object Windows.Forms.FlowLayoutPanel
+$summaryActionPanel.Dock = [Windows.Forms.DockStyle]::Fill
+$summaryActionPanel.FlowDirection = [Windows.Forms.FlowDirection]::TopDown
+$summaryActionPanel.WrapContents = $false
+$summaryActionPanel.Padding = [Windows.Forms.Padding]::new(4, 7, 4, 4)
+$summaryActionPanel.BackColor = $script:CurrentPalette.Card
 $reviewIssuesButton = New-Object Windows.Forms.Button
 $reviewIssuesButton.Text = "VER PENDÊNCIAS"
-$reviewIssuesButton.Dock = [Windows.Forms.DockStyle]::Fill
-$reviewIssuesButton.Margin = [Windows.Forms.Padding]::new(8, 18, 6, 18)
+$reviewIssuesButton.Width = 145
+$reviewIssuesButton.Height = 32
+$reviewIssuesButton.Margin = [Windows.Forms.Padding]::new(2, 2, 2, 5)
 Set-NFButtonStyle $reviewIssuesButton "Secondary"
-$activityLayout.Controls.Add($reviewIssuesButton, 4, 0)
+$exportCheckButton = New-Object Windows.Forms.Button
+$exportCheckButton.Text = "CONFERIR EXPORTAÇÃO"
+$exportCheckButton.Width = 145
+$exportCheckButton.Height = 32
+$exportCheckButton.Margin = [Windows.Forms.Padding]::new(2)
+Set-NFButtonStyle $exportCheckButton "Secondary"
+$summaryActionPanel.Controls.Add($reviewIssuesButton)
+$summaryActionPanel.Controls.Add($exportCheckButton)
+$activityLayout.Controls.Add($summaryActionPanel, 4, 0)
 
 # MOVIMENTAÇÕES
 $movementLayout = New-Object Windows.Forms.TableLayoutPanel
@@ -1479,7 +1544,7 @@ $historyTypeLabel.Text = "Tipo"; $historyTypeLabel.Dock = [Windows.Forms.DockSty
 $historyFilters.Controls.Add($historyTypeLabel, 2, 0)
 $historyTypeFilter = New-Object Windows.Forms.ComboBox
 $historyTypeFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
-[void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Saída", "Exclusão", "Importação", "Restauração"))
+[void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Saída", "Exclusão", "Importação", "Restauração", "Exportação"))
 $historyTypeFilter.SelectedIndex = 0; $historyTypeFilter.Dock = [Windows.Forms.DockStyle]::Fill; $historyTypeFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 8, 8); $historyTypeFilter.BackColor = $script:CurrentPalette.Input; $historyTypeFilter.ForeColor = $script:CurrentPalette.Text
 $historyFilters.Controls.Add($historyTypeFilter, 3, 0)
 $historyCountLabel = New-Object Windows.Forms.Label
@@ -1615,6 +1680,7 @@ $movementGrid.Add_SelectionChanged({ $movementOpenButton.Enabled = ($movementGri
 $movementGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Open-NFFromMovement } })
 $movementOpenButton.Add_Click({ Open-NFFromMovement })
 $reviewIssuesButton.Add_Click({ Show-NFReviewIssues })
+$exportCheckButton.Add_Click({ Show-NFExportReadiness })
 $historyFilter.Add_TextChanged({ Refresh-NFHistory })
 $historyTypeFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
 $historyGrid.Add_SelectionChanged({ $historyDetailsButton.Enabled = ($historyGrid.SelectedRows.Count -gt 0) })

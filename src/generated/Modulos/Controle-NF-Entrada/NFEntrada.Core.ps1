@@ -233,6 +233,45 @@ function Get-NFEntradaOperationalMetrics {
     }
 }
 
+function Get-NFEntradaExportReadiness {
+    param(
+        [Parameter(Mandatory = $true)]$Store,
+        [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory)
+    )
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $capacity = 296
+    $computerCount = @(Get-NFEntradaProductRecords -Store $Store -Product "COMPUTADOR DE BORDO V5").Count
+    $keyboardCount = @(Get-NFEntradaProductRecords -Store $Store -Product "TECLADO V5").Count
+    $computerExcess = [Math]::Max(0, $computerCount - $capacity)
+    $keyboardExcess = [Math]::Max(0, $keyboardCount - $capacity)
+    $review = @(Get-NFEntradaReviewItems -Store $Store)
+    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
+    $templateReady = [IO.File]::Exists($templatePath) -and ([IO.FileInfo]::new($templatePath)).Length -gt 0
+    $blocked = (-not $templateReady) -or (($computerExcess + $keyboardExcess) -gt 0)
+    $situation = if ($blocked) { "BLOQUEADO" } elseif ($review.Count -gt 0) { "REVISAR" } else { "PRONTO" }
+    return [pscustomobject]@{
+        ModeloDisponivel = $templateReady
+        CapacidadePorProduto = $capacity
+        RegistrosComputador = $computerCount
+        RegistrosTeclado = $keyboardCount
+        RestanteComputador = [Math]::Max(0, $capacity - $computerCount)
+        RestanteTeclado = [Math]::Max(0, $capacity - $keyboardCount)
+        ExcessoComputador = $computerExcess
+        ExcessoTeclado = $keyboardExcess
+        Pendencias = $review.Count
+        PodeExportar = (-not $blocked)
+        Situacao = $situation
+    }
+}
+
+function Get-NFEntradaLastExport {
+    param([Parameter(Mandatory = $true)]$Store)
+    foreach ($event in @(Get-NFEntradaHistory -Store $Store)) {
+        if ([string]$event.Tipo -eq "Exportacao") { return $event }
+    }
+    return $null
+}
+
 function New-NFEntradaSafetyBackup {
     param(
         [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory),
