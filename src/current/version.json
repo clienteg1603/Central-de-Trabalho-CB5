@@ -1,12 +1,16 @@
 {
-  "version": "0.21.12",
+  "version": "0.21.13",
   "buildRevision": 1,
   "releaseNotes": [
-    "Ajuste visual na Central de Manutenção CB5 antes da Etapa 10.",
-    "Ao abrir + NOVA PASSAGEM, os cartões de resumo do topo permanecem visíveis, seguindo o mesmo comportamento de Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras / Dados.",
-    "A Nova Passagem deixa de recolher a área de resumo e passa a abrir o formulário abaixo da navegação, preservando a visão geral da manutenção.",
-    "Central de Manutenção CB5 passa para v0.6.2; Controle de NF de Entrada permanece v2.0.0 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A Etapa 9 do Controle de NF de Entrada permanece integralmente preservada.",
-    "A versão Estável permanece v0.20.2; a v0.21.12 é publicada somente no canal Teste."
+    "Etapa 10 do Controle de NF de Entrada: acabamento operacional e redução de cliques no uso diário.",
+    "Após incluir, editar ou registrar saída, o programa tenta manter a mesma NF selecionada na grade quando ela continua visível no filtro atual.",
+    "As abas de CB5 e Teclado V5 ganham o botão LIMPAR FILTROS, que limpa a pesquisa e restaura Status para Em estoque e Código para Todos.",
+    "Ctrl+S passa a registrar saída da NF selecionada; Ctrl+N, Enter e Ctrl+F continuam disponíveis e os atalhos ficam indicados no rodapé.",
+    "A tecla Esc limpa rapidamente as pesquisas das abas de produto, Movimentações e Histórico.",
+    "Os principais botões operacionais ganham dicas de uso ao passar o mouse, incluindo o atalho Ctrl+Z para estorno na aba Movimentações.",
+    "Nenhuma regra de dados, importação, exportação, backup ou estorno foi alterada nesta etapa; o foco é conforto, consistência e navegação.",
+    "O ajuste anterior da Central de Manutenção CB5 permanece preservado: + NOVA PASSAGEM mantém os cartões de resumo visíveis.",
+    "Controle de NF de Entrada passa para v2.1.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A versão Estável permanece v0.20.2; a v0.21.13 é publicada somente no canal Teste."
   ]
 }
