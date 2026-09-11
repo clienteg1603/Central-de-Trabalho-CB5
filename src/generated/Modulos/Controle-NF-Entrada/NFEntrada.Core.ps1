@@ -377,6 +377,7 @@ function New-NFEntradaSafetyBackup {
         ($info | ConvertTo-Json -Depth 4),
         ([Text.UTF8Encoding]::new($true))
     )
+    [void](Invoke-NFEntradaBackupRetention -DataDirectory $DataDirectory -MaxAutomaticBackups 20)
     return [pscustomobject]@{
         Directory = $backupDirectory
         StoreExisted = $storeExists
@@ -449,6 +450,105 @@ function Get-NFEntradaSafetyBackups {
         })
     }
     return @($result | Sort-Object DataHora -Descending)
+}
+
+function Invoke-NFEntradaBackupRetention {
+    param(
+        [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory),
+        [int]$MaxAutomaticBackups = 20
+    )
+    if ($MaxAutomaticBackups -lt 1) { $MaxAutomaticBackups = 1 }
+    $backups = @(Get-NFEntradaSafetyBackups -DataDirectory $DataDirectory)
+    $automatic = @($backups | Where-Object { [string]$_.Motivo -eq "Automático" } | Sort-Object DataHora -Descending)
+    if ($automatic.Count -le $MaxAutomaticBackups) {
+        return [pscustomobject]@{ Removidos = 0; MantidosAutomaticos = $automatic.Count; Limite = $MaxAutomaticBackups }
+    }
+    $removed = 0
+    foreach ($backup in @($automatic | Select-Object -Skip $MaxAutomaticBackups)) {
+        $directory = [IO.Path]::GetFullPath([string]$backup.Directory)
+        $root = [IO.Path]::GetFullPath((Get-NFEntradaBackupsDirectory -DataDirectory $DataDirectory)).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        if (-not $directory.StartsWith($root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
+        try {
+            if ([IO.Directory]::Exists($directory)) {
+                [IO.Directory]::Delete($directory, $true)
+                $removed++
+            }
+        }
+        catch {}
+    }
+    return [pscustomobject]@{ Removidos = $removed; MantidosAutomaticos = [Math]::Min($automatic.Count, $MaxAutomaticBackups); Limite = $MaxAutomaticBackups }
+}
+
+function Get-NFEntradaIntegrityReport {
+    param(
+        [Parameter(Mandatory = $true)]$Store,
+        [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory)
+    )
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $errors = [Collections.Generic.List[string]]::new()
+    $warnings = [Collections.Generic.List[string]]::new()
+    $details = [Collections.Generic.List[string]]::new()
+
+    $storePath = Get-NFEntradaStorePath -DataDirectory $DataDirectory
+    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
+    if (-not [IO.File]::Exists($storePath)) {
+        [void]$warnings.Add("A base local ainda não foi gravada no disco.")
+    }
+    else {
+        try { [void](Read-NFEntradaStore -Path $storePath); [void]$details.Add("Base JSON: leitura válida") }
+        catch { [void]$errors.Add("A base JSON atual não pôde ser lida: " + $_.Exception.Message) }
+    }
+
+    if (-not [IO.File]::Exists($templatePath)) {
+        [void]$warnings.Add("O modelo Excel oficial não está disponível; a exportação ficará bloqueada.")
+    }
+    elseif ([IO.FileInfo]::new($templatePath).Length -le 0) {
+        [void]$errors.Add("O modelo Excel oficial está vazio.")
+    }
+    else { [void]$details.Add("Modelo Excel: disponível") }
+
+    $totalRecords = 0
+    $duplicateCount = 0
+    foreach ($product in @("COMPUTADOR DE BORDO V5", "TECLADO V5")) {
+        $records = @(Get-NFEntradaProductRecords -Store $Store -Product $product)
+        $totalRecords += $records.Count
+        $groups = @($records | Where-Object { -not [string]::IsNullOrWhiteSpace((ConvertTo-NFEntradaText $_.NFEntrada)) } | Group-Object { (ConvertTo-NFEntradaText $_.NFEntrada).ToUpperInvariant() } | Where-Object { $_.Count -gt 1 })
+        foreach ($group in $groups) {
+            $duplicateCount++
+            [void]$errors.Add((Get-NFEntradaProductDisplayName $product) + ": NF duplicada " + [string]$group.Name + ".")
+        }
+    }
+
+    $review = @(Get-NFEntradaReviewItems -Store $Store)
+    if ($review.Count -gt 0) { [void]$warnings.Add("Existem " + $review.Count + " NF(s) com dados para revisar.") }
+
+    $backups = @(Get-NFEntradaSafetyBackups -DataDirectory $DataDirectory)
+    $invalidBackups = @($backups | Where-Object { [string]$_.Situacao -ne "Pronto" })
+    if ($invalidBackups.Count -gt 0) { [void]$warnings.Add("Existem " + $invalidBackups.Count + " backup(s) inválido(s) ou incompleto(s).") }
+    $automaticBackups = @($backups | Where-Object { [string]$_.Motivo -eq "Automático" }).Count
+    if ($automaticBackups -gt 20) { [void]$warnings.Add("Há mais de 20 backups automáticos; a próxima criação fará a retenção automática.") }
+
+    $staleTemp = 0
+    if ([IO.Directory]::Exists($DataDirectory)) {
+        foreach ($file in [IO.Directory]::GetFiles($DataDirectory, "*.tmp")) { $staleTemp++ }
+    }
+    if ($staleTemp -gt 0) { [void]$warnings.Add("Foram encontrados " + $staleTemp + " arquivo(s) temporário(s) pendente(s).") }
+
+    $status = if ($errors.Count -gt 0) { "ERRO" } elseif ($warnings.Count -gt 0) { "ATENÇÃO" } else { "OK" }
+    return [pscustomobject]@{
+        Situacao = $status
+        Erros = @($errors)
+        Avisos = @($warnings)
+        Detalhes = @($details)
+        Registros = $totalRecords
+        Duplicidades = $duplicateCount
+        Pendencias = $review.Count
+        Backups = $backups.Count
+        BackupsInvalidos = $invalidBackups.Count
+        BackupsAutomaticos = $automaticBackups
+        ArquivosTemporarios = $staleTemp
+        ModeloDisponivel = ([IO.File]::Exists($templatePath) -and ([IO.FileInfo]::new($templatePath)).Length -gt 0)
+    }
 }
 
 function Restore-NFEntradaBackupSet {
