@@ -1,2 +1,4 @@
-from pathlib import Path
-print('stage10')
+--- before
++++ after
+-$script:ModuleVersion = "2.0.0"
++$script:ModuleVersion = "2.1.0"
