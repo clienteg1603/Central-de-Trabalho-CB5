@@ -1,13 +1,14 @@
 {
-  "version": "0.21.14",
+  "version": "0.21.15",
   "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 11 do Controle de NF de Entrada: auditoria final e proteção dos dados.",
-    "A aba Segurança ganha VERIFICAR INTEGRIDADE para conferir base JSON, duplicidades, pendências, modelo Excel, backups e arquivos temporários.",
-    "A verificação classifica o estado como OK, ATENÇÃO ou ERRO sem corrigir dados automaticamente.",
-    "Backups automáticos passam a ter retenção controlada de até 20 cópias; backups manuais e de recuperação são preservados.",
-    "A auditoria final cobre importação, histórico, backup e restauração, movimentações, duplicidades, saída e estorno.",
-    "Controle de NF de Entrada passa para v2.2.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A versão Estável permanece v0.20.2; a v0.21.14 é publicada somente no canal Teste."
+    "Etapa 12 do Controle de NF de Entrada: exportação operacional das consultas.",
+    "A aba Movimentações ganha EXPORTAR CSV para salvar exatamente as linhas visíveis com os filtros atuais.",
+    "A aba Histórico também ganha EXPORTAR CSV, respeitando pesquisa e tipo selecionados.",
+    "Os arquivos usam separador ponto e vírgula e UTF-8 com BOM para melhor abertura no Excel em português do Brasil.",
+    "Colunas internas ocultas não são exportadas; somente os dados visíveis ao usuário entram no arquivo.",
+    "A exportação é somente leitura e não altera a base, saldos, movimentações ou histórico.",
+    "Controle de NF de Entrada passa para v2.3.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A versão Estável permanece v0.20.2; a v0.21.15 é publicada somente no canal Teste."
   ]
 }
