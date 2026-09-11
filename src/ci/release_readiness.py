@@ -162,19 +162,24 @@ def main():
     errors.extend(validate_channel(test, "test"))
     errors.extend(validate_channel(stable, "stable"))
 
+    same_release = False
     try:
-        if version_tuple(test["Version"]) <= version_tuple(stable["Version"]):
-            errors.append(f"a candidata Teste ({test['Version']}) deve ser posterior à Estável ({stable['Version']})")
+        test_version = version_tuple(test["Version"])
+        stable_version = version_tuple(stable["Version"])
+        if test_version < stable_version:
+            errors.append(f"o canal Teste ({test['Version']}) não pode ficar atrás da Estável ({stable['Version']})")
+        same_release = test_version == stable_version
     except Exception as exc:
         errors.append(str(exc))
 
     if current.get("version") != test.get("Version"):
         errors.append(f"src/current/version.json ({current.get('version')}) diverge do canal Teste ({test.get('Version')})")
 
-    # A candidata deve obedecer ao layout atual completo. A Estável antiga é validada
-    # apenas quanto a canal, pacote, hash, tamanho, raiz e CRC, pois pode ter arquitetura legada.
+    # A candidata sempre obedece ao layout atual completo. Uma Estável antiga pode ter
+    # arquitetura legada; quando Teste e Estável apontam para a mesma release promovida,
+    # a Estável passa a ser validada também com o layout atual completo.
     errors.extend(validate_package(root, test, "Teste", strict_layout=True))
-    errors.extend(validate_package(root, stable, "Estável atual", strict_layout=False))
+    errors.extend(validate_package(root, stable, "Estável atual", strict_layout=same_release))
 
     if errors:
         print("RELEASE READINESS: FALHOU")
@@ -183,11 +188,15 @@ def main():
         raise SystemExit(1)
 
     print("RELEASE READINESS: OK")
-    print(f"  Candidata: v{test['Version']}")
-    print(f"  Estável atual: v{stable['Version']}")
-    print("  Candidata, pacote, hashes, manifesto e lista de arquivos estão consistentes.")
-    print("  A Estável atual também foi preservada e conferida sem exigir o layout novo.")
-    print("  Nenhuma promoção foi executada; a mudança do canal Estável continua dependendo de aprovação explícita.")
+    print(f"  Teste: v{test['Version']}")
+    print(f"  Estável: v{stable['Version']}")
+    if same_release:
+        print("  Estado pós-promoção confirmado: Teste e Estável apontam para a mesma release validada.")
+        print("  Pacote, hashes, manifesto e lista de arquivos da Estável atual estão consistentes com o layout moderno.")
+    else:
+        print("  Candidata, pacote, hashes, manifesto e lista de arquivos estão consistentes.")
+        print("  A Estável atual foi preservada e conferida sem exigir o layout novo.")
+        print("  Nenhuma promoção foi executada; a mudança do canal Estável continua dependendo de aprovação explícita.")
 
 
 if __name__ == "__main__":
