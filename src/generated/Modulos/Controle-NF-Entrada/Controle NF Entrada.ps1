@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.4.1"
+$script:ModuleVersion = "2.4.2"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -1436,10 +1436,10 @@ $root = New-Object Windows.Forms.TableLayoutPanel
 $root.Dock = [Windows.Forms.DockStyle]::Fill
 $root.Padding = [Windows.Forms.Padding]::new(14)
 $root.RowCount = 4
-[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 78)))
-[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 112)))
+[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 92)))
+[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 108)))
 [void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
-[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 46)))
+[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 58)))
 $form.Controls.Add($root)
 
 $header = New-Object Windows.Forms.TableLayoutPanel
@@ -1453,8 +1453,8 @@ $root.Controls.Add($header, 0, 0)
 $heading = New-Object Windows.Forms.TableLayoutPanel
 $heading.Dock = [Windows.Forms.DockStyle]::Fill
 $heading.RowCount = 2
-[void]$heading.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 62)))
-[void]$heading.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 38)))
+[void]$heading.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 54)))
+[void]$heading.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
 $header.Controls.Add($heading, 0, 0)
 $title = New-Object Windows.Forms.Label
 $title.Text = "Controle de NF de Entrada"
@@ -1854,7 +1854,8 @@ $actionPanel.AutoSize = $true
 $actionPanel.WrapContents = $false
 $actionPanel.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
 $actionPanel.BackColor = $script:CurrentPalette.Surface
-$actionPanel.Padding = [Windows.Forms.Padding]::new(0, 3, 0, 0)
+$actionPanel.Padding = [Windows.Forms.Padding]::new(0, 1, 0, 1)
+$actionPanel.Margin = [Windows.Forms.Padding]::new(0)
 $newButton = New-Object Windows.Forms.Button
 $newButton.Text = "+ NOVA NF"; $newButton.Width = 105; $newButton.Height = 34; Set-NFButtonStyle $newButton "Primary"
 $editButton = New-Object Windows.Forms.Button
@@ -1872,7 +1873,8 @@ $actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $
 $footerHost = New-Object Windows.Forms.TableLayoutPanel
 $footerHost.Dock = [Windows.Forms.DockStyle]::Fill
 $footerHost.BackColor = $script:CurrentPalette.Surface
-$footerHost.Padding = [Windows.Forms.Padding]::new(8, 3, 8, 3)
+$footerHost.Padding = [Windows.Forms.Padding]::new(8, 8, 8, 8)
+$footerHost.Margin = [Windows.Forms.Padding]::new(0)
 $footerHost.ColumnCount = 2
 [void]$footerHost.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
 [void]$footerHost.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
@@ -1987,6 +1989,106 @@ Deseja selecionar agora?",
         [Windows.Forms.MessageBoxIcon]::Information
     )
     if ($answer -eq [Windows.Forms.DialogResult]::Yes) { [void](Import-NFSourceFromUI) }
+}
+
+function Set-HostedNFEntradaTheme {
+    param([string]$Theme)
+    if ([string]::IsNullOrWhiteSpace($Theme)) { return }
+
+    $oldPalette = $script:CurrentPalette
+    $newPalette = Get-NFEntradaPalette $Theme
+    if ($null -eq $newPalette) { return }
+
+    $mapColor = {
+        param([Drawing.Color]$Color)
+        if ($null -eq $oldPalette) { return $Color }
+        $pairs = @(
+            @($oldPalette.Background, $newPalette.Background),
+            @($oldPalette.Surface, $newPalette.Surface),
+            @($oldPalette.Card, $newPalette.Card),
+            @($oldPalette.Input, $newPalette.Input),
+            @($oldPalette.Text, $newPalette.Text),
+            @($oldPalette.Muted, $newPalette.Muted),
+            @($oldPalette.Border, $newPalette.Border),
+            @($oldPalette.Accent, $newPalette.Accent),
+            @($oldPalette.AccentStrong, $newPalette.AccentStrong),
+            @($oldPalette.AccentText, $newPalette.AccentText),
+            @($oldPalette.Success, $newPalette.Success),
+            @($oldPalette.SuccessBack, $newPalette.SuccessBack),
+            @($oldPalette.Warning, $newPalette.Warning),
+            @($oldPalette.WarningBack, $newPalette.WarningBack),
+            @($oldPalette.Danger, $newPalette.Danger),
+            @($oldPalette.DangerBack, $newPalette.DangerBack)
+        )
+        foreach ($pair in $pairs) {
+            try {
+                if ($Color.ToArgb() -eq $pair[0].ToArgb()) { return $pair[1] }
+            } catch {}
+        }
+        return $Color
+    }.GetNewClosure()
+
+    $script:CurrentPalette = $newPalette
+
+    if ($null -ne $form -and -not $form.IsDisposed) {
+        $stack = New-Object System.Collections.Stack
+        $stack.Push($form)
+        while ($stack.Count -gt 0) {
+            $control = $stack.Pop()
+            try { $control.BackColor = & $mapColor $control.BackColor } catch {}
+            try { $control.ForeColor = & $mapColor $control.ForeColor } catch {}
+
+            if ($control -is [Windows.Forms.Button]) {
+                try { $control.FlatAppearance.BorderColor = & $mapColor $control.FlatAppearance.BorderColor } catch {}
+            }
+            elseif ($control -is [Windows.Forms.DataGridView]) {
+                try {
+                    $control.BackgroundColor = $newPalette.Surface
+                    $control.GridColor = $newPalette.Border
+                    $control.ColumnHeadersDefaultCellStyle.BackColor = $newPalette.Surface
+                    $control.ColumnHeadersDefaultCellStyle.ForeColor = $newPalette.Text
+                    $control.DefaultCellStyle.BackColor = $newPalette.Surface
+                    $control.DefaultCellStyle.ForeColor = $newPalette.Text
+                    $control.DefaultCellStyle.SelectionBackColor = $newPalette.AccentStrong
+                    $control.DefaultCellStyle.SelectionForeColor = $newPalette.AccentText
+                } catch {}
+            }
+            elseif ($control -is [Windows.Forms.TextBoxBase] -or
+                    $control -is [Windows.Forms.ComboBox] -or
+                    $control -is [Windows.Forms.NumericUpDown] -or
+                    $control -is [Windows.Forms.DateTimePicker]) {
+                try { $control.BackColor = $newPalette.Input; $control.ForeColor = $newPalette.Text } catch {}
+            }
+
+            try {
+                foreach ($child in @($control.Controls)) { $stack.Push($child) }
+            } catch {}
+        }
+    }
+
+    foreach ($backgroundControl in @(
+        $form, $root, $header, $heading, $cards,
+        $computerTab, $keyboardTab, $movementTab, $historyTab, $securityTab, $summaryTab,
+        $summaryLayout, $movementLayout, $historyLayout, $securityLayout
+    )) {
+        try { if ($null -ne $backgroundControl) { $backgroundControl.BackColor = $newPalette.Background; $backgroundControl.ForeColor = $newPalette.Text } } catch {}
+    }
+
+    try { $footerHost.BackColor = $newPalette.Surface } catch {}
+    try { $actionPanel.BackColor = $newPalette.Surface } catch {}
+    try { $lastPanel.BackColor = $newPalette.Card } catch {}
+    try { $summaryActionPanel.BackColor = $newPalette.Card } catch {}
+    try {
+        foreach ($card in @($cards.Controls)) {
+            if ($card -is [Windows.Forms.Panel]) { $card.BackColor = $newPalette.Card; $card.ForeColor = $newPalette.Text }
+        }
+    } catch {}
+
+    # Recria as linhas para reaplicar cores de status e destaques com a paleta nova.
+    try { Refresh-NFAll } catch {}
+    try { Update-NFActions } catch {}
+    try { $form.PerformLayout() } catch {}
+    try { $form.Invalidate($true); $form.Refresh() } catch {}
 }
 
 if ($script:IsInProcessHosted) {

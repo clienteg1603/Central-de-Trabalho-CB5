@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.17"
+$script:AppVersion = "0.21.18"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.3"
 $script:MaintenanceVersion = "0.6.2"
@@ -52,7 +52,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.4.1"
+$script:NFEntradaVersion = "2.4.2"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -392,7 +392,9 @@ function Sync-HostedModuleTheme {
                 return
             }
             $generatorCmd = Get-Command -Name Set-HostedGeneratorTheme -ErrorAction SilentlyContinue
-            if ($null -ne $generatorCmd) { Set-HostedGeneratorTheme $hostTheme }
+            if ($null -ne $generatorCmd) { Set-HostedGeneratorTheme $hostTheme; return }
+            $nfEntradaCmd = Get-Command -Name Set-HostedNFEntradaTheme -ErrorAction SilentlyContinue
+            if ($null -ne $nfEntradaCmd) { Set-HostedNFEntradaTheme $hostTheme }
         } $theme
     } catch {}
 }
@@ -631,10 +633,10 @@ function Get-ModuleAccent {
         return [Drawing.Color]::FromArgb(33, 156, 211)
     }
     if ($Module -eq "NFEntrada") {
-        if ($theme -eq "Claro corporativo") { return [Drawing.Color]::FromArgb(117, 90, 200) }
-        if ($theme -eq "Técnico industrial") { return [Drawing.Color]::FromArgb(155, 120, 255) }
-        if ($theme -eq "Alto contraste") { return [Drawing.Color]::Fuchsia }
-        return [Drawing.Color]::FromArgb(139, 92, 246)
+        if ($theme -eq "Claro corporativo") { return [Drawing.Color]::FromArgb(47, 112, 230) }
+        if ($theme -eq "Técnico industrial") { return [Drawing.Color]::FromArgb(35, 179, 158) }
+        if ($theme -eq "Alto contraste") { return [Drawing.Color]::Yellow }
+        return [Drawing.Color]::FromArgb(39, 196, 125)
     }
     if ($theme -eq "Claro corporativo") { return [Drawing.Color]::FromArgb(220, 111, 24) }
     if ($theme -eq "Técnico industrial") { return [Drawing.Color]::FromArgb(244, 142, 40) }
