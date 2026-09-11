@@ -1,0 +1,38 @@
+name: Fix NF Entrada syntax temporary
+
+on:
+  push:
+    paths:
+      - 'src/current/NFENTRADA_FIX_READY'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix NF Entrada syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1')
+          text = p.read_text(encoding='utf-8-sig')
+          old = '$col.MinimumWidth = [Math]::Min(Width, 70)'
+          new = '$col.MinimumWidth = [Math]::Min($Width, 70)'
+          if old not in text:
+              raise SystemExit('Trecho de sintaxe esperado não encontrado.')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          print('Sintaxe do Add-NFGridColumn corrigida.')
+          PY
+          rm -f src/current/NFENTRADA_FIX_READY
+          git config user.name "Central de Trabalho Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A 'src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1' src/current/NFENTRADA_FIX_READY
+          git commit -m "Corrige sintaxe do módulo Controle de NF de Entrada"
+          git push
