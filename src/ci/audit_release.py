@@ -17,6 +17,8 @@ EXPECTED_FILES = {
     "Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1",
     "Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1",
     "Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1",
+    "Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1",
+    "Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1",
 }
 
 LEGACY_LAUNCHERS = {
@@ -76,8 +78,10 @@ def audit_tree(root, version):
     updater_path = root / "Atualizador/Central de Trabalho Updater.ps1"
     updater_core_path = root / "Atualizador/Update.Core.ps1"
     channels_path = root / "Atualizador/CANAIS.json"
+    nf_path = root / "Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1"
+    nf_core_path = root / "Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1"
 
-    if all(p.exists() for p in (central_path, generator_path, generator_core_path, maintenance_path, maintenance_core_path, updater_path, updater_core_path, channels_path)):
+    if all(p.exists() for p in (central_path, generator_path, generator_core_path, maintenance_path, maintenance_core_path, updater_path, updater_core_path, channels_path, nf_path, nf_core_path)):
         central = read_text(central_path)
         generator = read_text(generator_path)
         generator_core = read_text(generator_core_path)
@@ -85,12 +89,16 @@ def audit_tree(root, version):
         maintenance_core = read_text(maintenance_core_path)
         updater = read_text(updater_path)
         updater_core = read_text(updater_core_path)
+        nf = read_text(nf_path)
+        nf_core = read_text(nf_core_path)
 
         central_version = extract_version(central, "AppVersion")
         generator_declared = extract_version(central, "GeneratorVersion")
         maintenance_declared = extract_version(central, "MaintenanceVersion")
+        nf_declared = extract_version(central, "NFEntradaVersion")
         generator_version = extract_version(generator, "AppVersion")
         maintenance_version = extract_version(maintenance, "AppVersion")
+        nf_version = extract_version(nf, "ModuleVersion")
 
         if central_version != version:
             errors.append(f"versão da Central divergente: script={central_version!r}, release={version!r}")
@@ -98,9 +106,11 @@ def audit_tree(root, version):
             errors.append(f"versão do Gerenciador divergente: Central={generator_declared!r}, módulo={generator_version!r}")
         if not maintenance_declared or maintenance_declared != maintenance_version:
             errors.append(f"versão da Manutenção divergente: Central={maintenance_declared!r}, módulo={maintenance_version!r}")
+        if not nf_declared or nf_declared != nf_version:
+            errors.append(f"versão do Controle NF Entrada divergente: Central={nf_declared!r}, módulo={nf_version!r}")
 
-        # Integração: ambos os módulos precisam continuar exportando um Control hospedável.
-        for name, text in (("Gerenciador", generator), ("Manutenção", maintenance)):
+        # Integração: todos os módulos precisam continuar exportando um Control hospedável.
+        for name, text in (("Gerenciador", generator), ("Manutenção", maintenance), ("NF Entrada", nf)):
             if "$script:HostedControlExport" not in text:
                 errors.append(f"{name}: exportação HostedControlExport foi perdida")
             if "[switch]$HostedInCentral" not in text:
@@ -135,6 +145,11 @@ def audit_tree(root, version):
             serial_body = core_serial.group(1)
             if not any(token in serial_body for token in ("{8}", "-eq 8", "-ne 8", "Length -eq 8", "Length -ne 8")):
                 errors.append("Manutencao.Core: não foi encontrada evidência da regra de exatamente 8 dígitos em Test-CB5Serial")
+
+        # NF Entrada — importação local, persistência e exportação pelo modelo original.
+        for marker in ("Import-NFEntradaSourceWorkbook", "Export-NFEntradaWorkbook", "modelo-nf-entrada.xlsx", 'Range("A3:F298").ClearContents()'):
+            if marker not in nf_core:
+                errors.append(f"NFEntrada.Core: contrato crítico ausente: {marker}")
 
         # Núcleos e configuração do Atualizador não podem desaparecer silenciosamente.
         if "Update.Core.ps1" not in updater:

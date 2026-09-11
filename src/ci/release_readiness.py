@@ -17,6 +17,8 @@ EXPECTED_RUNTIME_FILES = {
     "Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1",
     "Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1",
     "Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1",
+    "Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1",
+    "Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1",
 }
 FORBIDDEN_SUFFIXES = (".vbs", ".bat", ".cmd", ".pyc", ".log")
 FORBIDDEN_PARTS = ("__pycache__", "erro-inicializacao", "componentes-a-faturar", "preferencias.json")

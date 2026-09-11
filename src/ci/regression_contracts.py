@@ -44,6 +44,8 @@ def main():
         "components": root / "Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1",
         "maintenance": root / "Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1",
         "maintenance_core": root / "Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1",
+        "nf": root / "Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1",
+        "nf_core": root / "Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1",
         "updater": root / "Atualizador/Central de Trabalho Updater.ps1",
         "updater_core": root / "Atualizador/Update.Core.ps1",
     }
@@ -57,6 +59,8 @@ def main():
     components = read(paths["components"])
     maintenance = read(paths["maintenance"])
     maintenance_core = read(paths["maintenance_core"])
+    nf = read(paths["nf"])
+    nf_core = read(paths["nf_core"])
     updater = read(paths["updater"])
     updater_core = read(paths["updater_core"])
 
@@ -70,6 +74,7 @@ def main():
         "CentralDeTrabalho_Central",
         "Componentes.Core.ps1",
         "Manutencao.Core.ps1",
+        "NFEntrada.Core.ps1",
         "Update.Core.ps1",
         "CANAIS.json",
         '"Escuro profissional"',
@@ -166,6 +171,14 @@ def main():
         require_function(errors, maintenance_core, fn, "Manutencao.Core")
     require_regex(errors, maintenance_core, r"function\s+Test-CB5Serial\b.{0,1600}(\{8\}|Length\s+-e[q|n]\s+8|Length\s+-ne\s+8)", "Manutencao.Core / série exatamente 8 dígitos")
 
+    # NF DE ENTRADA — terceiro módulo integrado, base local e exportação fiel ao modelo original.
+    for marker in ('Controle de NF de Entrada', 'IMPORTAR PLANILHA', 'EXPORTAR EXCEL', 'COMPUTADOR DE BORDO V5', 'TECLADO V5', '$script:HostedControlExport', '[switch]$HostedInCentral'):
+        require(errors, nf, marker, "NF Entrada")
+    for fn in ("Initialize-NFEntradaDataStore", "Import-NFEntradaSourceWorkbook", "Read-NFEntradaStore", "Write-NFEntradaStore", "Add-NFEntradaRecord", "Update-NFEntradaRecord", "Remove-NFEntradaRecord", "Get-NFEntradaSummary", "Export-NFEntradaWorkbook"):
+        require_function(errors, nf_core, fn, "NFEntrada.Core")
+    for marker in ('modelo-nf-entrada.xlsx', 'Range("A3:F298").ClearContents()', '$excel.Workbooks.Open($destinationFull, 0, $false)', '$excel.CalculateFullRebuild()'):
+        require(errors, nf_core, marker, "NFEntrada.Core / exportação fiel")
+
     # ATUALIZADOR — preserva núcleo, hash do pacote, arquivos ocultos e recuperação real.
     require(errors, updater, "Update.Core.ps1", "Atualizador")
     for marker in ("PackageSha256", "PackageSize", "PACOTE-MANIFESTO.json"):
@@ -195,7 +208,7 @@ def main():
     require(errors, updater, 'O Atualizador tentou restaurar o backup automaticamente.', "Atualizador / mensagem de recuperação")
 
     fail(errors)
-    print("REGRESSÃO FUNCIONAL: OK — contratos de Central, Gerenciador, Componentes, Manutenção e Atualizador preservados.")
+    print("REGRESSÃO FUNCIONAL: OK — contratos de Central, Gerenciador, Componentes, Manutenção, NF Entrada e Atualizador preservados.")
 
 
 if __name__ == "__main__":
