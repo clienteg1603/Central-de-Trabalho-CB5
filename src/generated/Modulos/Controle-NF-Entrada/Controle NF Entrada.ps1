@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.3.0"
+$script:ModuleVersion = "2.4.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -274,6 +274,15 @@ function Clear-NFCurrentProductFilters {
         $keyboardFilter.Focus()
     }
     Set-NFStatus "Filtros restaurados para Em estoque e Todos os códigos." "Normal"
+}
+
+function Export-NFCurrentProductViewToCsv {
+    $product = Get-SelectedProduct
+    if ([string]::IsNullOrWhiteSpace($product)) { return }
+    $grid = if ($product -eq $script:ComputerProduct) { $computerGrid } else { $keyboardGrid }
+    $baseName = if ($product -eq $script:ComputerProduct) { "Estoque-CB5" } else { "Estoque-Teclado-V5" }
+    $title = if ($product -eq $script:ComputerProduct) { "Lista de Computador de Bordo CB5" } else { "Lista de Teclado V5" }
+    Export-NFGridViewToCsv -Grid $grid -BaseName $baseName -Title $title
 }
 
 function Format-NFDate {
@@ -862,7 +871,7 @@ function Refresh-NFAll {
     $exportButton.Enabled = [bool]$exportReadiness.PodeExportar
     $summary = Get-NFEntradaSummary -Store $script:Store
     $totalRecords = [int]$summary.Produtos[$script:ComputerProduct].Registros + [int]$summary.Produtos[$script:KeyboardProduct].Registros
-    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • Em estoque por padrão • Ctrl+N novo • Enter editar • Ctrl+S saída • Ctrl+F pesquisar") "Normal"
+    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • Em estoque por padrão • Ctrl+N novo • Enter editar • Ctrl+S saída • Ctrl+E exportar • Ctrl+F pesquisar") "Normal"
 }
 
 function Show-NFRecordDialog {
@@ -1854,9 +1863,11 @@ $outputButton = New-Object Windows.Forms.Button
 $outputButton.Text = "REGISTRAR SAÍDA"; $outputButton.Width = 135; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"
 $clearFiltersButton = New-Object Windows.Forms.Button
 $clearFiltersButton.Text = "LIMPAR FILTROS"; $clearFiltersButton.Width = 120; $clearFiltersButton.Height = 34; Set-NFButtonStyle $clearFiltersButton "Secondary"
+$exportListButton = New-Object Windows.Forms.Button
+$exportListButton.Text = "EXPORTAR LISTA"; $exportListButton.Width = 120; $exportListButton.Height = 34; Set-NFButtonStyle $exportListButton "Secondary"
 $deleteButton = New-Object Windows.Forms.Button
 $deleteButton.Text = "EXCLUIR"; $deleteButton.Width = 95; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton "Danger"
-$actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($outputButton); $actionPanel.Controls.Add($clearFiltersButton); $actionPanel.Controls.Add($deleteButton)
+$actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($outputButton); $actionPanel.Controls.Add($clearFiltersButton); $actionPanel.Controls.Add($exportListButton); $actionPanel.Controls.Add($deleteButton)
 # A barra fica no rodapé geral e é ativada somente nas abas de produto.
 $footerHost = New-Object Windows.Forms.TableLayoutPanel
 $footerHost.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1879,6 +1890,7 @@ function Update-NFActions {
     $enabled = -not [string]::IsNullOrWhiteSpace($product)
     $actionPanel.Visible = $enabled
     $newButton.Enabled = $enabled
+    $exportListButton.Enabled = $enabled
     $hasSelection = $false
     if ($enabled) {
         $grid = if ($product -eq $script:ComputerProduct) { $computerGrid } else { $keyboardGrid }
@@ -1902,6 +1914,7 @@ $toolTip.SetToolTip($newButton, "Novo registro (Ctrl+N).")
 $toolTip.SetToolTip($editButton, "Editar a NF selecionada (Enter ou duplo clique).")
 $toolTip.SetToolTip($outputButton, "Registrar saída da NF selecionada (Ctrl+S).")
 $toolTip.SetToolTip($clearFiltersButton, "Limpa a pesquisa e volta para Em estoque / Todos os códigos.")
+$toolTip.SetToolTip($exportListButton, "Exporta somente as linhas visíveis da aba atual, respeitando pesquisa, status e código (Ctrl+E).")
 $toolTip.SetToolTip($deleteButton, "Excluir o registro selecionado; o Histórico é preservado.")
 $toolTip.SetToolTip($movementReverseButton, "Estorna a saída ativa sem apagar a movimentação original (Ctrl+Z).")
 $toolTip.SetToolTip($movementExportButton, "Exporta somente as movimentações visíveis com os filtros atuais para CSV compatível com Excel.")
@@ -1917,9 +1930,9 @@ $keyboardFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) {
 $keyboardStatusFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
 $keyboardCodeFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
 $computerGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
-$computerGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::S) { $_.SuppressKeyPress=$true; Register-NFOutputFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $computerFilter.Focus() } })
+$computerGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::S) { $_.SuppressKeyPress=$true; Register-NFOutputFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::E) { $_.SuppressKeyPress=$true; Export-NFCurrentProductViewToCsv } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $computerFilter.Focus() } })
 $keyboardGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
-$keyboardGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::S) { $_.SuppressKeyPress=$true; Register-NFOutputFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $keyboardFilter.Focus() } })
+$keyboardGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::S) { $_.SuppressKeyPress=$true; Register-NFOutputFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::E) { $_.SuppressKeyPress=$true; Export-NFCurrentProductViewToCsv } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $keyboardFilter.Focus() } })
 $computerGrid.Add_SelectionChanged({ Update-NFActions })
 $keyboardGrid.Add_SelectionChanged({ Update-NFActions })
 $mainTabs.Add_SelectedIndexChanged({ Update-NFActions; if ($mainTabs.SelectedTab -eq $movementTab) { Refresh-NFMovements }; if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }; if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups } })
@@ -1953,6 +1966,7 @@ $newButton.Add_Click({ Add-NFRecordFromUI })
 $editButton.Add_Click({ Edit-NFRecordFromUI })
 $outputButton.Add_Click({ Register-NFOutputFromUI })
 $clearFiltersButton.Add_Click({ Clear-NFCurrentProductFilters })
+$exportListButton.Add_Click({ Export-NFCurrentProductViewToCsv })
 $deleteButton.Add_Click({ Remove-NFRecordFromUI })
 $importButton.Add_Click({ [void](Import-NFSourceFromUI) })
 $exportButton.Add_Click({ Export-NFFromUI })

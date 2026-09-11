@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.15",
+  "Version": "0.21.16",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.15.zip",
-  "PackageSha256": "D9BA7E33C0C9AC8940EA494F1DDEAA27C5EB18211D6494529C630646FAEAE329",
-  "PackageSize": 328252,
-  "PackageRoot": "Central-de-Trabalho-v0.21.15",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.16.zip",
+  "PackageSha256": "DC7B40207BF805FB4E6F9B651266B0280FFC9265D32527C893104F4369CAE769",
+  "PackageSize": 328478,
+  "PackageRoot": "Central-de-Trabalho-v0.21.16",
   "ReleaseNotes": [
-    "Etapa 12 do Controle de NF de Entrada: exportação operacional das consultas.",
-    "A aba Movimentações ganha EXPORTAR CSV para salvar exatamente as linhas visíveis com os filtros atuais.",
-    "A aba Histórico também ganha EXPORTAR CSV, respeitando pesquisa e tipo selecionados.",
-    "Os arquivos usam separador ponto e vírgula e UTF-8 com BOM para melhor abertura no Excel em português do Brasil.",
-    "Colunas internas ocultas não são exportadas; somente os dados visíveis ao usuário entram no arquivo.",
-    "A exportação é somente leitura e não altera a base, saldos, movimentações ou histórico.",
-    "Controle de NF de Entrada passa para v2.3.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A versão Estável permanece v0.20.2; a v0.21.15 é publicada somente no canal Teste."
+    "Etapa 13 do Controle de NF de Entrada: exportação rápida das listas de produto.",
+    "As abas Computador de Bordo CB5 e Teclado V5 ganham EXPORTAR LISTA.",
+    "A exportação respeita exatamente a pesquisa, o status e o código aplicados na tela.",
+    "O arquivo contém apenas as linhas e colunas visíveis e usa o mesmo CSV compatível com Excel introduzido na Etapa 12.",
+    "O atalho Ctrl+E exporta a lista da aba de produto atual; Ctrl+N, Enter, Ctrl+S e Ctrl+F permanecem inalterados.",
+    "A exportação é somente leitura e não modifica a base, saldos, NFs, movimentações ou histórico.",
+    "Controle de NF de Entrada passa para v2.4.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A versão Estável permanece v0.20.2; a v0.21.16 é publicada somente no canal Teste."
   ]
 }
