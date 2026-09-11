@@ -1,6 +1,6 @@
 {
   "version": "0.21.3",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 2 do Controle de NF de Entrada: reorganiza a leitura da tela e melhora o conforto de uso sem alterar as regras da planilha.",
     "As abas de Computador de Bordo V5 e Teclado V5 ganham filtros combináveis por texto, status e código, além de contador visível de registros exibidos.",
