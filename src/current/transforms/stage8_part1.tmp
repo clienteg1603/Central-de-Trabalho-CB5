@@ -1,0 +1,3 @@
+function Get-NFEntradaDuplicateRecord {
+    param([string]$NFEntrada)
+}
