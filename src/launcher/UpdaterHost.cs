@@ -97,7 +97,8 @@ internal static class Program
             {
                 System.Management.Automation.Language.Token[] tokens;
                 System.Management.Automation.Language.ParseError[] errors;
-                System.Management.Automation.Language.Parser.ParseFile(script, out tokens, out errors);
+                string source = File.ReadAllText(script, Encoding.UTF8);
+                System.Management.Automation.Language.Parser.ParseInput(source, out tokens, out errors);
                 if (errors != null && errors.Length > 0)
                 {
                     return 23;
