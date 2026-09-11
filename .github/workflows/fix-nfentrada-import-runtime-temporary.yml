@@ -52,16 +52,6 @@ jobs:
               raise SystemExit('Versão 1.0.0 do módulo NF Entrada não encontrada.')
           module.write_text(m.replace('$script:ModuleVersion = "1.0.0"', '$script:ModuleVersion = "1.0.1"', 1), encoding='utf-8')
 
-          workflow = Path(r'.github/workflows/build-test-package-v2.yml')
-          w = workflow.read_text(encoding='utf-8')
-          test_line = '          & ".\\src\\ci\\test_nfentrada_import.ps1" -CorePath ".\\src\\generated\\Modulos\\Controle-NF-Entrada\\NFEntrada.Core.ps1"\n\n'
-          marker = '          $centralSmoke = Start-Process -FilePath (Join-Path $smokeRoot "Central de Trabalho.exe")'
-          if 'test_nfentrada_import.ps1' not in w:
-              if marker not in w:
-                  raise SystemExit('Ponto de inserção do teste de importação não encontrado no workflow.')
-              w = w.replace(marker, test_line + marker, 1)
-              workflow.write_text(w, encoding='utf-8')
-
           meta = {
               'version': '0.21.1',
               'buildRevision': 1,
@@ -85,6 +75,10 @@ jobs:
           Remove-Item -LiteralPath "src/current/NFIMPORT_FIX_READY" -Force
           git config user.name "Central de Trabalho Builder"
           git config user.email "actions@users.noreply.github.com"
-          git add -A
+          git add 'src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1'
+          git add 'src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1'
+          git add 'src/generated/Central de Trabalho.ps1'
+          git add 'src/current/version.json'
+          git add -u 'src/current/NFIMPORT_FIX_READY'
           git commit -m "Corrige importação da planilha NF de Entrada e prepara v0.21.1"
           git push
