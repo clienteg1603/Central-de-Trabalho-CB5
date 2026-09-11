@@ -1,0 +1,6 @@
+diff --git a/src/current/version.json b/src/current/version.json
+--- a/src/current/version.json
++++ b/src/current/version.json
+@@ -5,1 +5,1 @@
+-    "Etapa 8 do Controle de NF de Entrada: cadastro rápido e prevenção de erros durante inclusão e edição.",
++    "Etapa 9 do Controle de NF de Entrada: correção segura de saídas registradas por engano.",
