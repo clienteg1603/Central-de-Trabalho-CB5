@@ -1,4 +1,4 @@
-﻿Set-StrictMode -Version Latest
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.0"
+$script:AppVersion = "0.21.1"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.3"
 $script:MaintenanceVersion = "0.6.1"
@@ -52,7 +52,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "1.0.0"
+$script:NFEntradaVersion = "1.0.1"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",

@@ -35,7 +35,7 @@ function Get-NFEntradaZipEntryText {
     $stream = $entry.Open()
     $reader = $null
     try {
-        $reader = New-Object IO.StreamReader($stream, [Text.Encoding]::UTF8, $true)
+        $reader = [IO.StreamReader]::new($stream, [Text.Encoding]::UTF8, $true)
         return $reader.ReadToEnd()
     }
     finally {
@@ -49,11 +49,11 @@ function Get-NFEntradaSharedStrings {
     $entry = $Archive.GetEntry("xl/sharedStrings.xml")
     if ($null -eq $entry) { return @() }
     [xml]$doc = Get-NFEntradaZipEntryText -Archive $Archive -Name "xl/sharedStrings.xml"
-    $ns = New-Object Xml.XmlNamespaceManager($doc.NameTable)
+    $ns = [Xml.XmlNamespaceManager]::new($doc.NameTable)
     $ns.AddNamespace("x", "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
-    $items = New-Object Collections.Generic.List[string]
+    $items = [Collections.Generic.List[string]]::new()
     foreach ($si in @($doc.SelectNodes("//x:si", $ns))) {
-        $parts = New-Object Collections.Generic.List[string]
+        $parts = [Collections.Generic.List[string]]::new()
         foreach ($t in @($si.SelectNodes(".//x:t", $ns))) { [void]$parts.Add([string]$t.InnerText) }
         [void]$items.Add(($parts -join ""))
     }
@@ -93,9 +93,9 @@ function Import-NFEntradaSheetRecords {
         [Parameter(Mandatory = $true)][ref]$NextId
     )
     [xml]$doc = Get-NFEntradaZipEntryText -Archive $Archive -Name $EntryName
-    $ns = New-Object Xml.XmlNamespaceManager($doc.NameTable)
+    $ns = [Xml.XmlNamespaceManager]::new($doc.NameTable)
     $ns.AddNamespace("x", "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
-    $records = New-Object Collections.Generic.List[object]
+    $records = [Collections.Generic.List[object]]::new()
     $order = 0
 
     foreach ($row in @($doc.SelectNodes("//x:sheetData/x:row", $ns))) {
