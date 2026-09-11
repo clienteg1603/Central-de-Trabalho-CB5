@@ -1,0 +1,50 @@
+name: NF stage9
+on:
+  push:
+    branches: [stage9-nfentrada]
+    paths: ['src/current/NFENTRADA_STAGE9_READY']
+permissions:
+  contents: write
+jobs:
+  stage9:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          Get-Content 'src/current/patches/stage9-manifest.txt' | ForEach-Object {
+            $p='src/current/patches/' + $_
+            git apply --recount --whitespace=nowarn $p
+            if($LASTEXITCODE -ne 0){ throw "patch failed: $p" }
+          }
+          $vp='src/current/version.json'
+          $t=[IO.File]::ReadAllText($vp,[Text.Encoding]::UTF8)
+          $t=$t.Replace('v1.9.0','v2.0.0').Replace('v0.21.10','v0.21.11')
+          [IO.File]::WriteAllText($vp,$t,[Text.UTF8Encoding]::new($false))
+      - name: Test
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $c='.\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1'
+          $u='.\src\generated\Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1'
+          & '.\src\ci\test_nfentrada_stage5.ps1' -CorePath $c
+          & '.\src\ci\test_nfentrada_stage6.ps1' -CorePath $c
+          & '.\src\ci\test_nfentrada_stage7.ps1' -CorePath $c -UiPath $u
+          & '.\src\ci\test_nfentrada_stage8.ps1' -CorePath $c -UiPath $u
+          & '.\src\ci\test_nfentrada_stage9.ps1' -CorePath $c
+          & '.\src\ci\parse_powershell.ps1' -Root '.\src\generated'
+          python '.\src\ci\regression_contracts.py' '.\src\generated'
+      - name: Commit
+        shell: powershell
+        run: |
+          Remove-Item 'src/current/NFENTRADA_STAGE9_READY' -Force
+          git config user.name 'Central de Trabalho Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add 'src/generated' 'src/ci/test_nfentrada_stage9.ps1' 'src/current/version.json'
+          git add -u 'src/current/NFENTRADA_STAGE9_READY'
+          git commit -m 'Evolui Controle NF Entrada - etapa 9'
+          git push origin HEAD:stage9-nfentrada
