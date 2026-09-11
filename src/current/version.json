@@ -1,6 +1,6 @@
 {
   "version": "0.21.15",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 12 do Controle de NF de Entrada: exportação operacional das consultas.",
     "A aba Movimentações ganha EXPORTAR CSV para salvar exatamente as linhas visíveis com os filtros atuais.",
