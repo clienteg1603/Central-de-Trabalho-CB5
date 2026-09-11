@@ -37,7 +37,7 @@ jobs:
               print(f'{dst_name}: {len(raw)} bytes')
           PY
           grep -q 'function Export-NFEntradaWorkbook' 'src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1'
-          grep -q 'CONTROLE DE NF DE ENTRADA' 'src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1'
+          grep -q 'Controle de NF de Entrada' 'src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1'
           rm -rf src/staging/nfentrada
           git config user.name "Central de Trabalho Builder"
           git config user.email "actions@users.noreply.github.com"
