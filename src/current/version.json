@@ -1,15 +1,15 @@
 {
-  "version": "0.21.6",
-  "buildRevision": 2,
+  "version": "0.21.7",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Conclusão da Etapa 4 do Controle de NF de Entrada: fluxo operacional diário para incluir, editar e registrar saídas com menos digitação manual.",
-    "As alterações pedidas na v0.21.5 permanecem: Computador de Bordo CB5 abre primeiro, CB5 e Teclado V5 iniciam em Em estoque e Resumo continua por último.",
-    "Nova ação REGISTRAR SAÍDA permite escolher uma NF em estoque, informar a quantidade retirada e a NF de saída/referência; o saldo é reduzido automaticamente sem alterar a quantidade original da entrada.",
-    "A saída é bloqueada quando a quantidade é inválida, maior que o saldo ou quando a NF já está encerrada.",
-    "Cada saída recebe evento próprio no Histórico com estado anterior, estado posterior, quantidade e referência informada.",
-    "Atalhos nas grades: Ctrl+N abre novo registro, Enter edita a seleção e Ctrl+F leva o foco para a pesquisa.",
-    "As regras de importação, exportação fiel ao XLSX, histórico, backups e restauração protegida continuam preservadas.",
-    "Controle de NF de Entrada passa para v1.5.0; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
-    "A versão Estável permanece v0.20.2; a v0.21.6 é publicada somente no canal Teste."
+    "Etapa 5 do Controle de NF de Entrada: cria uma camada estruturada de movimentações para acompanhar cada saída por NF.",
+    "Nova aba MOVIMENTAÇÕES fica depois de Teclado V5 e antes de Histórico; Resumo continua por último.",
+    "Cada saída registrada passa a guardar data/hora, produto, NF de entrada, quantidade, saldo antes, saldo depois e NF de saída/referência em registro próprio.",
+    "Saídas feitas na v0.21.6 são aproveitadas automaticamente a partir do histórico quando a base ainda não possui a nova estrutura de movimentações.",
+    "A aba Movimentações permite pesquisar por NF ou referência e filtrar por Computador de Bordo CB5 ou Teclado V5.",
+    "O botão ABRIR NF leva diretamente da movimentação para a NF correspondente, mudando o filtro de status para Todos quando necessário para também localizar NFs encerradas.",
+    "O fluxo da etapa 4 permanece preservado: CB5 abre primeiro, CB5 e Teclado iniciam em Em estoque, Registrar Saída continua operacional e Resumo permanece no final.",
+    "Controle de NF de Entrada passa para v1.6.0; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
+    "A versão Estável permanece v0.20.2; a v0.21.7 é publicada somente no canal Teste."
   ]
 }
