@@ -1,6 +1,6 @@
 {
   "version": "0.21.17",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Revisão de acabamento do Controle de NF de Entrada antes da continuidade das etapas funcionais.",
     "A paleta do módulo foi alinhada aos temas da Central de Trabalho, removendo o roxo isolado e melhorando a consistência visual.",
