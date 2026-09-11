@@ -1,6 +1,6 @@
 {
   "version": "0.21.4",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 3 do Controle de NF de Entrada: torna o histórico auditável e os backups acessíveis diretamente pela interface.",
     "Nova aba HISTÓRICO lista adições, edições, exclusões, importações e restaurações, com pesquisa, filtro por tipo e visualização detalhada do estado anterior e posterior.",
