@@ -1,16 +1,12 @@
 {
-  "version": "0.21.4",
-  "buildRevision": 2,
+  "version": "0.21.5",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 3 do Controle de NF de Entrada: torna o histórico auditável e os backups acessíveis diretamente pela interface.",
-    "Nova aba HISTÓRICO lista adições, edições, exclusões, importações e restaurações, com pesquisa, filtro por tipo e visualização detalhada do estado anterior e posterior.",
-    "Nova aba SEGURANÇA lista os backups internos com data, motivo, quantidade de registros, conteúdo e situação.",
-    "Passa a ser possível criar um backup manual pelo programa sem manipular pastas ou arquivos.",
-    "A restauração de um backup exige confirmação, valida a base escolhida e cria automaticamente um backup do estado atual antes de aplicar a restauração.",
-    "Se a restauração falhar, o estado anterior é restaurado automaticamente; restaurações concluídas também entram no histórico do módulo.",
-    "Novos backups recebem metadados internos para diferenciar cópias manuais, automáticas e cópias criadas antes de restaurações.",
-    "Filtros, status, importação protegida e exportação fiel ao XLSX original permanecem preservados.",
-    "Controle de NF de Entrada passa para v1.3.0; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
-    "A versão Estável permanece v0.20.2; a v0.21.4 é publicada somente no canal Teste."
+    "Etapa 4 do Controle de NF de Entrada.",
+    "Computador de Bordo CB5 e Teclado V5 passam a abrir com status Em estoque.",
+    "Resumo passa a ficar por último nas abas.",
+    "Computador de Bordo V5 é corrigido visualmente para Computador de Bordo CB5.",
+    "Histórico, segurança, importação e exportação permanecem preservados.",
+    "A versão Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
   ]
 }
