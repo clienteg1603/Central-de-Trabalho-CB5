@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.4.0"
+$script:ModuleVersion = "1.5.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -345,6 +345,7 @@ function Refresh-NFHistory {
             "Exclusao" { "Exclusão" }
             "Importacao" { "Importação" }
             "RestauracaoBackup" { "Restauração" }
+            "Saida" { "Saída" }
             default { [string]$event.Tipo }
         }
         if ($type -ne "Todos" -and $label -ne $type) { continue }
@@ -662,6 +663,55 @@ function Edit-NFRecordFromUI {
         Set-NFStatus ("Registro " + $record.NFEntrada + " atualizado com sucesso.") "Success"
     }
     catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
+}
+
+function Register-NFOutputFromUI {
+    $product = Get-SelectedProduct
+    if ([string]::IsNullOrWhiteSpace($product)) { return }
+    $grid = if ($product -eq $script:ComputerProduct) { $computerGrid } else { $keyboardGrid }
+    $id = Get-SelectedRecordId $grid
+    if ($id -le 0) { [Windows.Forms.MessageBox]::Show("Selecione uma NF em estoque para registrar a saída.", "Controle de NF de Entrada", 0, 64) | Out-Null; return }
+    $record = Find-NFRecordById -Product $product -Id $id
+    if ($null -eq $record) { return }
+    $saldoAtual = [int]$record.QuantidadeSaldo
+    if ($saldoAtual -le 0) { [Windows.Forms.MessageBox]::Show("A NF selecionada já está encerrada.", "Controle de NF de Entrada", 0, 64) | Out-Null; return }
+
+    $dialog = New-Object Windows.Forms.Form
+    $dialog.Text = "Registrar saída — NF $($record.NFEntrada)"
+    $dialog.StartPosition = [Windows.Forms.FormStartPosition]::CenterParent
+    $dialog.FormBorderStyle = [Windows.Forms.FormBorderStyle]::FixedDialog
+    $dialog.MaximizeBox = $false; $dialog.MinimizeBox = $false; $dialog.ShowInTaskbar = $false
+    $dialog.ClientSize = [Drawing.Size]::new(570, 300)
+    $dialog.BackColor = $script:CurrentPalette.Background; $dialog.ForeColor = $script:CurrentPalette.Text
+    $layout = New-Object Windows.Forms.TableLayoutPanel
+    $layout.Dock = [Windows.Forms.DockStyle]::Fill; $layout.Padding = [Windows.Forms.Padding]::new(18); $layout.ColumnCount = 2; $layout.RowCount = 5
+    [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 190)))
+    [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
+    foreach($h in @(46,46,46,62,50)){ [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute,$h))) }
+    $dialog.Controls.Add($layout)
+    function Add-OutputLabel([string]$text,[int]$row){ $l=New-Object Windows.Forms.Label; $l.Text=$text; $l.Dock=[Windows.Forms.DockStyle]::Fill; $l.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $l.ForeColor=$script:CurrentPalette.Text; $layout.Controls.Add($l,0,$row) }
+    Add-OutputLabel "Saldo atual" 0
+    $current=New-Object Windows.Forms.Label; $current.Text=[string]$saldoAtual; $current.Dock=[Windows.Forms.DockStyle]::Fill; $current.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $layout.Controls.Add($current,1,0)
+    Add-OutputLabel "Quantidade da saída" 1
+    $qty=New-Object Windows.Forms.NumericUpDown; $qty.Minimum=1; $qty.Maximum=$saldoAtual; $qty.Value=1; $qty.Dock=[Windows.Forms.DockStyle]::Fill; $layout.Controls.Add($qty,1,1)
+    Add-OutputLabel "Saldo após saída" 2
+    $after=New-Object Windows.Forms.Label; $after.Text=[string]($saldoAtual-1); $after.Dock=[Windows.Forms.DockStyle]::Fill; $after.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $layout.Controls.Add($after,1,2)
+    Add-OutputLabel "NF de Saída / referência" 3
+    $refBox=New-Object Windows.Forms.TextBox; $refBox.Dock=[Windows.Forms.DockStyle]::Fill; $refBox.MaxLength=120; $layout.Controls.Add($refBox,1,3)
+    $qty.Add_ValueChanged({ $after.Text=[string]($saldoAtual-[int]$qty.Value) })
+    $buttons=New-Object Windows.Forms.FlowLayoutPanel; $buttons.Dock=[Windows.Forms.DockStyle]::Fill; $buttons.FlowDirection=[Windows.Forms.FlowDirection]::RightToLeft; $layout.SetColumnSpan($buttons,2); $layout.Controls.Add($buttons,0,4)
+    $cancel=New-Object Windows.Forms.Button; $cancel.Text="CANCELAR"; $cancel.Width=110; $cancel.Height=34; $cancel.DialogResult=[Windows.Forms.DialogResult]::Cancel; Set-NFButtonStyle $cancel "Secondary"; $buttons.Controls.Add($cancel)
+    $save=New-Object Windows.Forms.Button; $save.Text="REGISTRAR SAÍDA"; $save.Width=140; $save.Height=34; $save.DialogResult=[Windows.Forms.DialogResult]::OK; Set-NFButtonStyle $save "Primary"; $buttons.Controls.Add($save)
+    $dialog.AcceptButton=$save; $dialog.CancelButton=$cancel
+    if ($dialog.ShowDialog() -ne [Windows.Forms.DialogResult]::OK) { $dialog.Dispose(); return }
+    $quantity=[int]$qty.Value; $reference=([string]$refBox.Text).Trim(); $dialog.Dispose()
+    try {
+        [void](Register-NFEntradaOutput -Store $script:Store -Product $product -Id $id -Quantidade $quantity -NFSaida $reference)
+        Save-NFStore
+        Refresh-NFAll
+        Set-NFStatus ("Saída registrada na NF " + $record.NFEntrada + ". Saldo atual: " + ($saldoAtual-$quantity)) "Success"
+    }
+    catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha ao registrar saída", 0, 16) | Out-Null }
 }
 
 function Remove-NFRecordFromUI {
@@ -1111,7 +1161,7 @@ $historyTypeLabel.Text = "Tipo"; $historyTypeLabel.Dock = [Windows.Forms.DockSty
 $historyFilters.Controls.Add($historyTypeLabel, 2, 0)
 $historyTypeFilter = New-Object Windows.Forms.ComboBox
 $historyTypeFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
-[void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Exclusão", "Importação", "Restauração"))
+[void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Saída", "Exclusão", "Importação", "Restauração"))
 $historyTypeFilter.SelectedIndex = 0; $historyTypeFilter.Dock = [Windows.Forms.DockStyle]::Fill; $historyTypeFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 8, 8); $historyTypeFilter.BackColor = $script:CurrentPalette.Input; $historyTypeFilter.ForeColor = $script:CurrentPalette.Text
 $historyFilters.Controls.Add($historyTypeFilter, 3, 0)
 $historyCountLabel = New-Object Windows.Forms.Label
@@ -1184,9 +1234,11 @@ $newButton = New-Object Windows.Forms.Button
 $newButton.Text = "+ NOVO REGISTRO"; $newButton.Width = 145; $newButton.Height = 34; Set-NFButtonStyle $newButton "Primary"
 $editButton = New-Object Windows.Forms.Button
 $editButton.Text = "EDITAR SELEÇÃO"; $editButton.Width = 125; $editButton.Height = 34; Set-NFButtonStyle $editButton "Secondary"
+$outputButton = New-Object Windows.Forms.Button
+$outputButton.Text = "REGISTRAR SAÍDA"; $outputButton.Width = 135; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"
 $deleteButton = New-Object Windows.Forms.Button
 $deleteButton.Text = "EXCLUIR"; $deleteButton.Width = 95; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton "Danger"
-$actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($deleteButton)
+$actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($outputButton); $actionPanel.Controls.Add($deleteButton)
 # A barra fica no rodapé geral e é ativada somente nas abas de produto.
 $footerHost = New-Object Windows.Forms.TableLayoutPanel
 $footerHost.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1216,6 +1268,13 @@ function Update-NFActions {
     }
     $editButton.Enabled = $hasSelection
     $deleteButton.Enabled = $hasSelection
+    $canOutput = $false
+    if ($hasSelection) {
+        $id = Get-SelectedRecordId $grid
+        $selected = Find-NFRecordById -Product $product -Id $id
+        $canOutput = ($null -ne $selected -and [int]$selected.QuantidadeSaldo -gt 0)
+    }
+    $outputButton.Enabled = $canOutput
 }
 
 $computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })
@@ -1225,7 +1284,9 @@ $keyboardFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:Keyboar
 $keyboardStatusFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
 $keyboardCodeFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
 $computerGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
+$computerGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $computerFilter.Focus() } })
 $keyboardGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
+$keyboardGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $keyboardFilter.Focus() } })
 $computerGrid.Add_SelectionChanged({ Update-NFActions })
 $keyboardGrid.Add_SelectionChanged({ Update-NFActions })
 $mainTabs.Add_SelectedIndexChanged({ Update-NFActions; if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }; if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups } })
@@ -1239,6 +1300,7 @@ $manualBackupButton.Add_Click({ New-NFManualBackupFromUI })
 $restoreBackupButton.Add_Click({ Restore-NFBackupFromUI })
 $newButton.Add_Click({ Add-NFRecordFromUI })
 $editButton.Add_Click({ Edit-NFRecordFromUI })
+$outputButton.Add_Click({ Register-NFOutputFromUI })
 $deleteButton.Add_Click({ Remove-NFRecordFromUI })
 $importButton.Add_Click({ [void](Import-NFSourceFromUI) })
 $exportButton.Add_Click({ Export-NFFromUI })
