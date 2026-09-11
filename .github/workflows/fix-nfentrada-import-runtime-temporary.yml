@@ -16,10 +16,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Corrigir importação e preparar v0.21.1
-        shell: powershell
+      - name: Corrigir fontes e preparar v0.21.1
+        shell: bash
         run: |
-          $ErrorActionPreference = "Stop"
+          set -euo pipefail
           python - <<'PY'
           from pathlib import Path
           import json
@@ -77,9 +77,12 @@ jobs:
           Path(r'src/current/version.json').write_text(json.dumps(meta, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
 
+      - name: Validar importação no Windows PowerShell e publicar fontes
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
           & ".\src\ci\test_nfentrada_import.ps1" -CorePath ".\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
           & ".\src\ci\parse_powershell.ps1" -Root ".\src\generated"
-
           Remove-Item -LiteralPath "src/current/NFIMPORT_FIX_READY" -Force
           git config user.name "Central de Trabalho Builder"
           git config user.email "actions@users.noreply.github.com"
