@@ -1,6 +1,6 @@
 {
   "version": "0.21.8",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 6 do Controle de NF de Entrada: resumo operacional acionável e conferência mais rápida da base.",
     "O Resumo continua como última aba e passa a mostrar movimentações de hoje, peças que saíram hoje, peças movimentadas nos últimos 7 dias e a última movimentação registrada.",
