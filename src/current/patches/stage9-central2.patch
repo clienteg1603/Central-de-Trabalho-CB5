@@ -1,0 +1,15 @@
+diff --git a/src/generated/Central de Trabalho.ps1 b/src/generated/Central de Trabalho.ps1
+--- a/src/generated/Central de Trabalho.ps1
++++ b/src/generated/Central de Trabalho.ps1
+@@ -32,7 +32,7 @@
+-$script:AppVersion = "0.21.10"
++$script:AppVersion = "0.21.11"
+ $script:RootPath = $PSScriptRoot
+ $script:GeneratorVersion = "3.7.3"
+ $script:MaintenanceVersion = "0.6.1"
+@@ -52,7 +52,7 @@
+-$script:NFEntradaVersion = "1.9.0"
++$script:NFEntradaVersion = "2.0.0"
+ $script:NFEntradaDirectory = [IO.Path]::Combine(
+     $script:RootPath,
+     "Modulos",
