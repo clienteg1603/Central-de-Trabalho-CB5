@@ -1,0 +1,6 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -385,1 +385,2 @@
+     $answer = [Windows.Forms.MessageBox]::Show("Confirmar correção desta saída?", "Controle de NF de Entrada", 4, 48)
++    if ([int]$answer -ne 6) { return }
