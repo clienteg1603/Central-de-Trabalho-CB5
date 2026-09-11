@@ -35,13 +35,13 @@ jobs:
           if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { throw "Host nativo da Central não foi gerado." }
           if (-not (Test-Path -LiteralPath $updaterExe -PathType Leaf)) { throw "Host nativo do Atualizador não foi gerado." }
 
-          # Monta uma instalação temporária completa e executa o autoteste silencioso
-          # dos dois EXEs. Nada da interface gráfica é aberto durante esse teste.
+          # Monta uma instalação temporária completa e executa o autoteste silencioso.
           $smokeRoot = Join-Path $work "smoke\Central-de-Trabalho"
           $smokeUpdater = Join-Path $smokeRoot "Atualizador"
           $smokeMaintenance = Join-Path $smokeRoot "Modulos\Central-de-Manutencao-CB5"
           $smokeGenerator = Join-Path $smokeRoot "Modulos\Gerador-de-Planilhas-CB5-TV5"
-          New-Item -ItemType Directory -Force -Path $smokeUpdater, $smokeMaintenance, $smokeGenerator | Out-Null
+          $smokeNFEntrada = Join-Path $smokeRoot "Modulos\Controle-NF-Entrada"
+          New-Item -ItemType Directory -Force -Path $smokeUpdater, $smokeMaintenance, $smokeGenerator, $smokeNFEntrada | Out-Null
 
           Copy-Item -LiteralPath $hostExe -Destination (Join-Path $smokeRoot "Central de Trabalho.exe") -Force
           Copy-Item -LiteralPath $updaterExe -Destination (Join-Path $smokeUpdater "Central de Trabalho Updater.exe") -Force
@@ -53,6 +53,8 @@ jobs:
           Copy-Item -LiteralPath "src\generated\Modulos\Central-de-Manutencao-CB5\Manutencao.Core.ps1" -Destination $smokeMaintenance -Force
           Copy-Item -LiteralPath "src\generated\Modulos\Gerador-de-Planilhas-CB5-TV5\Gerador Planilhas.ps1" -Destination $smokeGenerator -Force
           Copy-Item -LiteralPath "src\generated\Modulos\Gerador-de-Planilhas-CB5-TV5\Componentes.Core.ps1" -Destination $smokeGenerator -Force
+          Copy-Item -LiteralPath "src\generated\Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1" -Destination $smokeNFEntrada -Force
+          Copy-Item -LiteralPath "src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1" -Destination $smokeNFEntrada -Force
 
           $centralSmoke = Start-Process -FilePath (Join-Path $smokeRoot "Central de Trabalho.exe") -ArgumentList "--self-test" -WorkingDirectory $smokeRoot -Wait -PassThru
           if ($centralSmoke.ExitCode -ne 0) { throw "Autoteste da Central falhou com código $($centralSmoke.ExitCode)." }
@@ -106,7 +108,6 @@ jobs:
           test -f "$NATIVE_UPDATER_HOST"
 
           # Todos os arquivos operacionais de texto devem existir no próprio fonte atual.
-          # O build não pode depender de baixar ou reaproveitar uma versão Estável antiga.
           required_sources=(
             "$SOURCE_ROOT/Central de Trabalho.ps1"
             "$SOURCE_ROOT/Atualizador/CANAIS.json"
@@ -116,13 +117,14 @@ jobs:
             "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1"
             "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1"
             "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1"
+            "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1"
+            "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1"
           )
           for source in "${required_sources[@]}"; do
             test -s "$source" || { echo "ERRO: fonte runtime ausente ou vazio: $source"; exit 1; }
           done
 
           # Evoluções incrementais ficam em transforms somente até serem aplicadas.
-          # Depois do build, o fonte montado vira a nova base e a transformação é removida.
           if compgen -G "src/current/transforms/*.py" > /dev/null; then
             for transform in src/current/transforms/*.py; do
               echo "Aplicando transformação: $transform"
@@ -134,9 +136,10 @@ jobs:
           OUT_ROOT="$BUILD_DIR/Central-de-Trabalho-v${VERSION}"
           mkdir -p "$OUT_ROOT/Atualizador" \
                    "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5" \
-                   "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5"
+                   "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5" \
+                   "$OUT_ROOT/Modulos/Controle-NF-Entrada"
 
-          # Distribuição 0.20+: todo runtime vem diretamente do fonte versionado atual.
+          # Todo o runtime vem diretamente do fonte versionado atual.
           cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
           cp "$SOURCE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
           cp "$SOURCE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
@@ -147,6 +150,8 @@ jobs:
           cp "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
           cp "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
           cp "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
+          cp "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1" "$OUT_ROOT/Modulos/Controle-NF-Entrada/"
+          cp "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1" "$OUT_ROOT/Modulos/Controle-NF-Entrada/"
 
           # Windows PowerShell lê estes scripts de forma mais segura com UTF-8 BOM.
           python3 - "$OUT_ROOT" <<'PY'
@@ -160,6 +165,8 @@ jobs:
               root / 'Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1',
               root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1',
               root / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1',
+              root / 'Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1',
+              root / 'Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1',
           ]
           bom = b'\xef\xbb\xbf'
           for p in paths:
@@ -230,8 +237,7 @@ jobs:
           print(f'Pacote {version}: {len(package)} bytes / {channel["PackageSha256"]}')
           PY
 
-          # Segunda barreira: valida o ZIP pronto, manifesto e metadados do canal
-          # antes de qualquer commit de publicação ser permitido.
+          # Segunda barreira: valida o ZIP pronto, manifesto e metadados do canal.
           python3 src/ci/audit_release.py package "$OUT_ROOT" "$VERSION" \
             "updates/packages/Central-de-Trabalho-v${VERSION}.zip" \
             "updates/test.json"
