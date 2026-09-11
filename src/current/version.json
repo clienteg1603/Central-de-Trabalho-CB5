@@ -1,6 +1,6 @@
 {
   "version": "0.21.6",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Conclusão da Etapa 4 do Controle de NF de Entrada: fluxo operacional diário para incluir, editar e registrar saídas com menos digitação manual.",
     "As alterações pedidas na v0.21.5 permanecem: Computador de Bordo CB5 abre primeiro, CB5 e Teclado V5 iniciam em Em estoque e Resumo continua por último.",
