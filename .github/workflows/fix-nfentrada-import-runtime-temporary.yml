@@ -82,7 +82,6 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           & ".\src\ci\test_nfentrada_import.ps1" -CorePath ".\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
-          & ".\src\ci\parse_powershell.ps1" -Root ".\src\generated"
           Remove-Item -LiteralPath "src/current/NFIMPORT_FIX_READY" -Force
           git config user.name "Central de Trabalho Builder"
           git config user.email "actions@users.noreply.github.com"
