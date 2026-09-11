@@ -1,6 +1,6 @@
 {
   "version": "0.21.0",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Adiciona o Controle de NF de Entrada como terceiro módulo integrado à Central de Trabalho, sem criar um programa separado.",
     "O novo módulo possui as áreas Resumo, Computador de Bordo V5 e Teclado V5, seguindo a organização da planilha fornecida pelo usuário.",
