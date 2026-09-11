@@ -22,7 +22,8 @@ jobs:
           foreach ($file in $files) {
             $tokens = $null
             $errors = $null
-            [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors)
+            $source = [IO.File]::ReadAllText($file.FullName, [Text.Encoding]::UTF8)
+            [void][System.Management.Automation.Language.Parser]::ParseInput($source, [ref]$tokens, [ref]$errors)
             foreach ($e in @($errors)) {
               $allErrors.Add("$($file.FullName) | line $($e.Extent.StartLineNumber), col $($e.Extent.StartColumnNumber) | $($e.Message)")
             }
