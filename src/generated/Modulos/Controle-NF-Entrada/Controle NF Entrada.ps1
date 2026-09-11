@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.4.2"
+$script:ModuleVersion = "2.5.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -530,10 +530,20 @@ function Refresh-NFHistory {
     if ($null -eq $historyGrid) { return }
     $filter = if ($null -ne $historyFilter) { ([string]$historyFilter.Text).Trim().ToLowerInvariant() } else { "" }
     $type = if ($null -ne $historyTypeFilter -and $historyTypeFilter.SelectedIndex -gt 0) { [string]$historyTypeFilter.SelectedItem } else { "Todos" }
+    $period = if ($null -ne $historyPeriodFilter -and $historyPeriodFilter.SelectedIndex -gt 0) { [string]$historyPeriodFilter.SelectedItem } else { "Todos" }
     $events = @(Get-NFEntradaHistory -Store $script:Store)
     $shown = 0
+    $today = [DateTime]::Today
     $historyGrid.Rows.Clear()
     foreach ($event in $events) {
+        $when = [DateTime]::MinValue
+        $hasDate = [DateTime]::TryParse([string]$event.DataHora, [ref]$when)
+        if ($period -ne "Todos") {
+            if (-not $hasDate) { continue }
+            if ($period -eq "Hoje" -and $when -lt $today) { continue }
+            if ($period -eq "Últimos 7 dias" -and $when -lt $today.AddDays(-6)) { continue }
+            if ($period -eq "Últimos 30 dias" -and $when -lt $today.AddDays(-29)) { continue }
+        }
         $label = switch ([string]$event.Tipo) {
             "Adicao" { "Adição" }
             "Edicao" { "Edição" }
@@ -551,7 +561,7 @@ function Refresh-NFHistory {
         [void]$historyGrid.Rows.Add([string]$event.Id, (Format-NFHistoryDate ([string]$event.DataHora)), $label, (Get-NFEntradaProductDisplayName ([string]$event.Produto)), [string]$event.NFEntrada, [string]$event.Detalhes)
         $shown++
     }
-    $historyCountLabel.Text = "$shown de $($events.Count)"
+    $historyCountLabel.Text = "$shown de $($events.Count) • $period"
     $historyGrid.ClearSelection()
     $historyDetailsButton.Enabled = $false
 }
@@ -1764,12 +1774,14 @@ $historyLayout.RowCount = 3
 $historyTab.Controls.Add($historyLayout)
 $historyFilters = New-Object Windows.Forms.TableLayoutPanel
 $historyFilters.Dock = [Windows.Forms.DockStyle]::Fill
-$historyFilters.ColumnCount = 5
+$historyFilters.ColumnCount = 7
 [void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 74)))
 [void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
 [void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 52)))
 [void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 142)))
-[void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 108)))
+[void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 62)))
+[void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 155)))
+[void]$historyFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 120)))
 $historyLayout.Controls.Add($historyFilters, 0, 0)
 $historySearchLabel = New-Object Windows.Forms.Label
 $historySearchLabel.Text = "Pesquisar"; $historySearchLabel.Dock = [Windows.Forms.DockStyle]::Fill; $historySearchLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft; $historySearchLabel.ForeColor = $script:CurrentPalette.Muted
@@ -1785,9 +1797,17 @@ $historyTypeFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
 [void]$historyTypeFilter.Items.AddRange(@("Todos", "Adição", "Edição", "Saída", "Estorno de saída", "Exclusão", "Importação", "Restauração", "Exportação"))
 $historyTypeFilter.SelectedIndex = 0; $historyTypeFilter.Dock = [Windows.Forms.DockStyle]::Fill; $historyTypeFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 8, 8); $historyTypeFilter.BackColor = $script:CurrentPalette.Input; $historyTypeFilter.ForeColor = $script:CurrentPalette.Text
 $historyFilters.Controls.Add($historyTypeFilter, 3, 0)
+$historyPeriodLabel = New-Object Windows.Forms.Label
+$historyPeriodLabel.Text = "Período"; $historyPeriodLabel.Dock = [Windows.Forms.DockStyle]::Fill; $historyPeriodLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft; $historyPeriodLabel.ForeColor = $script:CurrentPalette.Muted
+$historyFilters.Controls.Add($historyPeriodLabel, 4, 0)
+$historyPeriodFilter = New-Object Windows.Forms.ComboBox
+$historyPeriodFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
+[void]$historyPeriodFilter.Items.AddRange(@("Todos", "Hoje", "Últimos 7 dias", "Últimos 30 dias"))
+$historyPeriodFilter.SelectedIndex = 0; $historyPeriodFilter.Dock = [Windows.Forms.DockStyle]::Fill; $historyPeriodFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 8, 8); $historyPeriodFilter.BackColor = $script:CurrentPalette.Input; $historyPeriodFilter.ForeColor = $script:CurrentPalette.Text
+$historyFilters.Controls.Add($historyPeriodFilter, 5, 0)
 $historyCountLabel = New-Object Windows.Forms.Label
 $historyCountLabel.Text = "0 de 0"; $historyCountLabel.Dock = [Windows.Forms.DockStyle]::Fill; $historyCountLabel.TextAlign = [Drawing.ContentAlignment]::MiddleRight; $historyCountLabel.ForeColor = $script:CurrentPalette.Muted
-$historyFilters.Controls.Add($historyCountLabel, 4, 0)
+$historyFilters.Controls.Add($historyCountLabel, 6, 0)
 $historyGrid = New-NFGrid
 $historyIdCol = New-Object Windows.Forms.DataGridViewTextBoxColumn
 $historyIdCol.Name = "HistoryId"; $historyIdCol.Visible = $false; [void]$historyGrid.Columns.Add($historyIdCol)
@@ -1956,6 +1976,7 @@ $exportCheckButton.Add_Click({ Show-NFExportReadiness })
 $historyFilter.Add_TextChanged({ Refresh-NFHistory })
 $historyFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $historyFilter.Clear() } })
 $historyTypeFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
+$historyPeriodFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
 $historyGrid.Add_SelectionChanged({ $historyDetailsButton.Enabled = ($historyGrid.SelectedRows.Count -gt 0) })
 $historyGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Show-NFHistoryDetails } })
 $historyExportButton.Add_Click({ Export-NFGridViewToCsv -Grid $historyGrid -BaseName "Historico-NF-Entrada" -Title "Histórico" })
