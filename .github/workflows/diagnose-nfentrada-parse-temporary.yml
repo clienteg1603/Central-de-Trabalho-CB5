@@ -1,0 +1,20 @@
+name: Diagnose NF Entrada parse temporary
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-nfentrada-parse-temporary.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse generated PowerShell sources
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          & ".\src\ci\parse_powershell.ps1" -Root ".\src\generated"
