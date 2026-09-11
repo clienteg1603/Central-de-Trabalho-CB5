@@ -146,7 +146,7 @@ foreach ($required in @(
     'CentralDeTrabalho_Atualizador',
     'Central de Trabalho Updater.ps1',
     '--self-test',
-    'Parser.ParseFile'
+    'Parser.ParseInput'
 )) {
     if ($sourceText -notmatch [regex]::Escape($required)) {
         throw "Native updater host is missing required contract: $required"
