@@ -1,6 +1,6 @@
 {
   "version": "0.21.20",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 16 do Controle de NF de Entrada: auditoria de redundâncias, informações confusas e comportamentos estranhos.",
     "O botão VALIDAR EXCEL foi removido por duplicar a validação já executada pelo próprio EXCEL OFICIAL.",
