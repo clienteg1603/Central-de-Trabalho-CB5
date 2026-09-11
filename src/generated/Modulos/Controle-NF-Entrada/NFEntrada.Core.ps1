@@ -711,6 +711,22 @@ function Get-NFEntradaProductRecords {
     return @($property.Value | Sort-Object { [int]$_.Ordem }, { [int]$_.Id })
 }
 
+function Get-NFEntradaDuplicateRecord {
+    param(
+        [Parameter(Mandatory = $true)]$Store,
+        [Parameter(Mandatory = $true)][ValidateSet("COMPUTADOR DE BORDO V5", "TECLADO V5")][string]$Product,
+        [Parameter(Mandatory = $true)][string]$NFEntrada,
+        [int]$IgnoreId = 0
+    )
+    $nf = ConvertTo-NFEntradaText $NFEntrada
+    if ([string]::IsNullOrWhiteSpace($nf)) { return $null }
+    foreach ($existing in Get-NFEntradaProductRecords -Store $Store -Product $Product) {
+        if ([int]$existing.Id -eq $IgnoreId) { continue }
+        if ([string]::Equals((ConvertTo-NFEntradaText $existing.NFEntrada), $nf, [StringComparison]::OrdinalIgnoreCase)) { return $existing }
+    }
+    return $null
+}
+
 function Test-NFEntradaRecord {
     param(
         [Parameter(Mandatory = $true)]$Record,
@@ -732,12 +748,8 @@ function Test-NFEntradaRecord {
     if ([string]::IsNullOrWhiteSpace($nf)) { throw "Informe a NF de Entrada." }
     $code = ConvertTo-NFEntradaText $Record.Codigo
     if (@("800", "100", "850", "Garantia") -notcontains $code) { throw "Selecione um código válido: 800, 100, 850 ou Garantia." }
-    foreach ($existing in Get-NFEntradaProductRecords -Store $Store -Product $Product) {
-        if ([int]$existing.Id -eq $IgnoreId) { continue }
-        if ([string]::Equals((ConvertTo-NFEntradaText $existing.NFEntrada), $nf, [StringComparison]::OrdinalIgnoreCase)) {
-            throw "A NF de Entrada $nf já está cadastrada em $(Get-NFEntradaProductDisplayName $Product)."
-        }
-    }
+    $duplicate = Get-NFEntradaDuplicateRecord -Store $Store -Product $Product -NFEntrada $nf -IgnoreId $IgnoreId
+    if ($null -ne $duplicate) { throw "A NF de Entrada $nf já está cadastrada em $(Get-NFEntradaProductDisplayName $Product)." }
     return $true
 }
 

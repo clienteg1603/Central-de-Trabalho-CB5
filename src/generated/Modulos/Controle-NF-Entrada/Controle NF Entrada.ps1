@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.8.0"
+$script:ModuleVersion = "1.9.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -714,7 +714,7 @@ function Refresh-NFAll {
 }
 
 function Show-NFRecordDialog {
-    param([string]$Product, $Existing = $null)
+    param([string]$Product, $Existing = $null, [string]$DefaultDate = "", [string]$DefaultCode = "800")
     $dialog = New-Object Windows.Forms.Form
     $displayProduct = Get-NFEntradaProductDisplayName $Product
     $dialog.Text = if ($null -eq $Existing) { "Novo registro — $displayProduct" } else { "Editar registro — $displayProduct" }
@@ -723,7 +723,7 @@ function Show-NFRecordDialog {
     $dialog.MaximizeBox = $false
     $dialog.MinimizeBox = $false
     $dialog.ShowInTaskbar = $false
-    $dialog.ClientSize = [Drawing.Size]::new(620, 430)
+    $dialog.ClientSize = [Drawing.Size]::new(620, 480)
     $dialog.BackColor = $script:CurrentPalette.Background
     $dialog.ForeColor = $script:CurrentPalette.Text
 
@@ -731,10 +731,11 @@ function Show-NFRecordDialog {
     $layout.Dock = [Windows.Forms.DockStyle]::Fill
     $layout.Padding = [Windows.Forms.Padding]::new(18)
     $layout.ColumnCount = 2
-    $layout.RowCount = 7
+    $layout.RowCount = 8
     [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 180)))
     [void]$layout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
     foreach ($i in 0..5) { [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, $(if ($i -eq 5) { 112 } else { 44 })))) }
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 44)))
     [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
     $dialog.Controls.Add($layout)
 
@@ -789,12 +790,20 @@ function Show-NFRecordDialog {
     $outBox.Dock = [Windows.Forms.DockStyle]::Fill
     $layout.Controls.Add($outBox, 1, 5)
 
+    $validationLabel = New-Object Windows.Forms.Label
+    $validationLabel.Text = "Preencha os dados para validar o registro."
+    $validationLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $validationLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $validationLabel.ForeColor = $script:CurrentPalette.Muted
+    $layout.SetColumnSpan($validationLabel, 2)
+    $layout.Controls.Add($validationLabel, 0, 6)
+
     $buttons = New-Object Windows.Forms.FlowLayoutPanel
     $buttons.FlowDirection = [Windows.Forms.FlowDirection]::RightToLeft
     $buttons.Dock = [Windows.Forms.DockStyle]::Fill
     $buttons.Padding = [Windows.Forms.Padding]::new(0, 12, 0, 0)
     $layout.SetColumnSpan($buttons, 2)
-    $layout.Controls.Add($buttons, 0, 6)
+    $layout.Controls.Add($buttons, 0, 7)
 
     $cancel = New-Object Windows.Forms.Button
     $cancel.Text = "CANCELAR"
@@ -811,6 +820,17 @@ function Show-NFRecordDialog {
     $save.DialogResult = [Windows.Forms.DialogResult]::OK
     Set-NFButtonStyle $save "Primary"
     $buttons.Controls.Add($save)
+
+    $saveAndNew = $null
+    if ($null -eq $Existing) {
+        $saveAndNew = New-Object Windows.Forms.Button
+        $saveAndNew.Text = "SALVAR E NOVA"
+        $saveAndNew.Width = 135
+        $saveAndNew.Height = 34
+        $saveAndNew.DialogResult = [Windows.Forms.DialogResult]::Retry
+        Set-NFButtonStyle $saveAndNew "Secondary"
+        $buttons.Controls.Add($saveAndNew)
+    }
     $dialog.AcceptButton = $save
     $dialog.CancelButton = $cancel
 
@@ -828,11 +848,49 @@ function Show-NFRecordDialog {
         $outBox.Text = [string]$Existing.NFSaida
     }
     else {
-        $datePicker.Value = [DateTime]::Today
-        $codeCombo.SelectedItem = "800"
+        $defaultParsed = [DateTime]::MinValue
+        if (-not [string]::IsNullOrWhiteSpace($DefaultDate) -and [DateTime]::TryParseExact($DefaultDate, "yyyy-MM-dd", [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$defaultParsed)) { $datePicker.Value = $defaultParsed }
+        else { $datePicker.Value = [DateTime]::Today }
+        $qtyBox.Value = 1
+        $balanceBox.Value = $qtyBox.Value
+        $codeCombo.SelectedItem = if ($codeCombo.Items.Contains($DefaultCode)) { $DefaultCode } else { "800" }
     }
 
-    if ($dialog.ShowDialog() -ne [Windows.Forms.DialogResult]::OK) { $dialog.Dispose(); return $null }
+    $ignoreId = if ($null -ne $Existing) { [int]$Existing.Id } else { 0 }
+    $validateDialog = {
+        $candidate = [pscustomobject]@{
+            Data = $datePicker.Value.ToString("yyyy-MM-dd")
+            QuantidadeNaNF = [int]$qtyBox.Value
+            NFEntrada = ([string]$nfBox.Text).Trim()
+            QuantidadeSaldo = [int]$balanceBox.Value
+            Codigo = [string]$codeCombo.SelectedItem
+            NFSaida = ([string]$outBox.Text).Trim()
+        }
+        try {
+            [void](Test-NFEntradaRecord -Record $candidate -Store $script:Store -Product $Product -IgnoreId $ignoreId)
+            $validationLabel.Text = if ($null -eq $Existing) { "Pronto para salvar. O saldo inicial acompanha a quantidade da NF." } else { "Registro válido e pronto para salvar." }
+            $validationLabel.ForeColor = $script:CurrentPalette.Success
+            $save.Enabled = $true
+            if ($null -ne $saveAndNew) { $saveAndNew.Enabled = $true }
+        } catch {
+            $validationLabel.Text = $_.Exception.Message
+            $validationLabel.ForeColor = $script:CurrentPalette.Danger
+            $save.Enabled = $false
+            if ($null -ne $saveAndNew) { $saveAndNew.Enabled = $false }
+        }
+    }.GetNewClosure()
+
+    $qtyBox.Add_ValueChanged({ if ($null -eq $Existing) { $balanceBox.Value = $qtyBox.Value }; & $validateDialog }.GetNewClosure())
+    $datePicker.Add_ValueChanged($validateDialog)
+    $nfBox.Add_TextChanged($validateDialog)
+    $balanceBox.Add_ValueChanged($validateDialog)
+    $codeCombo.Add_SelectedIndexChanged($validateDialog)
+    $outBox.Add_TextChanged($validateDialog)
+    [void](& $validateDialog)
+    $dialog.Add_Shown({ $qtyBox.Focus() }.GetNewClosure())
+
+    $dialogResult = $dialog.ShowDialog()
+    if ($dialogResult -ne [Windows.Forms.DialogResult]::OK -and $dialogResult -ne [Windows.Forms.DialogResult]::Retry) { $dialog.Dispose(); return $null }
     $result = [pscustomobject]@{
         Data = $datePicker.Value.ToString("yyyy-MM-dd")
         QuantidadeNaNF = [int]$qtyBox.Value
@@ -840,21 +898,27 @@ function Show-NFRecordDialog {
         QuantidadeSaldo = [int]$balanceBox.Value
         Codigo = [string]$codeCombo.SelectedItem
         NFSaida = ([string]$outBox.Text).Trim()
+        ContinuarCadastro = ($dialogResult -eq [Windows.Forms.DialogResult]::Retry)
     }
     $dialog.Dispose()
     return $result
 }
 
 function Add-NFRecordFromUI {
+    param([string]$DefaultDate = "", [string]$DefaultCode = "800")
     $product = Get-SelectedProduct
     if ([string]::IsNullOrWhiteSpace($product)) { return }
-    $record = Show-NFRecordDialog -Product $product
+    $defaultDate = if ([string]::IsNullOrWhiteSpace($DefaultDate)) { [DateTime]::Today.ToString("yyyy-MM-dd") } else { $DefaultDate }
+    $record = Show-NFRecordDialog -Product $product -DefaultDate $defaultDate -DefaultCode $DefaultCode
     if ($null -eq $record) { return }
     try {
         [void](Add-NFEntradaRecord -Store $script:Store -Product $product -Record $record)
         Save-NFStore
         Refresh-NFAll
         Set-NFStatus ("Registro " + $record.NFEntrada + " incluído com sucesso.") "Success"
+        if ([bool]$record.ContinuarCadastro) {
+            Add-NFRecordFromUI -DefaultDate ([string]$record.Data) -DefaultCode ([string]$record.Codigo)
+        }
     }
     catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
 }
