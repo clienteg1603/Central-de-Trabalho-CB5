@@ -174,10 +174,14 @@ def main():
     # NF DE ENTRADA — terceiro módulo integrado, base local e exportação fiel ao modelo original.
     for marker in ('Controle de NF de Entrada', 'IMPORTAR PLANILHA', 'EXPORTAR EXCEL', 'COMPUTADOR DE BORDO V5', 'TECLADO V5', '$script:HostedControlExport', '[switch]$HostedInCentral'):
         require(errors, nf, marker, "NF Entrada")
-    for fn in ("Initialize-NFEntradaDataStore", "Import-NFEntradaSourceWorkbook", "Read-NFEntradaStore", "Write-NFEntradaStore", "Add-NFEntradaRecord", "Update-NFEntradaRecord", "Remove-NFEntradaRecord", "Get-NFEntradaSummary", "Export-NFEntradaWorkbook"):
+    for fn in ("Initialize-NFEntradaDataStore", "Import-NFEntradaSourceWorkbook", "Read-NFEntradaStore", "Write-NFEntradaStore", "Ensure-NFEntradaStoreShape", "Add-NFEntradaHistoryEvent", "Get-NFEntradaHistory", "New-NFEntradaSafetyBackup", "Restore-NFEntradaSafetyBackup", "Add-NFEntradaRecord", "Update-NFEntradaRecord", "Remove-NFEntradaRecord", "Get-NFEntradaSummary", "Export-NFEntradaWorkbook"):
         require_function(errors, nf_core, fn, "NFEntrada.Core")
     for marker in ('modelo-nf-entrada.xlsx', 'Range("A3:F298").ClearContents()', '$excel.Workbooks.Open($destinationFull, 0, $false)', '$excel.CalculateFullRebuild()'):
         require(errors, nf_core, marker, "NFEntrada.Core / exportação fiel")
+    for marker in ('Historico = @()', 'Backups', 'BackupDirectory', '-Tipo "Adicao"', '-Tipo "Edicao"', '-Tipo "Exclusao"', '-Tipo "Importacao"'):
+        require(errors, nf_core, marker, "NFEntrada.Core / histórico e segurança")
+    for marker in ('Confirmar nova importação', 'backup da base e do modelo atuais', 'Set-NFStatus', '$editButton.Enabled = $hasSelection', '$deleteButton.Enabled = $hasSelection'):
+        require(errors, nf, marker, "NF Entrada / operação segura")
 
     # ATUALIZADOR — preserva núcleo, hash do pacote, arquivos ocultos e recuperação real.
     require(errors, updater, "Update.Core.ps1", "Atualizador")

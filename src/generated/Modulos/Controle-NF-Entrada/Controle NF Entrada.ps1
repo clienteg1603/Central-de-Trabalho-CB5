@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.0.1"
+$script:ModuleVersion = "1.1.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -133,6 +133,21 @@ function Get-NFEntradaPalette {
                 DangerBack = [Drawing.Color]::FromArgb(78, 26, 31)
             }
         }
+    }
+}
+
+function Set-NFStatus {
+    param(
+        [string]$Message,
+        [ValidateSet("Normal", "Success", "Warning", "Error")][string]$Kind = "Normal"
+    )
+    if ($null -eq $footerStatus) { return }
+    $footerStatus.Text = $Message
+    switch ($Kind) {
+        "Success" { $footerStatus.ForeColor = $script:CurrentPalette.Success }
+        "Warning" { $footerStatus.ForeColor = $script:CurrentPalette.Warning }
+        "Error" { $footerStatus.ForeColor = $script:CurrentPalette.Danger }
+        default { $footerStatus.ForeColor = $script:CurrentPalette.Muted }
     }
 }
 
@@ -295,13 +310,19 @@ function Refresh-NFSummary {
     $overEntryValue.Text = [string][int]$summary.SaldoMaiorQueEntrada
     $generalStatusValue.Text = [string]$summary.Situacao
     $generalStatusValue.ForeColor = if ($summary.Situacao -eq "OK") { $script:CurrentPalette.Success } else { $script:CurrentPalette.Danger }
+    $computerTab.Text = "COMPUTADOR DE BORDO V5 ($([int]$summary.Produtos[$script:ComputerProduct].Registros))"
+    $keyboardTab.Text = "TECLADO V5 ($([int]$summary.Produtos[$script:KeyboardProduct].Registros))"
 }
 
 function Refresh-NFAll {
     Refresh-NFSummary
     Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter
     Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter
-    $footerStatus.Text = "Base local: $($script:DatabasePath)"
+    $templateReady = [IO.File]::Exists((Get-NFEntradaTemplatePath -DataDirectory $script:DataDirectory))
+    $exportButton.Enabled = $templateReady
+    $summary = Get-NFEntradaSummary -Store $script:Store
+    $totalRecords = [int]$summary.Produtos[$script:ComputerProduct].Registros + [int]$summary.Produtos[$script:KeyboardProduct].Registros
+    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • base local protegida") "Normal"
 }
 
 function Show-NFRecordDialog {
@@ -444,8 +465,9 @@ function Add-NFRecordFromUI {
         [void](Add-NFEntradaRecord -Store $script:Store -Product $product -Record $record)
         Save-NFStore
         Refresh-NFAll
+        Set-NFStatus ("Registro " + $record.NFEntrada + " incluído com sucesso.") "Success"
     }
-    catch { [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
+    catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
 }
 
 function Edit-NFRecordFromUI {
@@ -462,8 +484,9 @@ function Edit-NFRecordFromUI {
         Update-NFEntradaRecord -Store $script:Store -Product $product -Id $id -Record $record
         Save-NFStore
         Refresh-NFAll
+        Set-NFStatus ("Registro " + $record.NFEntrada + " atualizado com sucesso.") "Success"
     }
-    catch { [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
+    catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
 }
 
 function Remove-NFRecordFromUI {
@@ -485,8 +508,9 @@ function Remove-NFRecordFromUI {
         Remove-NFEntradaRecord -Store $script:Store -Product $product -Id $id
         Save-NFStore
         Refresh-NFAll
+        Set-NFStatus ("Registro " + $record.NFEntrada + " excluído; histórico preservado.") "Warning"
     }
-    catch { [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
+    catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Controle de NF de Entrada", 0, 48) | Out-Null }
 }
 
 function Import-NFSourceFromUI {
@@ -497,13 +521,28 @@ function Import-NFSourceFromUI {
     if ($dialog.ShowDialog() -ne [Windows.Forms.DialogResult]::OK) { $dialog.Dispose(); return $false }
     $source = $dialog.FileName
     $dialog.Dispose()
+    $currentSummary = Get-NFEntradaSummary -Store $script:Store
+    $currentRecords = [int]$currentSummary.Produtos[$script:ComputerProduct].Registros + [int]$currentSummary.Produtos[$script:KeyboardProduct].Registros
+    $templateExists = [IO.File]::Exists((Get-NFEntradaTemplatePath -DataDirectory $script:DataDirectory))
+    if ($currentRecords -gt 0 -or $templateExists) {
+        $answer = [Windows.Forms.MessageBox]::Show(
+            "Esta importação substituirá a base ativa pelos dados da planilha selecionada.`r`n`r`nAntes da troca, o programa criará automaticamente um backup da base e do modelo atuais. O histórico já registrado será preservado.`r`n`r`nContinuar?",
+            "Confirmar nova importação",
+            [Windows.Forms.MessageBoxButtons]::YesNo,
+            [Windows.Forms.MessageBoxIcon]::Warning
+        )
+        if ($answer -ne [Windows.Forms.DialogResult]::Yes) { Set-NFStatus "Importação cancelada; nenhum dado foi alterado." "Normal"; return $false }
+    }
     try {
+        Set-NFStatus "Importando planilha e protegendo a base atual..." "Warning"
         $result = Import-NFEntradaSourceWorkbook -SourcePath $source -DataDirectory $script:DataDirectory
         $script:DatabasePath = [string]$result.StorePath
         $script:Store = $result.Store
         Refresh-NFAll
+        Set-NFStatus "Planilha importada com sucesso; base anterior protegida em backup." "Success"
+        $backupText = if ([string]::IsNullOrWhiteSpace([string]$result.BackupDirectory)) { "" } else { "`r`n`r`nUma cópia de segurança da base anterior foi criada automaticamente." }
         [Windows.Forms.MessageBox]::Show(
-            "Planilha original importada com sucesso. A partir de agora o módulo usa uma cópia protegida como modelo de exportação e mantém os registros na base local.",
+            "Planilha importada com sucesso. O arquivo original permaneceu no local escolhido; o módulo usa uma cópia protegida como modelo de exportação e mantém os registros na base local." + $backupText,
             "Controle de NF de Entrada",
             [Windows.Forms.MessageBoxButtons]::OK,
             [Windows.Forms.MessageBoxIcon]::Information
@@ -511,6 +550,7 @@ function Import-NFSourceFromUI {
         return $true
     }
     catch {
+        Set-NFStatus $_.Exception.Message "Error"
         [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha ao importar planilha", 0, 16) | Out-Null
         return $false
     }
@@ -528,6 +568,7 @@ function Export-NFFromUI {
     $dialog.Dispose()
     try {
         $exported = Export-NFEntradaWorkbook -Store $script:Store -DestinationPath $path
+        Set-NFStatus "Planilha exportada com sucesso." "Success"
         [Windows.Forms.MessageBox]::Show(
             "Planilha exportada com o modelo original, fórmulas, resumo e formatação preservados.`r`n`r`n$exported",
             "Exportação concluída",
@@ -535,7 +576,7 @@ function Export-NFFromUI {
             [Windows.Forms.MessageBoxIcon]::Information
         ) | Out-Null
     }
-    catch { [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha na exportação", 0, 16) | Out-Null }
+    catch { Set-NFStatus $_.Exception.Message "Error"; [Windows.Forms.MessageBox]::Show($_.Exception.Message, "Falha na exportação", 0, 16) | Out-Null }
 }
 
 function New-NFSummaryCard {
@@ -834,17 +875,25 @@ $footerHost.Controls.Add($footerStatus, 0, 0)
 $footerHost.Controls.Add($actionPanel, 1, 0)
 
 function Update-NFActions {
-    $enabled = -not [string]::IsNullOrWhiteSpace((Get-SelectedProduct))
+    $product = Get-SelectedProduct
+    $enabled = -not [string]::IsNullOrWhiteSpace($product)
     $actionPanel.Visible = $enabled
     $newButton.Enabled = $enabled
-    $editButton.Enabled = $enabled
-    $deleteButton.Enabled = $enabled
+    $hasSelection = $false
+    if ($enabled) {
+        $grid = if ($product -eq $script:ComputerProduct) { $computerGrid } else { $keyboardGrid }
+        $hasSelection = ($null -ne $grid -and $grid.SelectedRows.Count -gt 0)
+    }
+    $editButton.Enabled = $hasSelection
+    $deleteButton.Enabled = $hasSelection
 }
 
 $computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter })
 $keyboardFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter })
 $computerGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
 $keyboardGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
+$computerGrid.Add_SelectionChanged({ Update-NFActions })
+$keyboardGrid.Add_SelectionChanged({ Update-NFActions })
 $mainTabs.Add_SelectedIndexChanged({ Update-NFActions })
 $newButton.Add_Click({ Add-NFRecordFromUI })
 $editButton.Add_Click({ Edit-NFRecordFromUI })

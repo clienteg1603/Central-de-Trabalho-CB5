@@ -1,12 +1,15 @@
 {
-  "version": "0.21.1",
-  "buildRevision": 3,
+  "version": "0.21.2",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Corrige a falha ao importar a planilha NF DE ENTRADA que exibia “Os tipos de argumento não correspondem” no Windows PowerShell.",
-    "A leitura interna do arquivo XLSX passa a usar construtores .NET explícitos para StreamReader, XmlNamespaceManager e coleções genéricas, evitando incompatibilidade do binder do Windows PowerShell.",
-    "A importação continua trabalhando por cópia: a planilha escolhida pelo usuário não é movida, renomeada nem excluída; uma cópia idêntica é mantida como modelo protegido em AppData.",
-    "Foi adicionado um teste automático real que cria uma planilha XLSX de controle, importa os dois produtos, confere os registros e verifica por SHA-256 que o arquivo original permaneceu no lugar e sem alterações.",
-    "Controle de NF de Entrada passa para v1.0.1; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
-    "A v0.20.2 permanece Estável; a v0.21.1 é publicada somente no canal Teste até validação no computador do usuário."
+    "Inicia a Etapa 1 de evolução focada no Controle de NF de Entrada: segurança operacional, histórico auditável e clareza das ações.",
+    "Inclusões, edições e exclusões passam a registrar histórico interno com data/hora, produto, NF, estado anterior e estado posterior quando aplicável.",
+    "Uma nova importação agora exige confirmação quando já existe base ativa e cria automaticamente um backup da base e do modelo atuais antes de qualquer substituição.",
+    "A importação passa a preparar os novos arquivos em temporários, validá-los e restaurar o backup automaticamente se a troca falhar.",
+    "O histórico anterior é preservado mesmo após reimportar a planilha; o arquivo XLSX original continua no local escolhido e não é alterado.",
+    "A interface passa a mostrar contagem de registros nas abas, mensagens operacionais no rodapé e só habilita Editar/Excluir quando existe uma linha selecionada.",
+    "Exportar Excel fica indisponível enquanto não houver modelo importado, evitando uma tentativa inválida.",
+    "Controle de NF de Entrada passa para v1.1.0; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
+    "A versão Estável permanece v0.20.2; a v0.21.2 é publicada somente no canal Teste."
   ]
 }

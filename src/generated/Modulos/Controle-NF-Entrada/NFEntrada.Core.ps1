@@ -25,6 +25,123 @@ function Get-NFEntradaTemplatePath {
     return [IO.Path]::Combine($DataDirectory, "modelo-nf-entrada.xlsx")
 }
 
+
+function Get-NFEntradaBackupsDirectory {
+    param([string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory))
+    return [IO.Path]::Combine($DataDirectory, "Backups")
+}
+
+function Ensure-NFEntradaStoreShape {
+    param([Parameter(Mandatory = $true)]$Store)
+    if ($null -eq $Store.PSObject.Properties["Historico"]) {
+        $Store | Add-Member -NotePropertyName Historico -NotePropertyValue @()
+    }
+    elseif ($null -eq $Store.Historico) {
+        $Store.Historico = @()
+    }
+    if ($null -eq $Store.PSObject.Properties["Meta"]) {
+        $Store | Add-Member -NotePropertyName Meta -NotePropertyValue ([pscustomobject]@{
+            CriadoEm = [DateTime]::Now.ToString("o")
+            UltimaAlteracaoEm = [DateTime]::Now.ToString("o")
+        })
+    }
+    else {
+        if ($null -eq $Store.Meta.PSObject.Properties["CriadoEm"]) {
+            $Store.Meta | Add-Member -NotePropertyName CriadoEm -NotePropertyValue ([DateTime]::Now.ToString("o"))
+        }
+        if ($null -eq $Store.Meta.PSObject.Properties["UltimaAlteracaoEm"]) {
+            $Store.Meta | Add-Member -NotePropertyName UltimaAlteracaoEm -NotePropertyValue ([DateTime]::Now.ToString("o"))
+        }
+    }
+    return $Store
+}
+
+function Copy-NFEntradaRecordSnapshot {
+    param($Record)
+    if ($null -eq $Record) { return $null }
+    return [pscustomobject]@{
+        Id = [int]$Record.Id
+        Ordem = [int]$Record.Ordem
+        Data = ConvertTo-NFEntradaText $Record.Data
+        QuantidadeNaNF = [int]$Record.QuantidadeNaNF
+        NFEntrada = ConvertTo-NFEntradaText $Record.NFEntrada
+        QuantidadeSaldo = [int]$Record.QuantidadeSaldo
+        Codigo = ConvertTo-NFEntradaText $Record.Codigo
+        NFSaida = ConvertTo-NFEntradaText $Record.NFSaida
+    }
+}
+
+function Add-NFEntradaHistoryEvent {
+    param(
+        [Parameter(Mandatory = $true)]$Store,
+        [Parameter(Mandatory = $true)][string]$Tipo,
+        [string]$Produto = "",
+        [int]$RegistroId = 0,
+        [string]$NFEntrada = "",
+        $Antes = $null,
+        $Depois = $null,
+        [string]$Detalhes = ""
+    )
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $event = [pscustomobject]@{
+        Id = [guid]::NewGuid().ToString("N")
+        DataHora = [DateTime]::Now.ToString("o")
+        Tipo = $Tipo
+        Produto = $Produto
+        RegistroId = $RegistroId
+        NFEntrada = $NFEntrada
+        Detalhes = $Detalhes
+        Antes = $Antes
+        Depois = $Depois
+    }
+    $Store.Historico = @($Store.Historico) + $event
+    $Store.Meta.UltimaAlteracaoEm = $event.DataHora
+    return $event
+}
+
+function Get-NFEntradaHistory {
+    param([Parameter(Mandatory = $true)]$Store)
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    return @($Store.Historico | Sort-Object { [DateTime]$_.DataHora } -Descending)
+}
+
+function New-NFEntradaSafetyBackup {
+    param([string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory))
+    $storePath = Get-NFEntradaStorePath -DataDirectory $DataDirectory
+    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
+    $storeExists = [IO.File]::Exists($storePath)
+    $templateExists = [IO.File]::Exists($templatePath)
+    if (-not $storeExists -and -not $templateExists) { return $null }
+
+    $backupRoot = Get-NFEntradaBackupsDirectory -DataDirectory $DataDirectory
+    if (-not [IO.Directory]::Exists($backupRoot)) { [void][IO.Directory]::CreateDirectory($backupRoot) }
+    $stamp = [DateTime]::Now.ToString("yyyyMMdd-HHmmss-fff")
+    $backupDirectory = [IO.Path]::Combine($backupRoot, $stamp)
+    [void][IO.Directory]::CreateDirectory($backupDirectory)
+    if ($storeExists) { [IO.File]::Copy($storePath, [IO.Path]::Combine($backupDirectory, "nf-entrada.json"), $true) }
+    if ($templateExists) { [IO.File]::Copy($templatePath, [IO.Path]::Combine($backupDirectory, "modelo-nf-entrada.xlsx"), $true) }
+    return [pscustomobject]@{
+        Directory = $backupDirectory
+        StoreExisted = $storeExists
+        TemplateExisted = $templateExists
+    }
+}
+
+function Restore-NFEntradaSafetyBackup {
+    param(
+        [Parameter(Mandatory = $true)]$Backup,
+        [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory)
+    )
+    $storePath = Get-NFEntradaStorePath -DataDirectory $DataDirectory
+    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
+    $backupStore = [IO.Path]::Combine([string]$Backup.Directory, "nf-entrada.json")
+    $backupTemplate = [IO.Path]::Combine([string]$Backup.Directory, "modelo-nf-entrada.xlsx")
+    if ([bool]$Backup.StoreExisted -and [IO.File]::Exists($backupStore)) { [IO.File]::Copy($backupStore, $storePath, $true) }
+    elseif (-not [bool]$Backup.StoreExisted -and [IO.File]::Exists($storePath)) { [IO.File]::Delete($storePath) }
+    if ([bool]$Backup.TemplateExisted -and [IO.File]::Exists($backupTemplate)) { [IO.File]::Copy($backupTemplate, $templatePath, $true) }
+    elseif (-not [bool]$Backup.TemplateExisted -and [IO.File]::Exists($templatePath)) { [IO.File]::Delete($templatePath) }
+}
+
 function Get-NFEntradaZipEntryText {
     param(
         [Parameter(Mandatory = $true)][IO.Compression.ZipArchive]$Archive,
@@ -157,14 +274,20 @@ function New-NFEntradaStoreFromWorkbook {
         $cb = Import-NFEntradaSheetRecords -Archive $archive -EntryName "xl/worksheets/sheet1.xml" -ProductName "COMPUTADOR DE BORDO V5" -SharedStrings $shared -NextId ([ref]$next)
         $tk = Import-NFEntradaSheetRecords -Archive $archive -EntryName "xl/worksheets/sheet2.xml" -ProductName "TECLADO V5" -SharedStrings $shared -NextId ([ref]$next)
         if (@($cb).Count -eq 0 -and @($tk).Count -eq 0) { throw "A planilha não contém os registros esperados de Computador de Bordo V5 e Teclado V5." }
-        return [pscustomobject]@{
+        $store = [pscustomobject]@{
             SchemaVersion = 1
             NextId = $next
             Produtos = [pscustomobject]@{
                 'COMPUTADOR DE BORDO V5' = @($cb)
                 'TECLADO V5' = @($tk)
             }
+            Historico = @()
+            Meta = [pscustomobject]@{
+                CriadoEm = [DateTime]::Now.ToString("o")
+                UltimaAlteracaoEm = [DateTime]::Now.ToString("o")
+            }
         }
+        return $store
     }
     finally {
         if ($null -ne $archive) { $archive.Dispose() }
@@ -180,6 +303,11 @@ function New-EmptyNFEntradaStore {
             'COMPUTADOR DE BORDO V5' = @()
             'TECLADO V5' = @()
         }
+        Historico = @()
+        Meta = [pscustomobject]@{
+            CriadoEm = [DateTime]::Now.ToString("o")
+            UltimaAlteracaoEm = [DateTime]::Now.ToString("o")
+        }
     }
 }
 
@@ -191,12 +319,49 @@ function Import-NFEntradaSourceWorkbook {
     if (-not [IO.File]::Exists($SourcePath)) { throw "A planilha selecionada não foi encontrada." }
     if ([IO.Path]::GetExtension($SourcePath) -ne ".xlsx") { throw "Selecione a planilha original no formato .xlsx." }
     if (-not [IO.Directory]::Exists($DataDirectory)) { [void][IO.Directory]::CreateDirectory($DataDirectory) }
-    $store = New-NFEntradaStoreFromWorkbook -WorkbookPath $SourcePath
-    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
-    [IO.File]::Copy($SourcePath, $templatePath, $true)
+
     $storePath = Get-NFEntradaStorePath -DataDirectory $DataDirectory
-    Write-NFEntradaStore -Store $store -Path $storePath
-    return [pscustomobject]@{ Store = $store; StorePath = $storePath; TemplatePath = $templatePath }
+    $templatePath = Get-NFEntradaTemplatePath -DataDirectory $DataDirectory
+    $store = New-NFEntradaStoreFromWorkbook -WorkbookPath $SourcePath
+    if ([IO.File]::Exists($storePath)) {
+        try {
+            $previous = Read-NFEntradaStore -Path $storePath
+            [void](Ensure-NFEntradaStoreShape -Store $previous)
+            $store.Historico = @($previous.Historico)
+        }
+        catch {}
+    }
+    [void](Add-NFEntradaHistoryEvent -Store $store -Tipo "Importacao" -Detalhes ("Planilha importada: " + [IO.Path]::GetFileName($SourcePath)))
+
+    $backup = New-NFEntradaSafetyBackup -DataDirectory $DataDirectory
+    $token = [guid]::NewGuid().ToString("N")
+    $tempTemplate = $templatePath + "." + $token + ".tmp"
+    $tempStore = $storePath + "." + $token + ".tmp"
+    try {
+        [IO.File]::Copy($SourcePath, $tempTemplate, $true)
+        Write-NFEntradaStore -Store $store -Path $tempStore
+        [void](Read-NFEntradaStore -Path $tempStore)
+        [IO.File]::Copy($tempTemplate, $templatePath, $true)
+        [IO.File]::Copy($tempStore, $storePath, $true)
+    }
+    catch {
+        if ($null -ne $backup) {
+            try { Restore-NFEntradaSafetyBackup -Backup $backup -DataDirectory $DataDirectory } catch {}
+        }
+        throw
+    }
+    finally {
+        if ([IO.File]::Exists($tempTemplate)) { try { [IO.File]::Delete($tempTemplate) } catch {} }
+        if ([IO.File]::Exists($tempStore)) { try { [IO.File]::Delete($tempStore) } catch {} }
+        $tempBak = $tempStore + ".bak"
+        if ([IO.File]::Exists($tempBak)) { try { [IO.File]::Delete($tempBak) } catch {} }
+    }
+    return [pscustomobject]@{
+        Store = $store
+        StorePath = $storePath
+        TemplatePath = $templatePath
+        BackupDirectory = if ($null -ne $backup) { [string]$backup.Directory } else { "" }
+    }
 }
 
 function Write-NFEntradaStore {
@@ -204,10 +369,12 @@ function Write-NFEntradaStore {
         [Parameter(Mandatory = $true)]$Store,
         [string]$Path = (Get-NFEntradaStorePath)
     )
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $Store.Meta.UltimaAlteracaoEm = [DateTime]::Now.ToString("o")
     $directory = [IO.Path]::GetDirectoryName($Path)
     if (-not [IO.Directory]::Exists($directory)) { [void][IO.Directory]::CreateDirectory($directory) }
     $temp = $Path + ".tmp"
-    $json = $Store | ConvertTo-Json -Depth 12
+    $json = $Store | ConvertTo-Json -Depth 20
     [IO.File]::WriteAllText($temp, $json, ([Text.UTF8Encoding]::new($true)))
     if ([IO.File]::Exists($Path)) {
         $backup = $Path + ".bak"
@@ -222,6 +389,7 @@ function Read-NFEntradaStore {
     if (-not [IO.File]::Exists($Path)) { throw "A base de NF de Entrada não foi encontrada." }
     $store = ([IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8) | ConvertFrom-Json)
     if ($null -eq $store -or [int]$store.SchemaVersion -ne 1) { throw "A base de NF de Entrada possui formato incompatível." }
+    [void](Ensure-NFEntradaStoreShape -Store $store)
     return $store
 }
 
@@ -300,6 +468,7 @@ function Add-NFEntradaRecord {
     $property = $Store.Produtos.PSObject.Properties[$Product]
     $property.Value = @($records + $newRecord)
     $Store.NextId = $id + 1
+    [void](Add-NFEntradaHistoryEvent -Store $Store -Tipo "Adicao" -Produto $Product -RegistroId $id -NFEntrada $newRecord.NFEntrada -Depois (Copy-NFEntradaRecordSnapshot $newRecord))
     return $newRecord
 }
 
@@ -313,19 +482,24 @@ function Update-NFEntradaRecord {
     [void](Test-NFEntradaRecord -Record $Record -Store $Store -Product $Product -IgnoreId $Id)
     $records = @(Get-NFEntradaProductRecords -Store $Store -Product $Product)
     $found = $false
+    $before = $null
+    $after = $null
     foreach ($existing in $records) {
         if ([int]$existing.Id -ne $Id) { continue }
+        $before = Copy-NFEntradaRecordSnapshot $existing
         $existing.Data = ConvertTo-NFEntradaText $Record.Data
         $existing.QuantidadeNaNF = [int]$Record.QuantidadeNaNF
         $existing.NFEntrada = ConvertTo-NFEntradaText $Record.NFEntrada
         $existing.QuantidadeSaldo = [int]$Record.QuantidadeSaldo
         $existing.Codigo = ConvertTo-NFEntradaText $Record.Codigo
         $existing.NFSaida = ConvertTo-NFEntradaText $Record.NFSaida
+        $after = Copy-NFEntradaRecordSnapshot $existing
         $found = $true
         break
     }
     if (-not $found) { throw "O registro selecionado não foi encontrado." }
     $Store.Produtos.PSObject.Properties[$Product].Value = @($records)
+    [void](Add-NFEntradaHistoryEvent -Store $Store -Tipo "Edicao" -Produto $Product -RegistroId $Id -NFEntrada $after.NFEntrada -Antes $before -Depois $after)
 }
 
 function Remove-NFEntradaRecord {
@@ -335,9 +509,13 @@ function Remove-NFEntradaRecord {
         [Parameter(Mandatory = $true)][int]$Id
     )
     $records = @(Get-NFEntradaProductRecords -Store $Store -Product $Product)
+    $removed = @($records | Where-Object { [int]$_.Id -eq $Id } | Select-Object -First 1)
     $remaining = @($records | Where-Object { [int]$_.Id -ne $Id })
     if ($remaining.Count -eq $records.Count) { throw "O registro selecionado não foi encontrado." }
     $Store.Produtos.PSObject.Properties[$Product].Value = @($remaining)
+    $snapshot = if ($removed.Count -gt 0) { Copy-NFEntradaRecordSnapshot $removed[0] } else { $null }
+    $nf = if ($null -ne $snapshot) { [string]$snapshot.NFEntrada } else { "" }
+    [void](Add-NFEntradaHistoryEvent -Store $Store -Tipo "Exclusao" -Produto $Product -RegistroId $Id -NFEntrada $nf -Antes $snapshot)
 }
 
 function Get-NFEntradaSummary {
