@@ -1,0 +1,7 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -383,1 +383,2 @@
+         return
+     }
++    $result = Register-NFEntradaReversal -Store $script:Store -MovementId ([string]$movement.Id) -Motivo "Correção operacional"
