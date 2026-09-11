@@ -1,1 +1,2 @@
-stage10
+from pathlib import Path
+print('stage10')
