@@ -1,0 +1,108 @@
+{
+  "files": [
+    {
+      "path": "src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1",
+      "changes": [
+        {
+          "name": "versao do modulo",
+          "old": "$script:ModuleVersion = \"2.0.0\"",
+          "new": "$script:ModuleVersion = \"2.1.0\""
+        },
+        {
+          "name": "helpers de selecao e filtros",
+          "old": "function Find-NFRecordById {\n    param([string]$Product, [int]$Id)\n    foreach ($r in Get-NFEntradaProductRecords -Store $script:Store -Product $Product) {\n        if ([int]$r.Id -eq $Id) { return $r }\n    }\n    return $null\n}\n\nfunction Format-NFDate {",
+          "new": "function Find-NFRecordById {\n    param([string]$Product, [int]$Id)\n    foreach ($r in Get-NFEntradaProductRecords -Store $script:Store -Product $Product) {\n        if ([int]$r.Id -eq $Id) { return $r }\n    }\n    return $null\n}\n\nfunction Select-NFRecordInGrid {\n    param([Windows.Forms.DataGridView]$Grid, [int]$Id)\n    if ($null -eq $Grid -or $Id -le 0) { return $false }\n    foreach ($row in @($Grid.Rows)) {\n        try {\n            if ([int]$row.Cells[\"Id\"].Value -ne $Id) { continue }\n            $Grid.ClearSelection()\n            $row.Selected = $true\n            if ($row.Cells[\"NFEntrada\"].Visible) { $Grid.CurrentCell = $row.Cells[\"NFEntrada\"] }\n            try { $Grid.FirstDisplayedScrollingRowIndex = $row.Index } catch {}\n            return $true\n        } catch {}\n    }\n    return $false\n}\n\nfunction Clear-NFCurrentProductFilters {\n    $product = Get-SelectedProduct\n    if ([string]::IsNullOrWhiteSpace($product)) { return }\n    if ($product -eq $script:ComputerProduct) {\n        $computerFilter.Clear()\n        $computerCodeFilter.SelectedIndex = 0\n        $computerStatusFilter.SelectedItem = \"Em estoque\"\n        $computerFilter.Focus()\n    }\n    else {\n        $keyboardFilter.Clear()\n        $keyboardCodeFilter.SelectedIndex = 0\n        $keyboardStatusFilter.SelectedItem = \"Em estoque\"\n        $keyboardFilter.Focus()\n    }\n    Set-NFStatus \"Filtros restaurados para Em estoque e Todos os códigos.\" \"Normal\"\n}\n\nfunction Format-NFDate {"
+        },
+        {
+          "name": "manter selecao apos inclusao",
+          "old": "        [void](Add-NFEntradaRecord -Store $script:Store -Product $product -Record $record)\n        Save-NFStore\n        Refresh-NFAll\n        Set-NFStatus (\"Registro \" + $record.NFEntrada + \" incluído com sucesso.\") \"Success\"",
+          "new": "        $created = Add-NFEntradaRecord -Store $script:Store -Product $product -Record $record\n        Save-NFStore\n        Refresh-NFAll\n        $targetGrid = if ($product -eq $script:ComputerProduct) { $computerGrid } else { $keyboardGrid }\n        [void](Select-NFRecordInGrid -Grid $targetGrid -Id ([int]$created.Id))\n        Set-NFStatus (\"Registro \" + $record.NFEntrada + \" incluído com sucesso.\") \"Success\""
+        },
+        {
+          "name": "manter selecao apos edicao",
+          "old": "        Update-NFEntradaRecord -Store $script:Store -Product $product -Id $id -Record $record\n        Save-NFStore\n        Refresh-NFAll\n        Set-NFStatus (\"Registro \" + $record.NFEntrada + \" atualizado com sucesso.\") \"Success\"",
+          "new": "        Update-NFEntradaRecord -Store $script:Store -Product $product -Id $id -Record $record\n        Save-NFStore\n        Refresh-NFAll\n        [void](Select-NFRecordInGrid -Grid $grid -Id $id)\n        Set-NFStatus (\"Registro \" + $record.NFEntrada + \" atualizado com sucesso.\") \"Success\""
+        },
+        {
+          "name": "manter selecao apos saida",
+          "old": "        [void](Register-NFEntradaOutput -Store $script:Store -Product $product -Id $id -Quantidade $quantity -NFSaida $reference)\n        Save-NFStore\n        Refresh-NFAll\n        Set-NFStatus (\"Saída registrada na NF \" + $record.NFEntrada + \". Saldo atual: \" + ($saldoAtual-$quantity)) \"Success\"",
+          "new": "        [void](Register-NFEntradaOutput -Store $script:Store -Product $product -Id $id -Quantidade $quantity -NFSaida $reference)\n        Save-NFStore\n        Refresh-NFAll\n        [void](Select-NFRecordInGrid -Grid $grid -Id $id)\n        Set-NFStatus (\"Saída registrada na NF \" + $record.NFEntrada + \". Saldo atual: \" + ($saldoAtual-$quantity)) \"Success\""
+        },
+        {
+          "name": "botao limpar filtros",
+          "old": "$outputButton = New-Object Windows.Forms.Button\n$outputButton.Text = \"REGISTRAR SAÍDA\"; $outputButton.Width = 135; $outputButton.Height = 34; Set-NFButtonStyle $outputButton \"Secondary\"\n$deleteButton = New-Object Windows.Forms.Button\n$deleteButton.Text = \"EXCLUIR\"; $deleteButton.Width = 95; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton \"Danger\"\n$actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($outputButton); $actionPanel.Controls.Add($deleteButton)",
+          "new": "$outputButton = New-Object Windows.Forms.Button\n$outputButton.Text = \"REGISTRAR SAÍDA\"; $outputButton.Width = 135; $outputButton.Height = 34; Set-NFButtonStyle $outputButton \"Secondary\"\n$clearFiltersButton = New-Object Windows.Forms.Button\n$clearFiltersButton.Text = \"LIMPAR FILTROS\"; $clearFiltersButton.Width = 120; $clearFiltersButton.Height = 34; Set-NFButtonStyle $clearFiltersButton \"Secondary\"\n$deleteButton = New-Object Windows.Forms.Button\n$deleteButton.Text = \"EXCLUIR\"; $deleteButton.Width = 95; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton \"Danger\"\n$actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($outputButton); $actionPanel.Controls.Add($clearFiltersButton); $actionPanel.Controls.Add($deleteButton)"
+        },
+        {
+          "name": "status com atalhos",
+          "old": "    Set-NFStatus (\"Pronto • \" + $totalRecords + \" registro(s) • abas operacionais iniciam em Em estoque\") \"Normal\"",
+          "new": "    Set-NFStatus (\"Pronto • \" + $totalRecords + \" registro(s) • Em estoque por padrão • Ctrl+N novo • Enter editar • Ctrl+S saída • Ctrl+F pesquisar\") \"Normal\""
+        },
+        {
+          "name": "atalho ctrl s cb5",
+          "old": "$computerGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $computerFilter.Focus() } })",
+          "new": "$computerGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::S) { $_.SuppressKeyPress=$true; Register-NFOutputFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $computerFilter.Focus() } })"
+        },
+        {
+          "name": "atalho ctrl s teclado",
+          "old": "$keyboardGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $keyboardFilter.Focus() } })",
+          "new": "$keyboardGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::S) { $_.SuppressKeyPress=$true; Register-NFOutputFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $keyboardFilter.Focus() } })"
+        },
+        {
+          "name": "escape e dicas",
+          "old": "$computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })",
+          "new": "$toolTip = New-Object Windows.Forms.ToolTip\n$toolTip.AutoPopDelay = 8000\n$toolTip.InitialDelay = 350\n$toolTip.SetToolTip($newButton, \"Novo registro (Ctrl+N).\")\n$toolTip.SetToolTip($editButton, \"Editar a NF selecionada (Enter ou duplo clique).\")\n$toolTip.SetToolTip($outputButton, \"Registrar saída da NF selecionada (Ctrl+S).\")\n$toolTip.SetToolTip($clearFiltersButton, \"Limpa a pesquisa e volta para Em estoque / Todos os códigos.\")\n$toolTip.SetToolTip($deleteButton, \"Excluir o registro selecionado; o Histórico é preservado.\")\n$toolTip.SetToolTip($movementReverseButton, \"Estorna a saída ativa sem apagar a movimentação original (Ctrl+Z).\")\n\n$computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })\n$computerFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $computerFilter.Clear() } })"
+        },
+        {
+          "name": "escape teclado",
+          "old": "$keyboardFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })",
+          "new": "$keyboardFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })\n$keyboardFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $keyboardFilter.Clear() } })"
+        },
+        {
+          "name": "escape movimentacoes",
+          "old": "$movementFilter.Add_TextChanged({ Refresh-NFMovements })",
+          "new": "$movementFilter.Add_TextChanged({ Refresh-NFMovements })\n$movementFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $movementFilter.Clear() } })"
+        },
+        {
+          "name": "escape historico",
+          "old": "$historyFilter.Add_TextChanged({ Refresh-NFHistory })",
+          "new": "$historyFilter.Add_TextChanged({ Refresh-NFHistory })\n$historyFilter.Add_KeyDown({ if ($_.KeyCode -eq [Windows.Forms.Keys]::Escape) { $_.SuppressKeyPress=$true; $historyFilter.Clear() } })"
+        },
+        {
+          "name": "evento limpar filtros",
+          "old": "$outputButton.Add_Click({ Register-NFOutputFromUI })\n$deleteButton.Add_Click({ Remove-NFRecordFromUI })",
+          "new": "$outputButton.Add_Click({ Register-NFOutputFromUI })\n$clearFiltersButton.Add_Click({ Clear-NFCurrentProductFilters })\n$deleteButton.Add_Click({ Remove-NFRecordFromUI })"
+        }
+      ],
+      "markers": [
+        "$script:ModuleVersion = \"2.1.0\"",
+        "function Select-NFRecordInGrid",
+        "function Clear-NFCurrentProductFilters",
+        "LIMPAR FILTROS",
+        "Ctrl+S saída",
+        "$clearFiltersButton.Add_Click",
+        "$toolTip.SetToolTip($movementReverseButton"
+      ]
+    },
+    {
+      "path": "src/generated/Central de Trabalho.ps1",
+      "changes": [
+        {
+          "name": "versao central",
+          "old": "$script:AppVersion = \"0.21.12\"",
+          "new": "$script:AppVersion = \"0.21.13\""
+        },
+        {
+          "name": "versao nf central",
+          "old": "$script:NFEntradaVersion = \"2.0.0\"",
+          "new": "$script:NFEntradaVersion = \"2.1.0\""
+        }
+      ],
+      "markers": [
+        "$script:AppVersion = \"0.21.13\"",
+        "$script:MaintenanceVersion = \"0.6.2\"",
+        "$script:NFEntradaVersion = \"2.1.0\""
+      ]
+    }
+  ]
+}
