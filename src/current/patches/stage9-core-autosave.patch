@@ -1,6 +1,0 @@
-diff --git a/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1 b/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1
---- a/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1
-+++ b/src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1
-@@ -245,1 +245,2 @@
-     [void](Add-NFEntradaHistoryEvent -Store $Store -Tipo "EstornoSaida" -Produto $product -RegistroId ([int]$target.Id) -NFEntrada ([string]$target.NFEntrada) -Antes $before -Depois $after -Detalhes ("Estorno de " + $quantity + " peça(s) • movimento " + [string]$movement.Id + " • motivo: " + $reason))
-+    Write-NFEntradaStore -Store $Store
