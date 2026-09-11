@@ -1,16 +1,12 @@
 {
-  "version": "0.21.11",
+  "version": "0.21.12",
   "buildRevision": 1,
   "releaseNotes": [
-    "Etapa 9 do Controle de NF de Entrada: estorno seguro de saídas registradas por engano.",
-    "A aba Movimentações passa a mostrar o status Ativa ou Estornada e mantém a saída original visível para auditoria.",
-    "O novo botão ESTORNAR SAÍDA devolve a quantidade ao saldo da NF sem apagar a movimentação original.",
-    "O estorno exige confirmação, impede estorno duplicado e bloqueia a operação se a devolução ultrapassar a quantidade original da NF.",
-    "Cada estorno fica registrado no Histórico com saldo antes, saldo depois, quantidade devolvida e referência da movimentação.",
-    "Movimentações estornadas deixam de contar nos indicadores de peças e saídas efetivas do Resumo.",
-    "Ctrl+Z na aba Movimentações também aciona o estorno da saída selecionada quando ela ainda está ativa.",
-    "Todo o fluxo anterior permanece preservado: CB5 primeiro, Em estoque por padrão, cadastro rápido, Registrar Saída, Histórico, Segurança, conferência de exportação e Resumo por último.",
-    "Controle de NF de Entrada passa para v2.0.0; Gerenciador de Planilhas permanece v3.7.3 e Central de Manutenção permanece v0.6.1.",
-    "A versão Estável permanece v0.20.2; a v0.21.11 é publicada somente no canal Teste."
+    "Ajuste visual na Central de Manutenção CB5 antes da Etapa 10.",
+    "Ao abrir + NOVA PASSAGEM, os cartões de resumo do topo permanecem visíveis, seguindo o mesmo comportamento de Histórico, Estatísticas, Diagnóstico, Esquemáticos e Regras / Dados.",
+    "A Nova Passagem deixa de recolher a área de resumo e passa a abrir o formulário abaixo da navegação, preservando a visão geral da manutenção.",
+    "Central de Manutenção CB5 passa para v0.6.2; Controle de NF de Entrada permanece v2.0.0 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A Etapa 9 do Controle de NF de Entrada permanece integralmente preservada.",
+    "A versão Estável permanece v0.20.2; a v0.21.12 é publicada somente no canal Teste."
   ]
 }
