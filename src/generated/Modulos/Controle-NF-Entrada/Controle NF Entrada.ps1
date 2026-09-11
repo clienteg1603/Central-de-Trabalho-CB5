@@ -197,7 +197,7 @@ function Add-NFGridColumn {
     $col.Name = $Name
     $col.HeaderText = $Header
     $col.SortMode = [Windows.Forms.DataGridViewColumnSortMode]::NotSortable
-    $col.MinimumWidth = [Math]::Min(Width, 70)
+    $col.MinimumWidth = [Math]::Min($Width, 70)
     if ($Fill) { $col.AutoSizeMode = [Windows.Forms.DataGridViewAutoSizeColumnMode]::Fill; $col.MinimumWidth = [Math]::Max(130, $Width) }
     else { $col.Width = $Width }
     [void]$Grid.Columns.Add($col)
