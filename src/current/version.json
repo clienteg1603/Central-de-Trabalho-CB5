@@ -1,6 +1,6 @@
 {
   "version": "0.21.19",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Etapa 14 do Controle de NF de Entrada: filtro de período no Histórico.",
     "A aba Histórico ganha o filtro Período com Todos, Hoje, Últimos 7 dias e Últimos 30 dias.",
