@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
     [string]$HostTheme = ""
@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.6.1"
+$script:AppVersion = "0.6.2"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -1601,7 +1601,7 @@ if ($script:IsInProcessHosted) {
             if ($null -ne $passageVar -and $null -ne $passageVar.Value -and $mainTabs.SelectedTab -eq $passageVar.Value) { $isPassage = $true }
 
             $overviewHeight = 0
-            if (-not $isPassage -and $shellH -ge 650) {
+            if ($shellH -ge 650) {
                 if ($shellW -ge 1380) {
                     $overviewHeight = if ($shellH -lt 760) { 92 } elseif ($shellH -lt 940) { 102 } else { 110 }
                 }
