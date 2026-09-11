@@ -1,0 +1,50 @@
+name: NF Entrada stage 7 evolve temporary
+
+on:
+  push:
+    paths:
+      - 'src/current/NFENTRADA_STAGE7_READY'
+
+permissions:
+  contents: write
+
+jobs:
+  evolve:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aplicar evolução da etapa 7
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          python ".\src\current\transforms\0219_nfentrada_stage7.py"
+
+      - name: Validar exportação segura e regressões
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          & ".\src\ci\test_nfentrada_stage7.ps1" -CorePath ".\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1" -UiPath ".\src\generated\Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1"
+          & ".\src\ci\test_nfentrada_stage6.ps1" -CorePath ".\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
+          & ".\src\ci\test_nfentrada_stage5.ps1" -CorePath ".\src\generated\Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
+          & ".\src\ci\parse_powershell.ps1" -Root ".\src\generated"
+          python ".\src\ci\regression_contracts.py" ".\src\generated"
+
+      - name: Publicar fontes validados
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Remove-Item -LiteralPath "src/current/NFENTRADA_STAGE7_READY" -Force
+          Remove-Item -LiteralPath "src/current/transforms/0219_nfentrada_stage7.py" -Force
+          Remove-Item -LiteralPath ".github/workflows/nfentrada-stage7-evolve-temporary.yml" -Force
+          git config user.name "Central de Trabalho Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add 'src/generated/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1'
+          git add 'src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1'
+          git add 'src/generated/Central de Trabalho.ps1'
+          git add -u 'src/current'
+          git add -u '.github/workflows'
+          git commit -m "Evolui Controle NF Entrada - etapa 7 exportação segura"
+          git push
