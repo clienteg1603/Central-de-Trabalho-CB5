@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.6.0"
+$script:ModuleVersion = "1.7.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -314,11 +314,21 @@ function Refresh-NFMovements {
     if ($null -eq $movementGrid) { return }
     $filter = if ($null -ne $movementFilter) { ([string]$movementFilter.Text).Trim().ToLowerInvariant() } else { "" }
     $productFilter = if ($null -ne $movementProductFilter -and $movementProductFilter.SelectedIndex -gt 0) { [string]$movementProductFilter.SelectedItem } else { "Todos" }
+    $periodFilter = if ($null -ne $movementPeriodFilter -and $movementPeriodFilter.SelectedIndex -gt 0) { [string]$movementPeriodFilter.SelectedItem } else { "Todos" }
     $items = @(Get-NFEntradaMovements -Store $script:Store)
     $movementGrid.Rows.Clear()
     $shown = 0
     $qtyShown = 0
+    $today = [DateTime]::Today
     foreach ($item in $items) {
+        $when = [DateTime]::MinValue
+        $hasDate = [DateTime]::TryParse([string]$item.DataHora, [ref]$when)
+        if ($periodFilter -ne "Todos") {
+            if (-not $hasDate) { continue }
+            if ($periodFilter -eq "Hoje" -and $when -lt $today) { continue }
+            if ($periodFilter -eq "Últimos 7 dias" -and $when -lt $today.AddDays(-6)) { continue }
+            if ($periodFilter -eq "Últimos 30 dias" -and $when -lt $today.AddDays(-29)) { continue }
+        }
         $displayProduct = Get-NFEntradaProductDisplayName ([string]$item.Produto)
         if ($productFilter -ne "Todos" -and $displayProduct -ne $productFilter) { continue }
         $search = (($displayProduct + " " + [string]$item.NFEntrada + " " + [string]$item.Referencia)).ToLowerInvariant()
@@ -337,7 +347,7 @@ function Refresh-NFMovements {
         $shown++
         $qtyShown += [int]$item.Quantidade
     }
-    $movementCountLabel.Text = "$shown de $($items.Count) movimentação(ões) • $qtyShown peça(s) na seleção"
+    $movementCountLabel.Text = "$shown movimentação(ões) • $qtyShown peça(s) • período: $periodFilter"
     $movementGrid.ClearSelection()
     $movementOpenButton.Enabled = $false
 }
@@ -463,6 +473,120 @@ function Show-NFHistoryDetails {
     $dialog.Dispose()
 }
 
+function Show-NFReviewIssues {
+    $items = @(Get-NFEntradaReviewItems -Store $script:Store)
+    if ($items.Count -eq 0) {
+        [Windows.Forms.MessageBox]::Show(
+            "Nenhuma pendência de conferência foi encontrada na base atual.",
+            "Conferência do Controle de NF",
+            [Windows.Forms.MessageBoxButtons]::OK,
+            [Windows.Forms.MessageBoxIcon]::Information
+        ) | Out-Null
+        return
+    }
+
+    $dialog = New-Object Windows.Forms.Form
+    $dialog.Text = "Pendências de conferência"
+    $dialog.StartPosition = [Windows.Forms.FormStartPosition]::CenterParent
+    $dialog.Size = [Drawing.Size]::new(900, 540)
+    $dialog.MinimumSize = [Drawing.Size]::new(760, 460)
+    $dialog.BackColor = $script:CurrentPalette.Background
+    $dialog.ForeColor = $script:CurrentPalette.Text
+
+    $layout = New-Object Windows.Forms.TableLayoutPanel
+    $layout.Dock = [Windows.Forms.DockStyle]::Fill
+    $layout.Padding = [Windows.Forms.Padding]::new(14)
+    $layout.RowCount = 3
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 48)))
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 46)))
+    $dialog.Controls.Add($layout)
+
+    $info = New-Object Windows.Forms.Label
+    $info.Text = "$($items.Count) registro(s) precisam de conferência. Selecione uma linha e use ABRIR NF para ir ao registro."
+    $info.Dock = [Windows.Forms.DockStyle]::Fill
+    $info.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $info.ForeColor = $script:CurrentPalette.Muted
+    $layout.Controls.Add($info, 0, 0)
+
+    $reviewGrid = New-NFGrid
+    $productKey = New-Object Windows.Forms.DataGridViewTextBoxColumn
+    $productKey.Name = "ReviewProductKey"; $productKey.Visible = $false; [void]$reviewGrid.Columns.Add($productKey)
+    $recordKey = New-Object Windows.Forms.DataGridViewTextBoxColumn
+    $recordKey.Name = "ReviewRecordId"; $recordKey.Visible = $false; [void]$reviewGrid.Columns.Add($recordKey)
+    Add-NFGridColumn $reviewGrid "ReviewProduct" "PRODUTO" 190
+    Add-NFGridColumn $reviewGrid "ReviewNF" "NF DE ENTRADA" 120
+    Add-NFGridColumn $reviewGrid "ReviewQty" "QTD. NA NF" 90
+    Add-NFGridColumn $reviewGrid "ReviewBalance" "SALDO" 80
+    Add-NFGridColumn $reviewGrid "ReviewCode" "CÓD." 70
+    Add-NFGridColumn $reviewGrid "ReviewIssue" "PENDÊNCIA" 240 $true
+    foreach ($item in $items) {
+        [void]$reviewGrid.Rows.Add(
+            [string]$item.Produto,
+            [int]$item.RegistroId,
+            (Get-NFEntradaProductDisplayName ([string]$item.Produto)),
+            [string]$item.NFEntrada,
+            [int]$item.QuantidadeNaNF,
+            [int]$item.QuantidadeSaldo,
+            [string]$item.Codigo,
+            [string]$item.Problema
+        )
+    }
+    $reviewGrid.ClearSelection()
+    $layout.Controls.Add($reviewGrid, 0, 1)
+
+    $buttons = New-Object Windows.Forms.FlowLayoutPanel
+    $buttons.Dock = [Windows.Forms.DockStyle]::Fill
+    $buttons.FlowDirection = [Windows.Forms.FlowDirection]::RightToLeft
+    $close = New-Object Windows.Forms.Button
+    $close.Text = "FECHAR"; $close.Width = 100; $close.Height = 32; $close.DialogResult = [Windows.Forms.DialogResult]::Cancel
+    Set-NFButtonStyle $close "Secondary"
+    $open = New-Object Windows.Forms.Button
+    $open.Text = "ABRIR NF"; $open.Width = 110; $open.Height = 32; $open.Enabled = $false
+    Set-NFButtonStyle $open "Primary"
+    $buttons.Controls.Add($close); $buttons.Controls.Add($open)
+    $layout.Controls.Add($buttons, 0, 2)
+    $dialog.CancelButton = $close
+
+    $reviewGrid.Add_SelectionChanged({ $open.Enabled = ($reviewGrid.SelectedRows.Count -gt 0) })
+    $open.Add_Click({
+        if ($reviewGrid.SelectedRows.Count -eq 0) { return }
+        $dialog.Tag = [pscustomobject]@{
+            Produto = [string]$reviewGrid.SelectedRows[0].Cells["ReviewProductKey"].Value
+            NFEntrada = [string]$reviewGrid.SelectedRows[0].Cells["ReviewNF"].Value
+        }
+        $dialog.DialogResult = [Windows.Forms.DialogResult]::OK
+        $dialog.Close()
+    })
+    $reviewGrid.Add_CellDoubleClick({
+        if ($_.RowIndex -lt 0) { return }
+        $dialog.Tag = [pscustomobject]@{
+            Produto = [string]$reviewGrid.Rows[$_.RowIndex].Cells["ReviewProductKey"].Value
+            NFEntrada = [string]$reviewGrid.Rows[$_.RowIndex].Cells["ReviewNF"].Value
+        }
+        $dialog.DialogResult = [Windows.Forms.DialogResult]::OK
+        $dialog.Close()
+    })
+
+    $result = $dialog.ShowDialog()
+    $target = $dialog.Tag
+    $dialog.Dispose()
+    if ($result -ne [Windows.Forms.DialogResult]::OK -or $null -eq $target) { return }
+
+    if ([string]$target.Produto -eq $script:ComputerProduct) {
+        $computerStatusFilter.SelectedIndex = 0
+        $computerFilter.Text = [string]$target.NFEntrada
+        $mainTabs.SelectedTab = $computerTab
+        $computerFilter.Focus()
+    }
+    elseif ([string]$target.Produto -eq $script:KeyboardProduct) {
+        $keyboardStatusFilter.SelectedIndex = 0
+        $keyboardFilter.Text = [string]$target.NFEntrada
+        $mainTabs.SelectedTab = $keyboardTab
+        $keyboardFilter.Focus()
+    }
+}
+
 function Refresh-NFBackups {
     if ($null -eq $backupGrid) { return }
     $items = @(Get-NFEntradaSafetyBackups -DataDirectory $script:DataDirectory)
@@ -512,10 +636,22 @@ function Restore-NFBackupFromUI {
 
 function Refresh-NFSummary {
     $summary = Get-NFEntradaSummary -Store $script:Store
+    $operational = Get-NFEntradaOperationalMetrics -Store $script:Store
     $saldoTotalValue.Text = ([int]$summary.SaldoTotal).ToString("N0")
     $computerBalanceValue.Text = ([int]$summary.Produtos[$script:ComputerProduct].Saldo).ToString("N0")
     $keyboardBalanceValue.Text = ([int]$summary.Produtos[$script:KeyboardProduct].Saldo).ToString("N0")
     $openNFsValue.Text = ([int]$summary.NFsAbertas).ToString("N0")
+    $movementTodayValue.Text = ([int]$operational.MovimentacoesHoje).ToString("N0")
+    $piecesTodayValue.Text = ([int]$operational.PecasSaidaHoje).ToString("N0")
+    $piecesSevenValue.Text = ([int]$operational.PecasSaida7Dias).ToString("N0")
+    $reviewIssuesValue.Text = ([int]$operational.Pendencias).ToString("N0")
+    $reviewIssuesValue.ForeColor = if ([int]$operational.Pendencias -eq 0) { $script:CurrentPalette.Success } else { $script:CurrentPalette.Danger }
+    if ($null -ne $operational.UltimaMovimentacaoEm) {
+        $lastMovementValue.Text = ([DateTime]$operational.UltimaMovimentacaoEm).ToString("dd/MM HH:mm") + " • NF " + [string]$operational.UltimaMovimentacaoNF
+    }
+    else {
+        $lastMovementValue.Text = "Nenhuma movimentação registrada"
+    }
 
     $productSummaryGrid.Rows.Clear()
     [void]$productSummaryGrid.Rows.Add("Computador de bordo CB5", [int]$summary.Produtos[$script:ComputerProduct].NFsAbertas, [int]$summary.Produtos[$script:ComputerProduct].Saldo)
@@ -1117,11 +1253,12 @@ $summaryLayout = New-Object Windows.Forms.TableLayoutPanel
 $summaryLayout.Dock = [Windows.Forms.DockStyle]::Fill
 $summaryLayout.Padding = [Windows.Forms.Padding]::new(10)
 $summaryLayout.ColumnCount = 2
-$summaryLayout.RowCount = 2
+$summaryLayout.RowCount = 3
 [void]$summaryLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 55)))
 [void]$summaryLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 45)))
-[void]$summaryLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 48)))
-[void]$summaryLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 52)))
+[void]$summaryLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 34)))
+[void]$summaryLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 38)))
+[void]$summaryLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 28)))
 $summaryTab.Controls.Add($summaryLayout)
 
 $productGroup = New-Object Windows.Forms.GroupBox
@@ -1145,18 +1282,20 @@ $summaryLayout.Controls.Add($conferenceGroup, 1, 0)
 $conference = New-Object Windows.Forms.TableLayoutPanel
 $conference.Dock = [Windows.Forms.DockStyle]::Fill
 $conference.ColumnCount = 2
-$conference.RowCount = 4
+$conference.RowCount = 5
 [void]$conference.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 70)))
 [void]$conference.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 30)))
 $conferenceGroup.Controls.Add($conference)
 $missingDateValue = New-Object Windows.Forms.Label
 $negativeValue = New-Object Windows.Forms.Label
 $overEntryValue = New-Object Windows.Forms.Label
+$reviewIssuesValue = New-Object Windows.Forms.Label
 $generalStatusValue = New-Object Windows.Forms.Label
 $conferenceRows = @(
     @("Datas ausentes", $missingDateValue),
     @("Saldos negativos", $negativeValue),
     @("Saldo maior que a entrada", $overEntryValue),
+    @("Pendências para revisar", $reviewIssuesValue),
     @("Situação geral", $generalStatusValue)
 )
 for ($i = 0; $i -lt $conferenceRows.Count; $i++) {
@@ -1188,6 +1327,63 @@ Add-NFGridColumn $codeSummaryGrid "Teclado" "TECLADO V5" 150
 Add-NFGridColumn $codeSummaryGrid "Total" "TOTAL" 130 $true
 $codeGroup.Controls.Add($codeSummaryGrid)
 
+$activityGroup = New-Object Windows.Forms.GroupBox
+$activityGroup.Text = "Atividade operacional"
+$activityGroup.Dock = [Windows.Forms.DockStyle]::Fill
+$activityGroup.ForeColor = $script:CurrentPalette.Text
+$activityGroup.Padding = [Windows.Forms.Padding]::new(8, 20, 8, 8)
+$summaryLayout.SetColumnSpan($activityGroup, 2)
+$summaryLayout.Controls.Add($activityGroup, 0, 2)
+
+$activityLayout = New-Object Windows.Forms.TableLayoutPanel
+$activityLayout.Dock = [Windows.Forms.DockStyle]::Fill
+$activityLayout.ColumnCount = 5
+foreach ($percent in @(17, 17, 17, 32, 17)) {
+    [void]$activityLayout.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, $percent)))
+}
+$activityGroup.Controls.Add($activityLayout)
+
+$movementTodayValue = $null
+$piecesTodayValue = $null
+$piecesSevenValue = $null
+$activityLayout.Controls.Add((New-NFSummaryCard "MOVIMENTAÇÕES HOJE" "registros de saída" ([ref]$movementTodayValue)), 0, 0)
+$activityLayout.Controls.Add((New-NFSummaryCard "PEÇAS SAÍRAM HOJE" "saídas registradas" ([ref]$piecesTodayValue)), 1, 0)
+$activityLayout.Controls.Add((New-NFSummaryCard "PEÇAS EM 7 DIAS" "saídas registradas" ([ref]$piecesSevenValue)), 2, 0)
+
+$lastPanel = New-Object Windows.Forms.Panel
+$lastPanel.Dock = [Windows.Forms.DockStyle]::Fill
+$lastPanel.Margin = [Windows.Forms.Padding]::new(6)
+$lastPanel.BackColor = $script:CurrentPalette.Card
+$lastPanel.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
+$lastLayout = New-Object Windows.Forms.TableLayoutPanel
+$lastLayout.Dock = [Windows.Forms.DockStyle]::Fill
+$lastLayout.Padding = [Windows.Forms.Padding]::new(12, 8, 12, 8)
+$lastLayout.RowCount = 2
+[void]$lastLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 24)))
+[void]$lastLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
+$lastPanel.Controls.Add($lastLayout)
+$lastTitle = New-Object Windows.Forms.Label
+$lastTitle.Text = "ÚLTIMA MOVIMENTAÇÃO"
+$lastTitle.Dock = [Windows.Forms.DockStyle]::Fill
+$lastTitle.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.5)
+$lastTitle.ForeColor = $script:CurrentPalette.Muted
+$lastLayout.Controls.Add($lastTitle, 0, 0)
+$lastMovementValue = New-Object Windows.Forms.Label
+$lastMovementValue.Text = "Nenhuma movimentação registrada"
+$lastMovementValue.Dock = [Windows.Forms.DockStyle]::Fill
+$lastMovementValue.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+$lastMovementValue.Font = [Drawing.Font]::new("Segoe UI Semibold", 9.5)
+$lastMovementValue.ForeColor = $script:CurrentPalette.Text
+$lastLayout.Controls.Add($lastMovementValue, 0, 1)
+$activityLayout.Controls.Add($lastPanel, 3, 0)
+
+$reviewIssuesButton = New-Object Windows.Forms.Button
+$reviewIssuesButton.Text = "VER PENDÊNCIAS"
+$reviewIssuesButton.Dock = [Windows.Forms.DockStyle]::Fill
+$reviewIssuesButton.Margin = [Windows.Forms.Padding]::new(8, 18, 6, 18)
+Set-NFButtonStyle $reviewIssuesButton "Secondary"
+$activityLayout.Controls.Add($reviewIssuesButton, 4, 0)
+
 # MOVIMENTAÇÕES
 $movementLayout = New-Object Windows.Forms.TableLayoutPanel
 $movementLayout.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1199,11 +1395,13 @@ $movementLayout.RowCount = 3
 $movementTab.Controls.Add($movementLayout)
 $movementFilters = New-Object Windows.Forms.TableLayoutPanel
 $movementFilters.Dock = [Windows.Forms.DockStyle]::Fill
-$movementFilters.ColumnCount = 4
+$movementFilters.ColumnCount = 6
 [void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 74)))
 [void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
 [void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 62)))
-[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 210)))
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 190)))
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 58)))
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 165)))
 $movementLayout.Controls.Add($movementFilters,0,0)
 $movementSearchLabel=New-Object Windows.Forms.Label
 $movementSearchLabel.Text="Pesquisar"; $movementSearchLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementSearchLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementSearchLabel.ForeColor=$script:CurrentPalette.Muted
@@ -1219,6 +1417,14 @@ $movementProductFilter.DropDownStyle=[Windows.Forms.ComboBoxStyle]::DropDownList
 [void]$movementProductFilter.Items.AddRange(@("Todos","COMPUTADOR DE BORDO CB5","TECLADO V5"))
 $movementProductFilter.SelectedIndex=0; $movementProductFilter.Dock=[Windows.Forms.DockStyle]::Fill; $movementProductFilter.Margin=[Windows.Forms.Padding]::new(0,8,8,8); $movementProductFilter.BackColor=$script:CurrentPalette.Input; $movementProductFilter.ForeColor=$script:CurrentPalette.Text
 $movementFilters.Controls.Add($movementProductFilter,3,0)
+$movementPeriodLabel=New-Object Windows.Forms.Label
+$movementPeriodLabel.Text="Período"; $movementPeriodLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementPeriodLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementPeriodLabel.ForeColor=$script:CurrentPalette.Muted
+$movementFilters.Controls.Add($movementPeriodLabel,4,0)
+$movementPeriodFilter=New-Object Windows.Forms.ComboBox
+$movementPeriodFilter.DropDownStyle=[Windows.Forms.ComboBoxStyle]::DropDownList
+[void]$movementPeriodFilter.Items.AddRange(@("Todos","Hoje","Últimos 7 dias","Últimos 30 dias"))
+$movementPeriodFilter.SelectedIndex=0; $movementPeriodFilter.Dock=[Windows.Forms.DockStyle]::Fill; $movementPeriodFilter.Margin=[Windows.Forms.Padding]::new(0,8,8,8); $movementPeriodFilter.BackColor=$script:CurrentPalette.Input; $movementPeriodFilter.ForeColor=$script:CurrentPalette.Text
+$movementFilters.Controls.Add($movementPeriodFilter,5,0)
 
 $movementGrid=New-NFGrid
 $movementIdCol=New-Object Windows.Forms.DataGridViewTextBoxColumn
@@ -1404,9 +1610,11 @@ $keyboardGrid.Add_SelectionChanged({ Update-NFActions })
 $mainTabs.Add_SelectedIndexChanged({ Update-NFActions; if ($mainTabs.SelectedTab -eq $movementTab) { Refresh-NFMovements }; if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }; if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups } })
 $movementFilter.Add_TextChanged({ Refresh-NFMovements })
 $movementProductFilter.Add_SelectedIndexChanged({ Refresh-NFMovements })
+$movementPeriodFilter.Add_SelectedIndexChanged({ Refresh-NFMovements })
 $movementGrid.Add_SelectionChanged({ $movementOpenButton.Enabled = ($movementGrid.SelectedRows.Count -gt 0) })
 $movementGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Open-NFFromMovement } })
 $movementOpenButton.Add_Click({ Open-NFFromMovement })
+$reviewIssuesButton.Add_Click({ Show-NFReviewIssues })
 $historyFilter.Add_TextChanged({ Refresh-NFHistory })
 $historyTypeFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
 $historyGrid.Add_SelectionChanged({ $historyDetailsButton.Enabled = ($historyGrid.SelectedRows.Count -gt 0) })

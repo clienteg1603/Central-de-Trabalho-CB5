@@ -195,6 +195,11 @@ def main():
         if marker not in nf_core and marker not in nf:
             errors.append("NF Entrada / etapa 5: marcador ausente: " + marker)
 
+    for fn in ("Get-NFEntradaReviewItems", "Get-NFEntradaOperationalMetrics"):
+        require_function(errors, nf_core, fn, "NFEntrada.Core / etapa 6")
+    for marker in ("VER PENDÊNCIAS", "Pendências para revisar", "Últimos 7 dias", "$movementPeriodFilter", "Atividade operacional", "Show-NFReviewIssues"):
+        require(errors, nf, marker, "NF Entrada / etapa 6 operacional")
+
     # ATUALIZADOR — preserva núcleo, hash do pacote, arquivos ocultos e recuperação real.
     require(errors, updater, "Update.Core.ps1", "Atualizador")
     for marker in ("PackageSha256", "PackageSize", "PACOTE-MANIFESTO.json"):

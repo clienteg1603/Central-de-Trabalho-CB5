@@ -160,6 +160,79 @@ function Add-NFEntradaMovement {
     return $movement
 }
 
+function Get-NFEntradaReviewItems {
+    param([Parameter(Mandatory = $true)]$Store)
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $items = [Collections.Generic.List[object]]::new()
+    foreach ($product in @("COMPUTADOR DE BORDO V5", "TECLADO V5")) {
+        foreach ($record in @(Get-NFEntradaProductRecords -Store $Store -Product $product)) {
+            $issues = [Collections.Generic.List[string]]::new()
+            $qty = [int]$record.QuantidadeNaNF
+            $saldo = [int]$record.QuantidadeSaldo
+            if ([string]::IsNullOrWhiteSpace((ConvertTo-NFEntradaText $record.Data))) { [void]$issues.Add("Data ausente") }
+            if ($saldo -lt 0) { [void]$issues.Add("Saldo negativo") }
+            if ($saldo -gt $qty) { [void]$issues.Add("Saldo maior que a entrada") }
+            if ($issues.Count -eq 0) { continue }
+            [void]$items.Add([pscustomobject]@{
+                Produto = $product
+                RegistroId = [int]$record.Id
+                NFEntrada = ConvertTo-NFEntradaText $record.NFEntrada
+                QuantidadeNaNF = $qty
+                QuantidadeSaldo = $saldo
+                Codigo = ConvertTo-NFEntradaText $record.Codigo
+                Problema = ($issues -join "; ")
+            })
+        }
+    }
+    return @($items | Sort-Object Produto, NFEntrada)
+}
+
+function Get-NFEntradaOperationalMetrics {
+    param([Parameter(Mandatory = $true)]$Store)
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $today = [DateTime]::Today
+    $sevenDays = $today.AddDays(-6)
+    $movements = @(Get-NFEntradaMovements -Store $Store)
+    $movementToday = 0
+    $piecesToday = 0
+    $movementSeven = 0
+    $piecesSeven = 0
+    $piecesTotal = 0
+    $lastDate = [DateTime]::MinValue
+    $lastNF = ""
+    foreach ($movement in $movements) {
+        $piecesTotal += [int]$movement.Quantidade
+        $when = [DateTime]::MinValue
+        if (-not [DateTime]::TryParse([string]$movement.DataHora, [ref]$when)) { continue }
+        if ($when -gt $lastDate) { $lastDate = $when; $lastNF = [string]$movement.NFEntrada }
+        if ($when -ge $today) { $movementToday++; $piecesToday += [int]$movement.Quantidade }
+        if ($when -ge $sevenDays) { $movementSeven++; $piecesSeven += [int]$movement.Quantidade }
+    }
+    $open = 0
+    $closed = 0
+    foreach ($product in @("COMPUTADOR DE BORDO V5", "TECLADO V5")) {
+        foreach ($record in @(Get-NFEntradaProductRecords -Store $Store -Product $product)) {
+            $status = Get-NFEntradaRecordStatus -Record $record
+            if ($status -eq "Em estoque") { $open++ }
+            elseif ($status -eq "Encerrada") { $closed++ }
+        }
+    }
+    $review = @(Get-NFEntradaReviewItems -Store $Store)
+    return [pscustomobject]@{
+        MovimentacoesHoje = $movementToday
+        PecasSaidaHoje = $piecesToday
+        Movimentacoes7Dias = $movementSeven
+        PecasSaida7Dias = $piecesSeven
+        MovimentacoesTotal = $movements.Count
+        PecasMovimentadasTotal = $piecesTotal
+        NFsEmEstoque = $open
+        NFsEncerradas = $closed
+        Pendencias = $review.Count
+        UltimaMovimentacaoEm = if ($lastDate -gt [DateTime]::MinValue) { $lastDate } else { $null }
+        UltimaMovimentacaoNF = $lastNF
+    }
+}
+
 function New-NFEntradaSafetyBackup {
     param(
         [string]$DataDirectory = (Get-NFEntradaDefaultDataDirectory),
