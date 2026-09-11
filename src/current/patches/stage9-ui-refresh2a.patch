@@ -1,0 +1,10 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -339,6 +339,7 @@
+             [int]$item.Quantidade,
+             [int]$item.SaldoAntes,
+             [int]$item.SaldoDepois,
++            $status,
+             [string]$item.Referencia
+         )
