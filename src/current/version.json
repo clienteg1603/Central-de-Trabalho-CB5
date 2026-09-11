@@ -1,6 +1,6 @@
 {
   "version": "0.21.23",
-  "buildRevision": 3,
+  "buildRevision": 4,
   "releaseNotes": [
     "Hotfix da CURA 1: corrige a regressão de escala observada na v0.21.22.",
     "A política Per-Monitor V2 introduzida no host principal foi revertida porque comprimiu a interface em algumas configurações reais do Windows.",
