@@ -58,39 +58,39 @@ try {
 
     $store = New-TestStore -Computer @((New-TestRecord -Id 1 -NFEntrada 'CB5-1')) -Keyboard @((New-TestRecord -Id 1 -NFEntrada 'TV5-1'))
     $ready = Get-NFEntradaExportReadiness -Store $store -DataDirectory $temp
-    Assert-Stage7 ([bool]$ready.PodeExportar) 'Base válida com modelo deveria permitir exportação.'
-    Assert-Stage7 ([string]$ready.Situacao -eq 'PRONTO') 'Base válida deveria ficar PRONTO.'
+    Assert-Stage7 ([bool]$ready.PodeExportar) 'Base valida com modelo deveria permitir exportacao.'
+    Assert-Stage7 ([string]$ready.Situacao -eq 'PRONTO') 'Base valida deveria ficar PRONTO.'
     Assert-Stage7 ([int]$ready.CapacidadePorProduto -eq 296) 'Capacidade do modelo deve permanecer em 296 linhas por produto.'
-    Assert-Stage7 ([int]$ready.RegistrosComputador -eq 1 -and [int]$ready.RegistrosTeclado -eq 1) 'Contagem de registros da conferência está incorreta.'
+    Assert-Stage7 ([int]$ready.RegistrosComputador -eq 1 -and [int]$ready.RegistrosTeclado -eq 1) 'Contagem de registros da conferencia esta incorreta.'
 
     $reviewStore = New-TestStore -Computer @((New-TestRecord -Id 1 -Data '' -QuantidadeNaNF 1 -QuantidadeSaldo 2 -NFEntrada 'REVISAR-1'))
     $review = Get-NFEntradaExportReadiness -Store $reviewStore -DataDirectory $temp
-    Assert-Stage7 ([bool]$review.PodeExportar) 'Pendência de conferência deve avisar, mas não bloquear exportação quando o modelo comporta os dados.'
-    Assert-Stage7 ([string]$review.Situacao -eq 'REVISAR') 'Registro inconsistente deveria marcar exportação como REVISAR.'
-    Assert-Stage7 ([int]$review.Pendencias -eq 1) 'A conferência deveria apontar uma NF pendente.'
+    Assert-Stage7 ([bool]$review.PodeExportar) 'Pendencia de conferencia deve avisar, mas nao bloquear exportacao quando o modelo comporta os dados.'
+    Assert-Stage7 ([string]$review.Situacao -eq 'REVISAR') 'Registro inconsistente deveria marcar exportacao como REVISAR.'
+    Assert-Stage7 ([int]$review.Pendencias -eq 1) 'A conferencia deveria apontar uma NF pendente.'
 
     $many = [Collections.Generic.List[object]]::new()
     foreach ($i in 1..297) { [void]$many.Add((New-TestRecord -Id $i -NFEntrada ('NF-' + $i))) }
     $blockedStore = New-TestStore -Computer @($many)
     $blocked = Get-NFEntradaExportReadiness -Store $blockedStore -DataDirectory $temp
-    Assert-Stage7 (-not [bool]$blocked.PodeExportar) 'Mais de 296 registros de um produto deve bloquear exportação para preservar o formato oficial.'
+    Assert-Stage7 (-not [bool]$blocked.PodeExportar) 'Mais de 296 registros de um produto deve bloquear exportacao para preservar o formato oficial.'
     Assert-Stage7 ([string]$blocked.Situacao -eq 'BLOQUEADO') 'Excesso de linhas deveria marcar BLOQUEADO.'
     Assert-Stage7 ([int]$blocked.ExcessoComputador -eq 1) 'Excesso calculado para CB5 deveria ser 1.'
 
     [IO.File]::Delete($template)
     $missingTemplate = Get-NFEntradaExportReadiness -Store $store -DataDirectory $temp
-    Assert-Stage7 (-not [bool]$missingTemplate.PodeExportar) 'Sem modelo oficial a exportação deve permanecer bloqueada.'
+    Assert-Stage7 (-not [bool]$missingTemplate.PodeExportar) 'Sem modelo oficial a exportacao deve permanecer bloqueada.'
 
     [void](Add-NFEntradaHistoryEvent -Store $store -Tipo 'Exportacao' -Detalhes 'Arquivo: teste.xlsx')
     $last = Get-NFEntradaLastExport -Store $store
-    Assert-Stage7 ($null -ne $last -and [string]$last.Tipo -eq 'Exportacao') 'Última exportação não foi recuperada do histórico.'
+    Assert-Stage7 ($null -ne $last -and [string]$last.Tipo -eq 'Exportacao') 'Ultima exportacao nao foi recuperada do historico.'
 
     $ui = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $UiPath), [Text.Encoding]::UTF8)
-    foreach ($marker in @('CONFERIR EXPORTAÇÃO', 'Exportação Excel', 'Show-NFExportReadiness', '-Tipo "Exportacao"', '"Exportacao" { "Exportação" }', '$script:ModuleVersion = "1.8.0"')) {
+    foreach ($marker in @('$exportCheckButton', 'Show-NFExportReadiness', '-Tipo "Exportacao"', '"Exportacao" {', '$exportStatusValue', '$script:ModuleVersion = "1.8.0"')) {
         Assert-Stage7 ($ui.Contains($marker)) ('Marcador de interface ausente: ' + $marker)
     }
 
-    Write-Host 'NF ENTRADA ETAPA 7: OK — pré-conferência, capacidade, pendências, auditoria de exportação e interface validadas.'
+    Write-Host 'NF ENTRADA ETAPA 7: OK - pre-conferencia, capacidade, pendencias, auditoria de exportacao e interface validadas.'
 }
 finally {
     if ([IO.Directory]::Exists($temp)) { [IO.Directory]::Delete($temp, $true) }
