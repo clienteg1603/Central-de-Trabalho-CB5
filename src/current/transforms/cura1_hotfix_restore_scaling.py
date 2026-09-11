@@ -41,7 +41,7 @@ s = one(s,
     'viewport manutencao')
 save(p, s)
 
-# Gerenciador: restaura a escala hospedada anterior, evitando dupla compensação de DPI.
+# Gerenciador: o viewport hospedado já preservava as coordenadas finais; restaura apenas o AutoScale.
 p = R / 'Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1'
 s = load(p)
 s = one(s, '$script:AppVersion = "3.7.4"', '$script:AppVersion = "3.7.5"', 'versao gerenciador modulo')
@@ -49,14 +49,8 @@ s = one(s,
     '    $form.Name = "GeneratorHostedControl"\n    $form.AutoScaleDimensions = New-Object Drawing.SizeF(96, 96)\n    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi',
     '    $form.Name = "GeneratorHostedControl"\n    $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::None\n    $form.AutoScaleDimensions = New-Object Drawing.SizeF(96, 96)',
     'escala gerenciador hospedado')
-s = one(s,
-    '$logicalW = [int][Math]::Round($w * 96.0 / $dpi)',
-    '$logicalW = if ($script:IsInProcessHosted) { $w } else { [int][Math]::Round($w * 96.0 / $dpi) }',
-    'viewport w gerenciador')
-s = one(s,
-    '$logicalH = [int][Math]::Round($h * 96.0 / $dpi)',
-    '$logicalH = if ($script:IsInProcessHosted) { $h } else { [int][Math]::Round($h * 96.0 / $dpi) }',
-    'viewport h gerenciador')
+if 'LogicalWidth=if ($script:IsInProcessHosted) { $w } else { [int][Math]::Round($w*96.0/$dpi) }' not in s:
+    raise SystemExit('HOTFIX CURA1: viewport hospedado do Gerenciador não está no contrato esperado')
 save(p, s)
 
 # NF Entrada: UserControl hospedado volta a deixar a escala sob responsabilidade da Central.
