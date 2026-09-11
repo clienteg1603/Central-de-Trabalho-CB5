@@ -138,27 +138,17 @@ ui = rep(
     'evento do período do Histórico'
 )
 
-# O tema ao vivo também precisa incluir o novo combo e rótulo.
-ui = rep(
-    ui,
-    '$movementPeriodFilter, $historyTypeFilter, $historyFilter, $backupGrid',
-    '$movementPeriodFilter, $historyTypeFilter, $historyPeriodFilter, $historyFilter, $backupGrid',
-    'combo do período na atualização de tema'
-)
-ui = rep(
-    ui,
-    '$movementPeriodLabel, $historySearchLabel, $historyTypeLabel, $historyCountLabel, $securityInfo',
-    '$movementPeriodLabel, $historySearchLabel, $historyTypeLabel, $historyPeriodLabel, $historyCountLabel, $securityInfo',
-    'rótulo do período na atualização de tema'
-)
-
+# A atualização de tema da v2.4.2 percorre recursivamente todos os controles,
+# portanto o novo Label/ComboBox já acompanha a troca de Aparência sem lista manual.
 for marker in (
     '$script:ModuleVersion = "2.5.0"',
     '$historyPeriodFilter',
+    '$historyPeriodLabel.Text = "Período"',
     '"Últimos 7 dias"',
     '"Últimos 30 dias"',
     '$historyPeriodFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })',
-    '$historyCountLabel.Text = "$shown de $($events.Count) • $period"'
+    '$historyCountLabel.Text = "$shown de $($events.Count) • $period"',
+    'function Set-HostedNFEntradaTheme'
 ):
     if marker not in ui:
         raise SystemExit('Etapa 14: marcador final ausente: ' + marker)
