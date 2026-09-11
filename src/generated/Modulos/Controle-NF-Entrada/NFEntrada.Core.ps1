@@ -404,6 +404,15 @@ function Initialize-NFEntradaDataStore {
     return $path
 }
 
+function Get-NFEntradaRecordStatus {
+    param([Parameter(Mandatory = $true)]$Record)
+    $qty = [int]$Record.QuantidadeNaNF
+    $saldo = [int]$Record.QuantidadeSaldo
+    if ($saldo -lt 0 -or $saldo -gt $qty) { return "Revisar" }
+    if ($saldo -eq 0) { return "Encerrada" }
+    return "Em estoque"
+}
+
 function Get-NFEntradaProductRecords {
     param(
         [Parameter(Mandatory = $true)]$Store,

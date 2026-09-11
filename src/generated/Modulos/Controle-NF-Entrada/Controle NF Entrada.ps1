@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.1.0"
+$script:ModuleVersion = "1.2.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -252,11 +252,25 @@ function Format-NFDate {
 }
 
 function Refresh-NFProductGrid {
-    param([string]$Product, [Windows.Forms.DataGridView]$Grid, [Windows.Forms.TextBox]$FilterBox)
+    param(
+        [string]$Product,
+        [Windows.Forms.DataGridView]$Grid,
+        [Windows.Forms.TextBox]$FilterBox,
+        [Windows.Forms.ComboBox]$StatusFilter,
+        [Windows.Forms.ComboBox]$CodeFilter,
+        [Windows.Forms.Label]$CountLabel
+    )
     $filter = if ($null -ne $FilterBox) { ([string]$FilterBox.Text).Trim().ToLowerInvariant() } else { "" }
+    $selectedStatus = if ($null -ne $StatusFilter -and $StatusFilter.SelectedIndex -gt 0) { [string]$StatusFilter.SelectedItem } else { "Todos" }
+    $selectedCode = if ($null -ne $CodeFilter -and $CodeFilter.SelectedIndex -gt 0) { [string]$CodeFilter.SelectedItem } else { "Todos" }
+    $records = @(Get-NFEntradaProductRecords -Store $script:Store -Product $Product)
+    $shown = 0
     $Grid.Rows.Clear()
-    foreach ($record in Get-NFEntradaProductRecords -Store $script:Store -Product $Product) {
-        $search = (([string]$record.NFEntrada) + " " + ([string]$record.Codigo) + " " + ([string]$record.NFSaida) + " " + (Format-NFDate ([string]$record.Data))).ToLowerInvariant()
+    foreach ($record in $records) {
+        $status = Get-NFEntradaRecordStatus -Record $record
+        if ($selectedStatus -ne "Todos" -and $status -ne $selectedStatus) { continue }
+        if ($selectedCode -ne "Todos" -and ([string]$record.Codigo) -ne $selectedCode) { continue }
+        $search = (([string]$record.NFEntrada) + " " + ([string]$record.Codigo) + " " + ([string]$record.NFSaida) + " " + (Format-NFDate ([string]$record.Data)) + " " + $status).ToLowerInvariant()
         if (-not [string]::IsNullOrWhiteSpace($filter) -and -not $search.Contains($filter)) { continue }
         $index = $Grid.Rows.Add(
             [int]$record.Id,
@@ -265,24 +279,27 @@ function Refresh-NFProductGrid {
             [string]$record.NFEntrada,
             [int]$record.QuantidadeSaldo,
             [string]$record.Codigo,
+            $status,
             [string]$record.NFSaida
         )
+        $shown++
         $row = $Grid.Rows[$index]
-        $qty = [int]$record.QuantidadeNaNF
-        $saldo = [int]$record.QuantidadeSaldo
-        if ($saldo -lt 0 -or $saldo -gt $qty) {
-            $row.DefaultCellStyle.BackColor = $script:CurrentPalette.DangerBack
-            $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Danger
-        }
-        elseif ($saldo -eq 0) {
-            $row.DefaultCellStyle.BackColor = $script:CurrentPalette.SuccessBack
-            $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Success
-        }
-        else {
-            $row.DefaultCellStyle.BackColor = $script:CurrentPalette.WarningBack
-            $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Warning
+        switch ($status) {
+            "Revisar" {
+                $row.DefaultCellStyle.BackColor = $script:CurrentPalette.DangerBack
+                $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Danger
+            }
+            "Encerrada" {
+                $row.DefaultCellStyle.BackColor = $script:CurrentPalette.SuccessBack
+                $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Success
+            }
+            default {
+                $row.DefaultCellStyle.BackColor = $script:CurrentPalette.WarningBack
+                $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Warning
+            }
         }
     }
+    if ($null -ne $CountLabel) { $CountLabel.Text = "$shown de $($records.Count)" }
     $Grid.ClearSelection()
 }
 
@@ -316,8 +333,8 @@ function Refresh-NFSummary {
 
 function Refresh-NFAll {
     Refresh-NFSummary
-    Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter
-    Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter
+    Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel
+    Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel
     $templateReady = [IO.File]::Exists((Get-NFEntradaTemplatePath -DataDirectory $script:DataDirectory))
     $exportButton.Enabled = $templateReady
     $summary = Get-NFEntradaSummary -Store $script:Store
@@ -580,90 +597,147 @@ function Export-NFFromUI {
 }
 
 function New-NFSummaryCard {
-    param([string]$Title, [ref]$ValueLabel)
+    param([string]$Title, [string]$Subtitle, [ref]$ValueLabel)
     $panel = New-Object Windows.Forms.Panel
     $panel.Dock = [Windows.Forms.DockStyle]::Fill
-    $panel.Margin = [Windows.Forms.Padding]::new(5)
+    $panel.Margin = [Windows.Forms.Padding]::new(6)
     $panel.BackColor = $script:CurrentPalette.Card
     $panel.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
     $layout = New-Object Windows.Forms.TableLayoutPanel
     $layout.Dock = [Windows.Forms.DockStyle]::Fill
-    $layout.Padding = [Windows.Forms.Padding]::new(12, 8, 12, 7)
-    $layout.RowCount = 2
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 62)))
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 38)))
+    $layout.Padding = [Windows.Forms.Padding]::new(13, 8, 13, 7)
+    $layout.RowCount = 3
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 50)))
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 27)))
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 23)))
     $panel.Controls.Add($layout)
     $value = New-Object Windows.Forms.Label
     $value.Text = "0"
     $value.Dock = [Windows.Forms.DockStyle]::Fill
     $value.TextAlign = [Drawing.ContentAlignment]::BottomLeft
-    $value.Font = [Drawing.Font]::new("Segoe UI Semibold", 22)
+    $value.Font = [Drawing.Font]::new("Segoe UI Semibold", 21)
     $value.ForeColor = $script:CurrentPalette.Text
     $layout.Controls.Add($value, 0, 0)
     $label = New-Object Windows.Forms.Label
     $label.Text = $Title
     $label.Dock = [Windows.Forms.DockStyle]::Fill
-    $label.TextAlign = [Drawing.ContentAlignment]::TopLeft
-    $label.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.8)
-    $label.ForeColor = $script:CurrentPalette.Muted
+    $label.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $label.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.6)
+    $label.ForeColor = $script:CurrentPalette.Text
     $layout.Controls.Add($label, 0, 1)
+    $hint = New-Object Windows.Forms.Label
+    $hint.Text = $Subtitle
+    $hint.Dock = [Windows.Forms.DockStyle]::Fill
+    $hint.TextAlign = [Drawing.ContentAlignment]::TopLeft
+    $hint.Font = [Drawing.Font]::new("Segoe UI", 7.9)
+    $hint.ForeColor = $script:CurrentPalette.Muted
+    $layout.Controls.Add($hint, 0, 2)
     $ValueLabel.Value = $value
     return $panel
 }
 
 function New-ProductTabContent {
-    param([Windows.Forms.TabPage]$Tab, [ref]$GridRef, [ref]$FilterRef)
+    param(
+        [Windows.Forms.TabPage]$Tab,
+        [ref]$GridRef,
+        [ref]$FilterRef,
+        [ref]$StatusRef,
+        [ref]$CodeRef,
+        [ref]$CountRef
+    )
     $layout = New-Object Windows.Forms.TableLayoutPanel
     $layout.Dock = [Windows.Forms.DockStyle]::Fill
     $layout.Padding = [Windows.Forms.Padding]::new(10)
     $layout.RowCount = 2
-    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 42)))
+    [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 50)))
     [void]$layout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
     $Tab.Controls.Add($layout)
 
     $filterPanel = New-Object Windows.Forms.TableLayoutPanel
     $filterPanel.Dock = [Windows.Forms.DockStyle]::Fill
-    $filterPanel.ColumnCount = 3
-    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 90)))
+    $filterPanel.ColumnCount = 7
+    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 72)))
     [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
-    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 220)))
+    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 58)))
+    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 128)))
+    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 48)))
+    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 100)))
+    [void]$filterPanel.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 96)))
     $layout.Controls.Add($filterPanel, 0, 0)
 
-    $label = New-Object Windows.Forms.Label
-    $label.Text = "Pesquisar"
-    $label.Dock = [Windows.Forms.DockStyle]::Fill
-    $label.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
-    $label.ForeColor = $script:CurrentPalette.Muted
-    $filterPanel.Controls.Add($label, 0, 0)
+    $searchLabel = New-Object Windows.Forms.Label
+    $searchLabel.Text = "Pesquisar"
+    $searchLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $searchLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $searchLabel.ForeColor = $script:CurrentPalette.Muted
+    $filterPanel.Controls.Add($searchLabel, 0, 0)
 
     $filter = New-Object Windows.Forms.TextBox
     $filter.Dock = [Windows.Forms.DockStyle]::Fill
-    $filter.Margin = [Windows.Forms.Padding]::new(0, 7, 10, 7)
+    $filter.Margin = [Windows.Forms.Padding]::new(0, 9, 12, 9)
     $filter.BackColor = $script:CurrentPalette.Input
     $filter.ForeColor = $script:CurrentPalette.Text
     $filterPanel.Controls.Add($filter, 1, 0)
 
-    $legend = New-Object Windows.Forms.Label
-    $legend.Text = "Verde: encerrada  •  Amarelo: em estoque  •  Vermelho: revisar"
-    $legend.Dock = [Windows.Forms.DockStyle]::Fill
-    $legend.TextAlign = [Drawing.ContentAlignment]::MiddleRight
-    $legend.ForeColor = $script:CurrentPalette.Muted
-    $legend.Font = [Drawing.Font]::new("Segoe UI", 8.3)
-    $filterPanel.Controls.Add($legend, 2, 0)
+    $statusLabel = New-Object Windows.Forms.Label
+    $statusLabel.Text = "Status"
+    $statusLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $statusLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $statusLabel.ForeColor = $script:CurrentPalette.Muted
+    $filterPanel.Controls.Add($statusLabel, 2, 0)
+
+    $statusFilter = New-Object Windows.Forms.ComboBox
+    $statusFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
+    [void]$statusFilter.Items.AddRange(@("Todos", "Em estoque", "Encerrada", "Revisar"))
+    $statusFilter.SelectedIndex = 0
+    $statusFilter.Dock = [Windows.Forms.DockStyle]::Fill
+    $statusFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 12, 8)
+    $statusFilter.BackColor = $script:CurrentPalette.Input
+    $statusFilter.ForeColor = $script:CurrentPalette.Text
+    $filterPanel.Controls.Add($statusFilter, 3, 0)
+
+    $codeLabel = New-Object Windows.Forms.Label
+    $codeLabel.Text = "Cód."
+    $codeLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $codeLabel.TextAlign = [Drawing.ContentAlignment]::MiddleLeft
+    $codeLabel.ForeColor = $script:CurrentPalette.Muted
+    $filterPanel.Controls.Add($codeLabel, 4, 0)
+
+    $codeFilter = New-Object Windows.Forms.ComboBox
+    $codeFilter.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
+    [void]$codeFilter.Items.AddRange(@("Todos", "800", "100", "850", "Garantia"))
+    $codeFilter.SelectedIndex = 0
+    $codeFilter.Dock = [Windows.Forms.DockStyle]::Fill
+    $codeFilter.Margin = [Windows.Forms.Padding]::new(0, 8, 10, 8)
+    $codeFilter.BackColor = $script:CurrentPalette.Input
+    $codeFilter.ForeColor = $script:CurrentPalette.Text
+    $filterPanel.Controls.Add($codeFilter, 5, 0)
+
+    $countLabel = New-Object Windows.Forms.Label
+    $countLabel.Text = "0 de 0"
+    $countLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $countLabel.TextAlign = [Drawing.ContentAlignment]::MiddleRight
+    $countLabel.ForeColor = $script:CurrentPalette.Muted
+    $countLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", 8.5)
+    $filterPanel.Controls.Add($countLabel, 6, 0)
 
     $grid = New-NFGrid
     $idCol = New-Object Windows.Forms.DataGridViewTextBoxColumn
     $idCol.Name = "Id"; $idCol.Visible = $false
     [void]$grid.Columns.Add($idCol)
     Add-NFGridColumn $grid "Data" "DATA" 92
-    Add-NFGridColumn $grid "QuantidadeNaNF" "QUANTIDADE NA NF" 125
-    Add-NFGridColumn $grid "NFEntrada" "NF DE ENTRADA" 115
-    Add-NFGridColumn $grid "QuantidadeSaldo" "QUANTIDADE NO SALDO" 140
-    Add-NFGridColumn $grid "Codigo" "CÓD" 78
-    Add-NFGridColumn $grid "NFSaida" "NF DE SAÍDA" 260 $true
+    Add-NFGridColumn $grid "QuantidadeNaNF" "QTD. NA NF" 105
+    Add-NFGridColumn $grid "NFEntrada" "NF DE ENTRADA" 120
+    Add-NFGridColumn $grid "QuantidadeSaldo" "SALDO" 88
+    Add-NFGridColumn $grid "Codigo" "CÓD." 76
+    Add-NFGridColumn $grid "Status" "STATUS" 100
+    Add-NFGridColumn $grid "NFSaida" "NF DE SAÍDA / MOVIMENTAÇÕES" 280 $true
     $layout.Controls.Add($grid, 0, 1)
     $GridRef.Value = $grid
     $FilterRef.Value = $filter
+    $StatusRef.Value = $statusFilter
+    $CodeRef.Value = $codeFilter
+    $CountRef.Value = $countLabel
 }
 
 $script:CurrentPalette = Get-NFEntradaPalette $(if ([string]::IsNullOrWhiteSpace($HostTheme)) { "Escuro profissional" } else { $HostTheme })
@@ -689,10 +763,10 @@ $root = New-Object Windows.Forms.TableLayoutPanel
 $root.Dock = [Windows.Forms.DockStyle]::Fill
 $root.Padding = [Windows.Forms.Padding]::new(14)
 $root.RowCount = 4
-[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 72)))
-[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 100)))
+[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 78)))
+[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 112)))
 [void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
-[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 30)))
+[void]$root.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 46)))
 $form.Controls.Add($root)
 
 $header = New-Object Windows.Forms.TableLayoutPanel
@@ -717,7 +791,7 @@ $title.Font = [Drawing.Font]::new("Segoe UI Semibold", 20)
 $title.ForeColor = $script:CurrentPalette.Text
 $heading.Controls.Add($title, 0, 0)
 $subtitle = New-Object Windows.Forms.Label
-$subtitle.Text = "Computador de Bordo V5 e Teclado V5 • mesma regra e mesmo modelo da planilha original"
+$subtitle.Text = "Saldos, NFs e exportação no mesmo padrão da planilha oficial"
 $subtitle.Dock = [Windows.Forms.DockStyle]::Fill
 $subtitle.TextAlign = [Drawing.ContentAlignment]::TopLeft
 $subtitle.ForeColor = $script:CurrentPalette.Muted
@@ -743,10 +817,10 @@ $cards.ColumnCount = 4
 foreach ($i in 0..3) { [void]$cards.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 25))) }
 $root.Controls.Add($cards, 0, 1)
 $saldoTotalValue = $null; $computerBalanceValue = $null; $keyboardBalanceValue = $null; $openNFsValue = $null
-$cards.Controls.Add((New-NFSummaryCard "SALDO TOTAL" ([ref]$saldoTotalValue)), 0, 0)
-$cards.Controls.Add((New-NFSummaryCard "COMPUTADOR DE BORDO V5" ([ref]$computerBalanceValue)), 1, 0)
-$cards.Controls.Add((New-NFSummaryCard "TECLADO V5" ([ref]$keyboardBalanceValue)), 2, 0)
-$cards.Controls.Add((New-NFSummaryCard "NFs EM ABERTO" ([ref]$openNFsValue)), 3, 0)
+$cards.Controls.Add((New-NFSummaryCard "SALDO TOTAL" "peças disponíveis" ([ref]$saldoTotalValue)), 0, 0)
+$cards.Controls.Add((New-NFSummaryCard "COMPUTADOR DE BORDO V5" "saldo atual" ([ref]$computerBalanceValue)), 1, 0)
+$cards.Controls.Add((New-NFSummaryCard "TECLADO V5" "saldo atual" ([ref]$keyboardBalanceValue)), 2, 0)
+$cards.Controls.Add((New-NFSummaryCard "NFs EM ABERTO" "com saldo maior que zero" ([ref]$openNFsValue)), 3, 0)
 
 $mainTabs = New-Object Windows.Forms.TabControl
 $mainTabs.Dock = [Windows.Forms.DockStyle]::Fill
@@ -841,27 +915,30 @@ Add-NFGridColumn $codeSummaryGrid "Teclado" "TECLADO V5" 150
 Add-NFGridColumn $codeSummaryGrid "Total" "TOTAL" 130 $true
 $codeGroup.Controls.Add($codeSummaryGrid)
 
-$computerGrid = $null; $computerFilter = $null
-$keyboardGrid = $null; $keyboardFilter = $null
-New-ProductTabContent -Tab $computerTab -GridRef ([ref]$computerGrid) -FilterRef ([ref]$computerFilter)
-New-ProductTabContent -Tab $keyboardTab -GridRef ([ref]$keyboardGrid) -FilterRef ([ref]$keyboardFilter)
+$computerGrid = $null; $computerFilter = $null; $computerStatusFilter = $null; $computerCodeFilter = $null; $computerCountLabel = $null
+$keyboardGrid = $null; $keyboardFilter = $null; $keyboardStatusFilter = $null; $keyboardCodeFilter = $null; $keyboardCountLabel = $null
+New-ProductTabContent -Tab $computerTab -GridRef ([ref]$computerGrid) -FilterRef ([ref]$computerFilter) -StatusRef ([ref]$computerStatusFilter) -CodeRef ([ref]$computerCodeFilter) -CountRef ([ref]$computerCountLabel)
+New-ProductTabContent -Tab $keyboardTab -GridRef ([ref]$keyboardGrid) -FilterRef ([ref]$keyboardFilter) -StatusRef ([ref]$keyboardStatusFilter) -CodeRef ([ref]$keyboardCodeFilter) -CountRef ([ref]$keyboardCountLabel)
 
 # Barra de ações dentro das abas de produto.
 $actionPanel = New-Object Windows.Forms.FlowLayoutPanel
 $actionPanel.AutoSize = $true
 $actionPanel.WrapContents = $false
 $actionPanel.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
-$actionPanel.BackColor = $script:CurrentPalette.Background
+$actionPanel.BackColor = $script:CurrentPalette.Surface
+$actionPanel.Padding = [Windows.Forms.Padding]::new(0, 3, 0, 0)
 $newButton = New-Object Windows.Forms.Button
-$newButton.Text = "+ NOVO REGISTRO"; $newButton.Width = 135; $newButton.Height = 32; Set-NFButtonStyle $newButton "Primary"
+$newButton.Text = "+ NOVO REGISTRO"; $newButton.Width = 145; $newButton.Height = 34; Set-NFButtonStyle $newButton "Primary"
 $editButton = New-Object Windows.Forms.Button
-$editButton.Text = "EDITAR"; $editButton.Width = 90; $editButton.Height = 32; Set-NFButtonStyle $editButton "Secondary"
+$editButton.Text = "EDITAR SELEÇÃO"; $editButton.Width = 125; $editButton.Height = 34; Set-NFButtonStyle $editButton "Secondary"
 $deleteButton = New-Object Windows.Forms.Button
-$deleteButton.Text = "EXCLUIR"; $deleteButton.Width = 90; $deleteButton.Height = 32; Set-NFButtonStyle $deleteButton "Danger"
+$deleteButton.Text = "EXCLUIR"; $deleteButton.Width = 95; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton "Danger"
 $actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($deleteButton)
 # A barra fica no rodapé geral e é ativada somente nas abas de produto.
 $footerHost = New-Object Windows.Forms.TableLayoutPanel
 $footerHost.Dock = [Windows.Forms.DockStyle]::Fill
+$footerHost.BackColor = $script:CurrentPalette.Surface
+$footerHost.Padding = [Windows.Forms.Padding]::new(8, 3, 8, 3)
 $footerHost.ColumnCount = 2
 [void]$footerHost.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
 [void]$footerHost.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
@@ -888,8 +965,12 @@ function Update-NFActions {
     $deleteButton.Enabled = $hasSelection
 }
 
-$computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter })
-$keyboardFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter })
+$computerFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })
+$computerStatusFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })
+$computerCodeFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel })
+$keyboardFilter.Add_TextChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
+$keyboardStatusFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
+$keyboardCodeFilter.Add_SelectedIndexChanged({ Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel })
 $computerGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
 $keyboardGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI } })
 $computerGrid.Add_SelectionChanged({ Update-NFActions })
