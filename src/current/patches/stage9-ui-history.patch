@@ -1,0 +1,8 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -398,6 +398,7 @@
+             "RestauracaoBackup" { "Restauração" }
+             "Saida" { "Saída" }
++            "EstornoSaida" { "Estorno de saída" }
+             "Exportacao" { "Exportação" }
