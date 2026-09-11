@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.16",
+  "Version": "0.21.17",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.16.zip",
-  "PackageSha256": "DC7B40207BF805FB4E6F9B651266B0280FFC9265D32527C893104F4369CAE769",
-  "PackageSize": 328478,
-  "PackageRoot": "Central-de-Trabalho-v0.21.16",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.17.zip",
+  "PackageSha256": "9E8D479EEA84720F37302E098D6586AD80DD0D53FC4C9E51FE40CD0CF45835DB",
+  "PackageSize": 328582,
+  "PackageRoot": "Central-de-Trabalho-v0.21.17",
   "ReleaseNotes": [
-    "Etapa 13 do Controle de NF de Entrada: exportação rápida das listas de produto.",
-    "As abas Computador de Bordo CB5 e Teclado V5 ganham EXPORTAR LISTA.",
-    "A exportação respeita exatamente a pesquisa, o status e o código aplicados na tela.",
-    "O arquivo contém apenas as linhas e colunas visíveis e usa o mesmo CSV compatível com Excel introduzido na Etapa 12.",
-    "O atalho Ctrl+E exporta a lista da aba de produto atual; Ctrl+N, Enter, Ctrl+S e Ctrl+F permanecem inalterados.",
-    "A exportação é somente leitura e não modifica a base, saldos, NFs, movimentações ou histórico.",
-    "Controle de NF de Entrada passa para v2.4.0; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
-    "A versão Estável permanece v0.20.2; a v0.21.16 é publicada somente no canal Teste."
+    "Revisão de acabamento do Controle de NF de Entrada antes da continuidade das etapas funcionais.",
+    "A paleta do módulo foi alinhada aos temas da Central de Trabalho, removendo o roxo isolado e melhorando a consistência visual.",
+    "Botões das abas de produto, Movimentações, Histórico e Segurança foram encurtados para evitar cortes em larguras menores.",
+    "As exportações foram diferenciadas visualmente: EXCEL OFICIAL representa a planilha completa; CSV representa apenas a visão filtrada atual.",
+    "A barra de ações das abas de produto ficou mais compacta com rótulos curtos, preservando todas as funções e atalhos existentes.",
+    "O rodapé deixou de exibir a sequência longa de atalhos para evitar texto cortado e excesso de informação.",
+    "Controle de NF de Entrada passa para v2.4.1; Central de Manutenção permanece v0.6.2 e Gerenciador de Planilhas permanece v3.7.3.",
+    "A versão Estável permanece v0.20.2; a v0.21.17 é publicada somente no canal Teste."
   ]
 }

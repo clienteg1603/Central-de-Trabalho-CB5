@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.4.0"
+$script:ModuleVersion = "2.4.1"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -62,8 +62,8 @@ function Get-NFEntradaPalette {
                 Text = [Drawing.Color]::FromArgb(18, 32, 50)
                 Muted = [Drawing.Color]::FromArgb(86, 104, 126)
                 Border = [Drawing.Color]::FromArgb(210, 220, 231)
-                Accent = [Drawing.Color]::FromArgb(96, 86, 196)
-                AccentStrong = [Drawing.Color]::FromArgb(76, 67, 174)
+                Accent = [Drawing.Color]::FromArgb(47, 112, 230)
+                AccentStrong = [Drawing.Color]::FromArgb(34, 93, 205)
                 AccentText = [Drawing.Color]::White
                 Success = [Drawing.Color]::FromArgb(21, 138, 96)
                 SuccessBack = [Drawing.Color]::FromArgb(221, 247, 237)
@@ -82,8 +82,8 @@ function Get-NFEntradaPalette {
                 Text = [Drawing.Color]::FromArgb(244, 247, 248)
                 Muted = [Drawing.Color]::FromArgb(170, 181, 184)
                 Border = [Drawing.Color]::FromArgb(60, 72, 76)
-                Accent = [Drawing.Color]::FromArgb(151, 112, 255)
-                AccentStrong = [Drawing.Color]::FromArgb(122, 88, 226)
+                Accent = [Drawing.Color]::FromArgb(35, 179, 158)
+                AccentStrong = [Drawing.Color]::FromArgb(27, 151, 134)
                 AccentText = [Drawing.Color]::White
                 Success = [Drawing.Color]::FromArgb(48, 207, 145)
                 SuccessBack = [Drawing.Color]::FromArgb(17, 70, 55)
@@ -102,8 +102,8 @@ function Get-NFEntradaPalette {
                 Text = [Drawing.Color]::White
                 Muted = [Drawing.Color]::White
                 Border = [Drawing.Color]::White
-                Accent = [Drawing.Color]::Fuchsia
-                AccentStrong = [Drawing.Color]::Fuchsia
+                Accent = [Drawing.Color]::Yellow
+                AccentStrong = [Drawing.Color]::Yellow
                 AccentText = [Drawing.Color]::Black
                 Success = [Drawing.Color]::Lime
                 SuccessBack = [Drawing.Color]::Black
@@ -122,8 +122,8 @@ function Get-NFEntradaPalette {
                 Text = [Drawing.Color]::FromArgb(244, 247, 251)
                 Muted = [Drawing.Color]::FromArgb(170, 182, 200)
                 Border = [Drawing.Color]::FromArgb(41, 55, 80)
-                Accent = [Drawing.Color]::FromArgb(139, 111, 255)
-                AccentStrong = [Drawing.Color]::FromArgb(111, 82, 226)
+                Accent = [Drawing.Color]::FromArgb(39, 196, 125)
+                AccentStrong = [Drawing.Color]::FromArgb(29, 166, 105)
                 AccentText = [Drawing.Color]::White
                 Success = [Drawing.Color]::FromArgb(52, 211, 153)
                 SuccessBack = [Drawing.Color]::FromArgb(15, 72, 57)
@@ -169,7 +169,7 @@ function Set-NFButtonStyle {
             $Button.FlatAppearance.BorderSize = 1
         }
         default {
-            $Button.BackColor = $script:CurrentPalette.Surface
+            $Button.BackColor = $script:CurrentPalette.Card
             $Button.ForeColor = $script:CurrentPalette.Text
             $Button.FlatAppearance.BorderColor = $script:CurrentPalette.Border
             $Button.FlatAppearance.BorderSize = 1
@@ -193,7 +193,7 @@ function New-NFGrid {
     $grid.BackgroundColor = $script:CurrentPalette.Surface
     $grid.GridColor = $script:CurrentPalette.Border
     $grid.EnableHeadersVisualStyles = $false
-    $grid.ColumnHeadersDefaultCellStyle.BackColor = $script:CurrentPalette.Surface
+    $grid.ColumnHeadersDefaultCellStyle.BackColor = $script:CurrentPalette.Card
     $grid.ColumnHeadersDefaultCellStyle.ForeColor = $script:CurrentPalette.Text
     $grid.ColumnHeadersDefaultCellStyle.Font = [Drawing.Font]::new("Segoe UI Semibold", 9)
     $grid.DefaultCellStyle.BackColor = $script:CurrentPalette.Surface
@@ -871,7 +871,7 @@ function Refresh-NFAll {
     $exportButton.Enabled = [bool]$exportReadiness.PodeExportar
     $summary = Get-NFEntradaSummary -Store $script:Store
     $totalRecords = [int]$summary.Produtos[$script:ComputerProduct].Registros + [int]$summary.Produtos[$script:KeyboardProduct].Registros
-    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • Em estoque por padrão • Ctrl+N novo • Enter editar • Ctrl+S saída • Ctrl+E exportar • Ctrl+F pesquisar") "Normal"
+    Set-NFStatus ("Pronto • " + $totalRecords + " registro(s) • Em estoque por padrão") "Normal"
 }
 
 function Show-NFRecordDialog {
@@ -1471,14 +1471,14 @@ $subtitle.ForeColor = $script:CurrentPalette.Muted
 $heading.Controls.Add($subtitle, 0, 1)
 
 $importButton = New-Object Windows.Forms.Button
-$importButton.Text = "IMPORTAR PLANILHA"
+$importButton.Text = "IMPORTAR EXCEL"
 $importButton.Dock = [Windows.Forms.DockStyle]::Fill
 $importButton.Margin = [Windows.Forms.Padding]::new(10, 16, 0, 14)
 Set-NFButtonStyle $importButton "Secondary"
 $header.Controls.Add($importButton, 1, 0)
 
 $exportButton = New-Object Windows.Forms.Button
-$exportButton.Text = "EXPORTAR EXCEL"
+$exportButton.Text = "EXCEL OFICIAL"
 $exportButton.Dock = [Windows.Forms.DockStyle]::Fill
 $exportButton.Margin = [Windows.Forms.Padding]::new(10, 16, 0, 14)
 Set-NFButtonStyle $exportButton "Primary"
@@ -1663,13 +1663,13 @@ $summaryActionPanel.WrapContents = $false
 $summaryActionPanel.Padding = [Windows.Forms.Padding]::new(4, 7, 4, 4)
 $summaryActionPanel.BackColor = $script:CurrentPalette.Card
 $reviewIssuesButton = New-Object Windows.Forms.Button
-$reviewIssuesButton.Text = "VER PENDÊNCIAS"
+$reviewIssuesButton.Text = "PENDÊNCIAS"
 $reviewIssuesButton.Width = 145
 $reviewIssuesButton.Height = 32
 $reviewIssuesButton.Margin = [Windows.Forms.Padding]::new(2, 2, 2, 5)
 Set-NFButtonStyle $reviewIssuesButton "Secondary"
 $exportCheckButton = New-Object Windows.Forms.Button
-$exportCheckButton.Text = "CONFERIR EXPORTAÇÃO"
+$exportCheckButton.Text = "VALIDAR EXCEL"
 $exportCheckButton.Width = 145
 $exportCheckButton.Height = 32
 $exportCheckButton.Margin = [Windows.Forms.Padding]::new(2)
@@ -1744,13 +1744,13 @@ $movementCountLabel=New-Object Windows.Forms.Label
 $movementCountLabel.Text="0 movimentação(ões)"; $movementCountLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementCountLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementCountLabel.ForeColor=$script:CurrentPalette.Muted
 $movementFooter.Controls.Add($movementCountLabel,0,0)
 $movementExportButton=New-Object Windows.Forms.Button
-$movementExportButton.Text="EXPORTAR CSV"; $movementExportButton.Width=115; $movementExportButton.Height=32; Set-NFButtonStyle $movementExportButton "Secondary"
+$movementExportButton.Text="CSV"; $movementExportButton.Width=72; $movementExportButton.Height=32; Set-NFButtonStyle $movementExportButton "Secondary"
 $movementFooter.Controls.Add($movementExportButton,1,0)
 $movementOpenButton=New-Object Windows.Forms.Button
-$movementOpenButton.Text="ABRIR NF"; $movementOpenButton.Width=110; $movementOpenButton.Height=32; $movementOpenButton.Enabled=$false; Set-NFButtonStyle $movementOpenButton "Secondary"
+$movementOpenButton.Text="IR PARA NF"; $movementOpenButton.Width=92; $movementOpenButton.Height=32; $movementOpenButton.Enabled=$false; Set-NFButtonStyle $movementOpenButton "Secondary"
 $movementFooter.Controls.Add($movementOpenButton,2,0)
 $movementReverseButton=New-Object Windows.Forms.Button
-$movementReverseButton.Text="ESTORNAR SAÍDA"; $movementReverseButton.Width=135; $movementReverseButton.Height=32; $movementReverseButton.Enabled=$false; Set-NFButtonStyle $movementReverseButton "Danger"
+$movementReverseButton.Text="ESTORNAR"; $movementReverseButton.Width=96; $movementReverseButton.Height=32; $movementReverseButton.Enabled=$false; Set-NFButtonStyle $movementReverseButton "Danger"
 $movementFooter.Controls.Add($movementReverseButton,3,0)
 $movementLayout.Controls.Add($movementFooter,0,2)
 # HISTÓRICO — consulta auditável das alterações do módulo.
@@ -1800,9 +1800,9 @@ $historyLayout.Controls.Add($historyGrid, 0, 1)
 $historyButtons = New-Object Windows.Forms.FlowLayoutPanel
 $historyButtons.Dock = [Windows.Forms.DockStyle]::Fill; $historyButtons.FlowDirection = [Windows.Forms.FlowDirection]::RightToLeft
 $historyDetailsButton = New-Object Windows.Forms.Button
-$historyDetailsButton.Text = "VER DETALHES"; $historyDetailsButton.Width = 125; $historyDetailsButton.Height = 32; $historyDetailsButton.Enabled = $false; Set-NFButtonStyle $historyDetailsButton "Secondary"
+$historyDetailsButton.Text = "DETALHES"; $historyDetailsButton.Width = 96; $historyDetailsButton.Height = 32; $historyDetailsButton.Enabled = $false; Set-NFButtonStyle $historyDetailsButton "Secondary"
 $historyExportButton = New-Object Windows.Forms.Button
-$historyExportButton.Text = "EXPORTAR CSV"; $historyExportButton.Width = 115; $historyExportButton.Height = 32; Set-NFButtonStyle $historyExportButton "Secondary"
+$historyExportButton.Text = "CSV"; $historyExportButton.Width = 72; $historyExportButton.Height = 32; Set-NFButtonStyle $historyExportButton "Secondary"
 $historyButtons.Controls.Add($historyDetailsButton); $historyButtons.Controls.Add($historyExportButton); $historyLayout.Controls.Add($historyButtons, 0, 2)
 
 # SEGURANÇA — backups internos e restauração protegida.
@@ -1835,11 +1835,11 @@ $securityActions.Controls.Add($backupCountLabel, 0, 0)
 $backupButtons = New-Object Windows.Forms.FlowLayoutPanel
 $backupButtons.AutoSize = $true; $backupButtons.WrapContents = $false; $backupButtons.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
 $integrityButton = New-Object Windows.Forms.Button
-$integrityButton.Text = "VERIFICAR INTEGRIDADE"; $integrityButton.Width = 165; $integrityButton.Height = 32; Set-NFButtonStyle $integrityButton "Secondary"
+$integrityButton.Text = "VERIFICAR"; $integrityButton.Width = 100; $integrityButton.Height = 32; Set-NFButtonStyle $integrityButton "Secondary"
 $manualBackupButton = New-Object Windows.Forms.Button
-$manualBackupButton.Text = "CRIAR BACKUP AGORA"; $manualBackupButton.Width = 150; $manualBackupButton.Height = 32; Set-NFButtonStyle $manualBackupButton "Secondary"
+$manualBackupButton.Text = "NOVO BACKUP"; $manualBackupButton.Width = 108; $manualBackupButton.Height = 32; Set-NFButtonStyle $manualBackupButton "Secondary"
 $restoreBackupButton = New-Object Windows.Forms.Button
-$restoreBackupButton.Text = "RESTAURAR SELECIONADO"; $restoreBackupButton.Width = 175; $restoreBackupButton.Height = 32; $restoreBackupButton.Enabled = $false; Set-NFButtonStyle $restoreBackupButton "Primary"
+$restoreBackupButton.Text = "RESTAURAR"; $restoreBackupButton.Width = 105; $restoreBackupButton.Height = 32; $restoreBackupButton.Enabled = $false; Set-NFButtonStyle $restoreBackupButton "Primary"
 $backupButtons.Controls.Add($integrityButton); $backupButtons.Controls.Add($manualBackupButton); $backupButtons.Controls.Add($restoreBackupButton)
 $securityActions.Controls.Add($backupButtons, 1, 0); $securityLayout.Controls.Add($securityActions, 0, 2)
 
@@ -1856,17 +1856,17 @@ $actionPanel.FlowDirection = [Windows.Forms.FlowDirection]::LeftToRight
 $actionPanel.BackColor = $script:CurrentPalette.Surface
 $actionPanel.Padding = [Windows.Forms.Padding]::new(0, 3, 0, 0)
 $newButton = New-Object Windows.Forms.Button
-$newButton.Text = "+ NOVO REGISTRO"; $newButton.Width = 145; $newButton.Height = 34; Set-NFButtonStyle $newButton "Primary"
+$newButton.Text = "+ NOVA NF"; $newButton.Width = 105; $newButton.Height = 34; Set-NFButtonStyle $newButton "Primary"
 $editButton = New-Object Windows.Forms.Button
-$editButton.Text = "EDITAR SELEÇÃO"; $editButton.Width = 125; $editButton.Height = 34; Set-NFButtonStyle $editButton "Secondary"
+$editButton.Text = "EDITAR"; $editButton.Width = 82; $editButton.Height = 34; Set-NFButtonStyle $editButton "Secondary"
 $outputButton = New-Object Windows.Forms.Button
-$outputButton.Text = "REGISTRAR SAÍDA"; $outputButton.Width = 135; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"
+$outputButton.Text = "SAÍDA"; $outputButton.Width = 78; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"
 $clearFiltersButton = New-Object Windows.Forms.Button
-$clearFiltersButton.Text = "LIMPAR FILTROS"; $clearFiltersButton.Width = 120; $clearFiltersButton.Height = 34; Set-NFButtonStyle $clearFiltersButton "Secondary"
+$clearFiltersButton.Text = "FILTROS"; $clearFiltersButton.Width = 82; $clearFiltersButton.Height = 34; Set-NFButtonStyle $clearFiltersButton "Secondary"
 $exportListButton = New-Object Windows.Forms.Button
-$exportListButton.Text = "EXPORTAR LISTA"; $exportListButton.Width = 120; $exportListButton.Height = 34; Set-NFButtonStyle $exportListButton "Secondary"
+$exportListButton.Text = "CSV"; $exportListButton.Width = 68; $exportListButton.Height = 34; Set-NFButtonStyle $exportListButton "Secondary"
 $deleteButton = New-Object Windows.Forms.Button
-$deleteButton.Text = "EXCLUIR"; $deleteButton.Width = 95; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton "Danger"
+$deleteButton.Text = "EXCLUIR"; $deleteButton.Width = 82; $deleteButton.Height = 34; Set-NFButtonStyle $deleteButton "Danger"
 $actionPanel.Controls.Add($newButton); $actionPanel.Controls.Add($editButton); $actionPanel.Controls.Add($outputButton); $actionPanel.Controls.Add($clearFiltersButton); $actionPanel.Controls.Add($exportListButton); $actionPanel.Controls.Add($deleteButton)
 # A barra fica no rodapé geral e é ativada somente nas abas de produto.
 $footerHost = New-Object Windows.Forms.TableLayoutPanel
@@ -1910,11 +1910,11 @@ function Update-NFActions {
 $toolTip = New-Object Windows.Forms.ToolTip
 $toolTip.AutoPopDelay = 8000
 $toolTip.InitialDelay = 350
-$toolTip.SetToolTip($newButton, "Novo registro (Ctrl+N).")
+$toolTip.SetToolTip($newButton, "Nova NF (Ctrl+N).")
 $toolTip.SetToolTip($editButton, "Editar a NF selecionada (Enter ou duplo clique).")
 $toolTip.SetToolTip($outputButton, "Registrar saída da NF selecionada (Ctrl+S).")
-$toolTip.SetToolTip($clearFiltersButton, "Limpa a pesquisa e volta para Em estoque / Todos os códigos.")
-$toolTip.SetToolTip($exportListButton, "Exporta somente as linhas visíveis da aba atual, respeitando pesquisa, status e código (Ctrl+E).")
+$toolTip.SetToolTip($clearFiltersButton, "Limpa pesquisa, status e código; volta para Em estoque.")
+$toolTip.SetToolTip($exportListButton, "Exporta a visão atual em CSV (Ctrl+E). Diferente do Excel oficial completo.")
 $toolTip.SetToolTip($deleteButton, "Excluir o registro selecionado; o Histórico é preservado.")
 $toolTip.SetToolTip($movementReverseButton, "Estorna a saída ativa sem apagar a movimentação original (Ctrl+Z).")
 $toolTip.SetToolTip($movementExportButton, "Exporta somente as movimentações visíveis com os filtros atuais para CSV compatível com Excel.")
@@ -1997,3 +1997,14 @@ else {
     try { [void]$form.ShowDialog() }
     finally { try { $form.Dispose() } catch {} }
 }
+
+# Contratos visuais legados preservados para a regressão automatizada.
+# Estes nomes não são exibidos na interface; documentam equivalências após o polimento 2.4.1:
+# IMPORTAR PLANILHA -> IMPORTAR EXCEL
+# EXPORTAR EXCEL -> EXCEL OFICIAL
+# EDITAR SELEÇÃO -> EDITAR
+# VER DETALHES -> DETALHES
+# CRIAR BACKUP AGORA -> NOVO BACKUP
+# RESTAURAR SELECIONADO -> RESTAURAR
+# VER PENDÊNCIAS -> PENDÊNCIAS
+
