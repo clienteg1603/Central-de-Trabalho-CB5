@@ -1,0 +1,6 @@
+diff --git a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1 b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+--- a/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
++++ b/src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1
+@@ -352,1 +352,1 @@
+-    $movementCountLabel.Text = "$shown movimentação(ões) • $qtyShown peça(s) • período: $periodFilter"
++    $movementCountLabel.Text = "$shown movimentação(ões) • $qtyShown peça(s) ativas • $reversedShown estornada(s) • período: $periodFilter"
