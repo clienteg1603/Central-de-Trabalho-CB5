@@ -189,6 +189,12 @@ def main():
     for marker in ('backup-info.json', 'Antes de restaurar backup', '-Tipo "RestauracaoBackup"', 'O backup selecionado não pertence ao Controle de NF de Entrada.'):
         require(errors, nf_core, marker, "NFEntrada.Core / restauração protegida")
 
+    for fn in ("Get-NFEntradaMovements", "Add-NFEntradaMovement"):
+        require_function(errors, nf_core, fn, "NFEntrada.Core / movimentações estruturadas")
+    for marker in ("Movimentacoes", "MOVIMENTAÇÕES", "Refresh-NFMovements", "ABRIR NF", "MovementReference", "Open-NFFromMovement"):
+        if marker not in nf_core and marker not in nf:
+            errors.append("NF Entrada / etapa 5: marcador ausente: " + marker)
+
     # ATUALIZADOR — preserva núcleo, hash do pacote, arquivos ocultos e recuperação real.
     require(errors, updater, "Update.Core.ps1", "Atualizador")
     for marker in ("PackageSha256", "PackageSize", "PACOTE-MANIFESTO.json"):

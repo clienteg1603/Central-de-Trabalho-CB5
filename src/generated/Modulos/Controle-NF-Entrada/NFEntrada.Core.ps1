@@ -45,6 +45,30 @@ function Ensure-NFEntradaStoreShape {
     elseif ($null -eq $Store.Historico) {
         $Store.Historico = @()
     }
+    if ($null -eq $Store.PSObject.Properties["Movimentacoes"]) {
+        $movements = [Collections.Generic.List[object]]::new()
+        foreach ($event in @($Store.Historico)) {
+            if ([string]$event.Tipo -ne "Saida" -or $null -eq $event.Antes -or $null -eq $event.Depois) { continue }
+            $qty = [int]$event.Antes.QuantidadeSaldo - [int]$event.Depois.QuantidadeSaldo
+            if ($qty -le 0) { continue }
+            [void]$movements.Add([pscustomobject]@{
+                Id = [string]$event.Id
+                DataHora = [string]$event.DataHora
+                Produto = [string]$event.Produto
+                RegistroId = [int]$event.RegistroId
+                NFEntrada = [string]$event.NFEntrada
+                Quantidade = $qty
+                Referencia = [string]$event.Detalhes
+                SaldoAntes = [int]$event.Antes.QuantidadeSaldo
+                SaldoDepois = [int]$event.Depois.QuantidadeSaldo
+                Origem = "Histórico legado"
+            })
+        }
+        $Store | Add-Member -NotePropertyName Movimentacoes -NotePropertyValue @($movements)
+    }
+    elseif ($null -eq $Store.Movimentacoes) {
+        $Store.Movimentacoes = @()
+    }
     if ($null -eq $Store.PSObject.Properties["Meta"]) {
         $Store | Add-Member -NotePropertyName Meta -NotePropertyValue ([pscustomobject]@{
             CriadoEm = [DateTime]::Now.ToString("o")
@@ -109,6 +133,31 @@ function Get-NFEntradaHistory {
     param([Parameter(Mandatory = $true)]$Store)
     [void](Ensure-NFEntradaStoreShape -Store $Store)
     return @($Store.Historico | Sort-Object { [DateTime]$_.DataHora } -Descending)
+}
+
+function Get-NFEntradaMovements {
+    param([Parameter(Mandatory = $true)]$Store)
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    return @($Store.Movimentacoes | Sort-Object { [DateTime]$_.DataHora } -Descending)
+}
+
+function Add-NFEntradaMovement {
+    param($Store,[string]$Produto,[int]$RegistroId,[string]$NFEntrada,[int]$Quantidade,[string]$Referencia,[int]$SaldoAntes,[int]$SaldoDepois)
+    [void](Ensure-NFEntradaStoreShape -Store $Store)
+    $movement = [pscustomobject]@{
+        Id = [guid]::NewGuid().ToString("N")
+        DataHora = [DateTime]::Now.ToString("o")
+        Produto = $Produto
+        RegistroId = $RegistroId
+        NFEntrada = $NFEntrada
+        Quantidade = $Quantidade
+        Referencia = $Referencia
+        SaldoAntes = $SaldoAntes
+        SaldoDepois = $SaldoDepois
+        Origem = "Operação"
+    }
+    $Store.Movimentacoes = @($Store.Movimentacoes) + $movement
+    return $movement
 }
 
 function New-NFEntradaSafetyBackup {
@@ -406,6 +455,7 @@ function New-NFEntradaStoreFromWorkbook {
                 'TECLADO V5' = @($tk)
             }
             Historico = @()
+            Movimentacoes = @()
             Meta = [pscustomobject]@{
                 CriadoEm = [DateTime]::Now.ToString("o")
                 UltimaAlteracaoEm = [DateTime]::Now.ToString("o")
@@ -428,6 +478,7 @@ function New-EmptyNFEntradaStore {
             'TECLADO V5' = @()
         }
         Historico = @()
+        Movimentacoes = @()
         Meta = [pscustomobject]@{
             CriadoEm = [DateTime]::Now.ToString("o")
             UltimaAlteracaoEm = [DateTime]::Now.ToString("o")
@@ -452,6 +503,7 @@ function Import-NFEntradaSourceWorkbook {
             $previous = Read-NFEntradaStore -Path $storePath
             [void](Ensure-NFEntradaStoreShape -Store $previous)
             $store.Historico = @($previous.Historico)
+            $store.Movimentacoes = @($previous.Movimentacoes)
         }
         catch {}
     }
@@ -665,6 +717,7 @@ function Register-NFEntradaOutput {
     }
     if (-not $found) { throw "O registro selecionado não foi encontrado." }
     $Store.Produtos.PSObject.Properties[$Product].Value = @($records)
+    [void](Add-NFEntradaMovement -Store $Store -Produto $Product -RegistroId $Id -NFEntrada $after.NFEntrada -Quantidade $Quantidade -Referencia $saida -SaldoAntes ([int]$before.QuantidadeSaldo) -SaldoDepois ([int]$after.QuantidadeSaldo))
     [void](Add-NFEntradaHistoryEvent -Store $Store -Tipo "Saida" -Produto $Product -RegistroId $Id -NFEntrada $after.NFEntrada -Antes $before -Depois $after -Detalhes ("Saída de " + $Quantidade + " peça(s) • " + $saida))
     return $after
 }

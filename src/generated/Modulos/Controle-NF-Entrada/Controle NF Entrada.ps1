@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "1.5.0"
+$script:ModuleVersion = "1.6.0"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -310,6 +310,57 @@ function Format-NFHistoryDate {
     return $Text
 }
 
+function Refresh-NFMovements {
+    if ($null -eq $movementGrid) { return }
+    $filter = if ($null -ne $movementFilter) { ([string]$movementFilter.Text).Trim().ToLowerInvariant() } else { "" }
+    $productFilter = if ($null -ne $movementProductFilter -and $movementProductFilter.SelectedIndex -gt 0) { [string]$movementProductFilter.SelectedItem } else { "Todos" }
+    $items = @(Get-NFEntradaMovements -Store $script:Store)
+    $movementGrid.Rows.Clear()
+    $shown = 0
+    $qtyShown = 0
+    foreach ($item in $items) {
+        $displayProduct = Get-NFEntradaProductDisplayName ([string]$item.Produto)
+        if ($productFilter -ne "Todos" -and $displayProduct -ne $productFilter) { continue }
+        $search = (($displayProduct + " " + [string]$item.NFEntrada + " " + [string]$item.Referencia)).ToLowerInvariant()
+        if (-not [string]::IsNullOrWhiteSpace($filter) -and -not $search.Contains($filter)) { continue }
+        [void]$movementGrid.Rows.Add(
+            [string]$item.Id,
+            [string]$item.Produto,
+            (Format-NFHistoryDate ([string]$item.DataHora)),
+            $displayProduct,
+            [string]$item.NFEntrada,
+            [int]$item.Quantidade,
+            [int]$item.SaldoAntes,
+            [int]$item.SaldoDepois,
+            [string]$item.Referencia
+        )
+        $shown++
+        $qtyShown += [int]$item.Quantidade
+    }
+    $movementCountLabel.Text = "$shown de $($items.Count) movimentação(ões) • $qtyShown peça(s) na seleção"
+    $movementGrid.ClearSelection()
+    $movementOpenButton.Enabled = $false
+}
+
+function Open-NFFromMovement {
+    if ($movementGrid.SelectedRows.Count -eq 0) { return }
+    $row = $movementGrid.SelectedRows[0]
+    $product = [string]$row.Cells["MovementProductKey"].Value
+    $nf = [string]$row.Cells["MovementNF"].Value
+    if ($product -eq $script:ComputerProduct) {
+        $computerStatusFilter.SelectedIndex = 0
+        $computerFilter.Text = $nf
+        $mainTabs.SelectedTab = $computerTab
+        $computerFilter.Focus()
+    }
+    elseif ($product -eq $script:KeyboardProduct) {
+        $keyboardStatusFilter.SelectedIndex = 0
+        $keyboardFilter.Text = $nf
+        $mainTabs.SelectedTab = $keyboardTab
+        $keyboardFilter.Focus()
+    }
+}
+
 function Get-NFHistoryEventById {
     param([string]$Id)
     foreach ($event in Get-NFEntradaHistory -Store $script:Store) {
@@ -491,6 +542,7 @@ function Refresh-NFAll {
     Refresh-NFSummary
     Refresh-NFProductGrid -Product $script:ComputerProduct -Grid $computerGrid -FilterBox $computerFilter -StatusFilter $computerStatusFilter -CodeFilter $computerCodeFilter -CountLabel $computerCountLabel
     Refresh-NFProductGrid -Product $script:KeyboardProduct -Grid $keyboardGrid -FilterBox $keyboardFilter -StatusFilter $keyboardStatusFilter -CodeFilter $keyboardCodeFilter -CountLabel $keyboardCountLabel
+    if ($mainTabs.SelectedTab -eq $movementTab) { Refresh-NFMovements }
     if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }
     if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups }
     $templateReady = [IO.File]::Exists((Get-NFEntradaTemplatePath -DataDirectory $script:DataDirectory))
@@ -1043,6 +1095,10 @@ $keyboardTab = New-Object Windows.Forms.TabPage
 $keyboardTab.Text = "TECLADO V5"
 $keyboardTab.BackColor = $script:CurrentPalette.Background
 $mainTabs.TabPages.Add($keyboardTab)
+$movementTab = New-Object Windows.Forms.TabPage
+$movementTab.Text = "MOVIMENTAÇÕES"
+$movementTab.BackColor = $script:CurrentPalette.Background
+$mainTabs.TabPages.Add($movementTab)
 $historyTab = New-Object Windows.Forms.TabPage
 $historyTab.Text = "HISTÓRICO"
 $historyTab.BackColor = $script:CurrentPalette.Background
@@ -1127,11 +1183,67 @@ $summaryLayout.SetColumnSpan($codeGroup, 2)
 $summaryLayout.Controls.Add($codeGroup, 0, 1)
 $codeSummaryGrid = New-NFGrid
 Add-NFGridColumn $codeSummaryGrid "Codigo" "CÓDIGO" 110
-Add-NFGridColumn $codeSummaryGrid "Computador" "COMPUTADOR V5" 150
+Add-NFGridColumn $codeSummaryGrid "Computador" "COMPUTADOR CB5" 150
 Add-NFGridColumn $codeSummaryGrid "Teclado" "TECLADO V5" 150
 Add-NFGridColumn $codeSummaryGrid "Total" "TOTAL" 130 $true
 $codeGroup.Controls.Add($codeSummaryGrid)
 
+# MOVIMENTAÇÕES
+$movementLayout = New-Object Windows.Forms.TableLayoutPanel
+$movementLayout.Dock = [Windows.Forms.DockStyle]::Fill
+$movementLayout.Padding = [Windows.Forms.Padding]::new(10)
+$movementLayout.RowCount = 3
+[void]$movementLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 52)))
+[void]$movementLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Percent, 100)))
+[void]$movementLayout.RowStyles.Add((New-Object Windows.Forms.RowStyle([Windows.Forms.SizeType]::Absolute, 42)))
+$movementTab.Controls.Add($movementLayout)
+$movementFilters = New-Object Windows.Forms.TableLayoutPanel
+$movementFilters.Dock = [Windows.Forms.DockStyle]::Fill
+$movementFilters.ColumnCount = 4
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 74)))
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent, 100)))
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 62)))
+[void]$movementFilters.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Absolute, 210)))
+$movementLayout.Controls.Add($movementFilters,0,0)
+$movementSearchLabel=New-Object Windows.Forms.Label
+$movementSearchLabel.Text="Pesquisar"; $movementSearchLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementSearchLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementSearchLabel.ForeColor=$script:CurrentPalette.Muted
+$movementFilters.Controls.Add($movementSearchLabel,0,0)
+$movementFilter=New-Object Windows.Forms.TextBox
+$movementFilter.Dock=[Windows.Forms.DockStyle]::Fill; $movementFilter.Margin=[Windows.Forms.Padding]::new(0,9,12,9); $movementFilter.BackColor=$script:CurrentPalette.Input; $movementFilter.ForeColor=$script:CurrentPalette.Text
+$movementFilters.Controls.Add($movementFilter,1,0)
+$movementProductLabel=New-Object Windows.Forms.Label
+$movementProductLabel.Text="Produto"; $movementProductLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementProductLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementProductLabel.ForeColor=$script:CurrentPalette.Muted
+$movementFilters.Controls.Add($movementProductLabel,2,0)
+$movementProductFilter=New-Object Windows.Forms.ComboBox
+$movementProductFilter.DropDownStyle=[Windows.Forms.ComboBoxStyle]::DropDownList
+[void]$movementProductFilter.Items.AddRange(@("Todos","COMPUTADOR DE BORDO CB5","TECLADO V5"))
+$movementProductFilter.SelectedIndex=0; $movementProductFilter.Dock=[Windows.Forms.DockStyle]::Fill; $movementProductFilter.Margin=[Windows.Forms.Padding]::new(0,8,8,8); $movementProductFilter.BackColor=$script:CurrentPalette.Input; $movementProductFilter.ForeColor=$script:CurrentPalette.Text
+$movementFilters.Controls.Add($movementProductFilter,3,0)
+
+$movementGrid=New-NFGrid
+$movementIdCol=New-Object Windows.Forms.DataGridViewTextBoxColumn
+$movementIdCol.Name="MovementId"; $movementIdCol.Visible=$false; [void]$movementGrid.Columns.Add($movementIdCol)
+$movementProductKeyCol=New-Object Windows.Forms.DataGridViewTextBoxColumn
+$movementProductKeyCol.Name="MovementProductKey"; $movementProductKeyCol.Visible=$false; [void]$movementGrid.Columns.Add($movementProductKeyCol)
+Add-NFGridColumn $movementGrid "MovementDate" "DATA / HORA" 145
+Add-NFGridColumn $movementGrid "MovementProduct" "PRODUTO" 190
+Add-NFGridColumn $movementGrid "MovementNF" "NF DE ENTRADA" 110
+Add-NFGridColumn $movementGrid "MovementQty" "SAÍDA" 75
+Add-NFGridColumn $movementGrid "MovementBefore" "SALDO ANTES" 95
+Add-NFGridColumn $movementGrid "MovementAfter" "SALDO DEPOIS" 100
+Add-NFGridColumn $movementGrid "MovementReference" "NF DE SAÍDA / REFERÊNCIA" 240 $true
+$movementLayout.Controls.Add($movementGrid,0,1)
+$movementFooter=New-Object Windows.Forms.TableLayoutPanel
+$movementFooter.Dock=[Windows.Forms.DockStyle]::Fill; $movementFooter.ColumnCount=2
+[void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::Percent,100)))
+[void]$movementFooter.ColumnStyles.Add((New-Object Windows.Forms.ColumnStyle([Windows.Forms.SizeType]::AutoSize)))
+$movementCountLabel=New-Object Windows.Forms.Label
+$movementCountLabel.Text="0 movimentação(ões)"; $movementCountLabel.Dock=[Windows.Forms.DockStyle]::Fill; $movementCountLabel.TextAlign=[Drawing.ContentAlignment]::MiddleLeft; $movementCountLabel.ForeColor=$script:CurrentPalette.Muted
+$movementFooter.Controls.Add($movementCountLabel,0,0)
+$movementOpenButton=New-Object Windows.Forms.Button
+$movementOpenButton.Text="ABRIR NF"; $movementOpenButton.Width=110; $movementOpenButton.Height=32; $movementOpenButton.Enabled=$false; Set-NFButtonStyle $movementOpenButton "Secondary"
+$movementFooter.Controls.Add($movementOpenButton,1,0)
+$movementLayout.Controls.Add($movementFooter,0,2)
 # HISTÓRICO — consulta auditável das alterações do módulo.
 $historyLayout = New-Object Windows.Forms.TableLayoutPanel
 $historyLayout.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1289,7 +1401,12 @@ $keyboardGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Edit-NFRecordFromUI
 $keyboardGrid.Add_KeyDown({ if ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::N) { $_.SuppressKeyPress=$true; Add-NFRecordFromUI } elseif ($_.KeyCode -eq [Windows.Forms.Keys]::Enter) { $_.SuppressKeyPress=$true; Edit-NFRecordFromUI } elseif ($_.Control -and $_.KeyCode -eq [Windows.Forms.Keys]::F) { $_.SuppressKeyPress=$true; $keyboardFilter.Focus() } })
 $computerGrid.Add_SelectionChanged({ Update-NFActions })
 $keyboardGrid.Add_SelectionChanged({ Update-NFActions })
-$mainTabs.Add_SelectedIndexChanged({ Update-NFActions; if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }; if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups } })
+$mainTabs.Add_SelectedIndexChanged({ Update-NFActions; if ($mainTabs.SelectedTab -eq $movementTab) { Refresh-NFMovements }; if ($mainTabs.SelectedTab -eq $historyTab) { Refresh-NFHistory }; if ($mainTabs.SelectedTab -eq $securityTab) { Refresh-NFBackups } })
+$movementFilter.Add_TextChanged({ Refresh-NFMovements })
+$movementProductFilter.Add_SelectedIndexChanged({ Refresh-NFMovements })
+$movementGrid.Add_SelectionChanged({ $movementOpenButton.Enabled = ($movementGrid.SelectedRows.Count -gt 0) })
+$movementGrid.Add_CellDoubleClick({ if ($_.RowIndex -ge 0) { Open-NFFromMovement } })
+$movementOpenButton.Add_Click({ Open-NFFromMovement })
 $historyFilter.Add_TextChanged({ Refresh-NFHistory })
 $historyTypeFilter.Add_SelectedIndexChanged({ Refresh-NFHistory })
 $historyGrid.Add_SelectionChanged({ $historyDetailsButton.Enabled = ($historyGrid.SelectedRows.Count -gt 0) })
