@@ -33,10 +33,10 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.22"
+$script:AppVersion = "0.21.23"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.7.4"
-$script:MaintenanceVersion = "0.6.3"
+$script:GeneratorVersion = "3.7.5"
+$script:MaintenanceVersion = "0.6.4"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -52,7 +52,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.6.2"
+$script:NFEntradaVersion = "2.6.3"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -1212,7 +1212,6 @@ catch {
 
 $form.Text = "Central de Trabalho"
 $form.StartPosition = [Windows.Forms.FormStartPosition]::CenterScreen
-$form.AutoScaleDimensions = [Drawing.SizeF]::new(96.0, 96.0)
 $form.AutoScaleMode = [Windows.Forms.AutoScaleMode]::Dpi
 $form.Font = [Drawing.Font]::new("Segoe UI", 9.5)
 $form.MaximizeBox = $true
