@@ -19,6 +19,10 @@ $iconAssetPath = Join-Path $srcRoot "assets\Central-de-Trabalho.png.b64"
 if (-not (Test-Path -LiteralPath $iconAssetPath -PathType Leaf)) {
     throw "Central icon asset not found: $iconAssetPath"
 }
+$iconBuildScript = Join-Path $PSScriptRoot "Icon.Build.ps1"
+if (-not (Test-Path -LiteralPath $iconBuildScript -PathType Leaf)) {
+    throw "Multi-size icon builder not found: $iconBuildScript"
+}
 
 [void](New-Item -ItemType Directory -Force -Path $OutputDirectory)
 $outExe = Join-Path $OutputDirectory "Central de Trabalho Updater.exe"
@@ -53,6 +57,9 @@ finally {
 if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf) -or (Get-Item -LiteralPath $iconPath).Length -lt 512) {
     throw "Central updater ICO was not generated correctly from the CT image."
 }
+
+. $iconBuildScript
+New-CentralMultiSizeIcon -Base64AssetPath $iconAssetPath -OutputPath $iconPath
 
 $parts = @($Version.Split('.'))
 while ($parts.Count -lt 4) { $parts += '0' }
@@ -166,4 +173,4 @@ foreach ($entry in $expectedMetadata.GetEnumerator()) {
     }
 }
 
-Write-Host "NATIVE UPDATER HOST: OK - Central de Trabalho Updater.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, custom CT icon, professional Windows metadata, self-test contract, temporary self-hosted runtime, in-process PowerShell engine."
+Write-Host "NATIVE UPDATER HOST: OK - Central de Trabalho Updater.exe v$fileVersion, $($bytes.Length) bytes, Windows GUI subsystem, multi-size CT icon, professional Windows metadata, self-test contract, temporary self-hosted runtime, in-process PowerShell engine."
