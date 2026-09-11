@@ -145,7 +145,7 @@ foreach ($pattern in $forbiddenPatterns) {
 foreach ($required in @(
     'RunspaceFactory.CreateRunspace',
     '--self-test',
-    'Parser.ParseFile',
+    'Parser.ParseInput',
     'Central de Trabalho.ps1',
     'SetCurrentProcessExplicitAppUserModelID',
     'CentralDeTrabalho.Desktop'
