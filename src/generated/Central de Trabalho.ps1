@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.26"
+$script:AppVersion = "0.21.27"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.7"
 $script:MaintenanceVersion = "0.6.6"
@@ -52,7 +52,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.6.5"
+$script:NFEntradaVersion = "2.6.6"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -379,60 +379,53 @@ function Close-EmbeddedModule {
 function Sync-HostedModuleTheme {
     $script:LastThemeSyncError = ""
     if ($null -eq $script:HostedModule -or [string]::IsNullOrWhiteSpace($script:EmbeddedModule)) { return $true }
-    if ($null -eq $script:HostedForm) { return $true }
-
-    try {
-        if ($script:HostedForm.IsDisposed -or $script:HostedForm.Disposing -or $null -eq $script:HostedForm.Parent) { return $true }
-    }
-    catch {
-        $script:LastThemeSyncError = $_.Exception.Message
-        return $false
-    }
+    if ($null -eq $script:HostedForm -or $script:HostedForm.IsDisposed) { return $true }
 
     $theme = [string]$themeCombo.SelectedItem
     if ([string]::IsNullOrWhiteSpace($theme)) { $theme = "Escuro profissional" }
+    $moduleName = [string]$script:EmbeddedModule
 
     try {
         $handled = & $script:HostedModule {
-            param($hostTheme)
+            param($targetModule, $hostTheme)
 
-            $maintenanceCmd = Get-Command -Name Set-HostedMaintenanceTheme -ErrorAction SilentlyContinue
-            if ($null -ne $maintenanceCmd) {
-                [void](Set-HostedMaintenanceTheme $hostTheme)
-                return $true
+            switch ($targetModule) {
+                "Maintenance" {
+                    $cmd = Get-Command -Name Set-HostedMaintenanceTheme -CommandType Function -ErrorAction SilentlyContinue
+                    if ($null -eq $cmd) { throw "A função de aparência da Manutenção não foi encontrada." }
+                    $result = Set-HostedMaintenanceTheme $hostTheme
+                    if ($result -is [bool] -and -not $result) { throw "A Manutenção recusou a aparência selecionada." }
+                    return $true
+                }
+                "Generator" {
+                    $cmd = Get-Command -Name Set-HostedGeneratorTheme -CommandType Function -ErrorAction SilentlyContinue
+                    if ($null -eq $cmd) { throw "A função de aparência do Gerenciador não foi encontrada." }
+                    $result = Set-HostedGeneratorTheme $hostTheme
+                    if ($result -is [bool] -and -not $result) { throw "O Gerenciador recusou a aparência selecionada." }
+                    return $true
+                }
+                "NFEntrada" {
+                    $cmd = Get-Command -Name Set-HostedNFEntradaTheme -CommandType Function -ErrorAction SilentlyContinue
+                    if ($null -eq $cmd) { throw "A função de aparência do Controle de NF não foi encontrada." }
+                    $result = Set-HostedNFEntradaTheme $hostTheme
+                    if ($result -is [bool] -and -not $result) { throw "O Controle de NF não conseguiu aplicar a aparência selecionada." }
+                    return $true
+                }
+                default { throw "Módulo integrado desconhecido: $targetModule" }
             }
-
-            $generatorCmd = Get-Command -Name Set-HostedGeneratorTheme -ErrorAction SilentlyContinue
-            if ($null -ne $generatorCmd) {
-                [void](Set-HostedGeneratorTheme $hostTheme)
-                return $true
-            }
-
-            $nfEntradaCmd = Get-Command -Name Set-HostedNFEntradaTheme -ErrorAction SilentlyContinue
-            if ($null -ne $nfEntradaCmd) {
-                [void](Set-HostedNFEntradaTheme $hostTheme)
-                return $true
-            }
-
-            return $false
-        } $theme
+        } $moduleName $theme
 
         if (-not [bool]$handled) {
-            throw "O módulo aberto não expôs um aplicador de aparência compatível."
+            $script:LastThemeSyncError = "O módulo não confirmou a aplicação da aparência."
+            return $false
         }
 
-        # CURA 2: depois que o módulo reaplica sua aparência, a Central força um
-        # ciclo completo de layout e pintura no controle já hospedado. Não é
-        # necessário fechar e abrir novamente para a mudança aparecer.
-        $script:HostedForm.SuspendLayout()
         try {
             $script:HostedForm.PerformLayout()
             $script:HostedForm.Invalidate($true)
-        }
-        finally {
-            $script:HostedForm.ResumeLayout($true)
-        }
-        $script:HostedForm.Update()
+            $script:HostedForm.Update()
+            $script:HostedForm.Refresh()
+        } catch {}
         return $true
     }
     catch {
@@ -658,7 +651,7 @@ function Start-UpdaterModule {
 function Get-SidebarColor {
     param([string]$Theme)
     switch ($Theme) {
-        "Claro corporativo" { return [Drawing.Color]::FromArgb(22, 37, 59) }
+        "Claro corporativo" { return [Drawing.Color]::FromArgb(234, 240, 247) }
         "Alto contraste" { return [Drawing.Color]::Black }
         "Técnico industrial" { return [Drawing.Color]::FromArgb(18, 23, 25) }
         default { return [Drawing.Color]::FromArgb(9, 24, 41) }
@@ -903,10 +896,18 @@ function Apply-AppTheme {
         $form.BackColor = $script:CurrentPalette.Background
         $rootLayout.BackColor = $script:CurrentPalette.Background
         $sidebar.BackColor = $sidebarColor
+        $brandPanel.BackColor = $sidebarColor
+        $navPanel.BackColor = $sidebarColor
+        $sidebarBottom.BackColor = $sidebarColor
         $mainPanel.BackColor = $script:CurrentPalette.Background
+        $mainLayout.BackColor = $script:CurrentPalette.Background
         $headerPanel.BackColor = $script:CurrentPalette.Background
         $modulesHost.BackColor = $script:CurrentPalette.Background
+        $modulesLayout.BackColor = $script:CurrentPalette.Background
+        $programsHeader.BackColor = $script:CurrentPalette.Background
+        $modulesFlow.BackColor = $script:CurrentPalette.Background
         $footerPanel.BackColor = $script:CurrentPalette.Footer
+        $footerLayout.BackColor = $script:CurrentPalette.Footer
     } catch {}
     try {
         if ($null -ne $embeddedHost) { $embeddedHost.BackColor = $script:CurrentPalette.Background }
@@ -914,11 +915,13 @@ function Apply-AppTheme {
         if ($null -ne $embeddedContent) { $embeddedContent.BackColor = $script:CurrentPalette.Background }
     } catch {}
     try {
-        foreach ($label in @($brandTitle, $brandSub, $sidebarSection, $sidebarThemeLabel, $sidebarVersion)) {
-            if ($null -ne $label) { $label.ForeColor = [Drawing.Color]::FromArgb(225, 235, 245) }
+        foreach ($label in @($brandTitle, $sidebarSection, $sidebarThemeLabel, $sidebarVersion)) {
+            if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Text }
+        }
+        foreach ($label in @($brandSub, $sidebarStatusSub)) {
+            if ($null -ne $label) { $label.ForeColor = $script:CurrentPalette.Muted }
         }
         $sidebarStatus.ForeColor = $script:CurrentPalette.Success
-        $sidebarStatusSub.ForeColor = [Drawing.Color]::FromArgb(161, 179, 197)
     } catch {}
     try {
         foreach ($label in @($pageTitle, $programsTitle, $generatorTitle, $maintenanceTitle, $nfEntradaTitle, $todayLabel, $embeddedTitle)) {
@@ -1764,8 +1767,6 @@ $embeddedFolderButton.TabIndex = 1
 $themeCombo.Add_SelectedIndexChanged({
     $centralApplied = $false
     try {
-        # A Central muda primeiro e repinta imediatamente. A sincronização de um
-        # módulo nunca pode bloquear ou desfazer a aparência da janela principal.
         Apply-AppTheme
         $form.PerformLayout()
         $form.Invalidate($true)
@@ -1780,23 +1781,12 @@ $themeCombo.Add_SelectedIndexChanged({
     try { Save-AppSettings } catch {}
 
     $synced = $true
-    try { $synced = [bool](Sync-HostedModuleTheme) }
-    catch {
-        $synced = $false
-        $script:LastThemeSyncError = $_.Exception.Message
-    }
-
-    # Reafirma a aparência da Central depois da sincronização. Alguns módulos
-    # possuem eventos internos de ComboBox e não podem influenciar o repaint da
-    # janela hospedeira.
     if ($centralApplied) {
-        try {
-            Apply-AppTheme
-            $form.PerformLayout()
-            $form.Invalidate($true)
-            $form.Update()
-            $form.Refresh()
-        } catch {}
+        try { $synced = [bool](Sync-HostedModuleTheme) }
+        catch {
+            $synced = $false
+            $script:LastThemeSyncError = $_.Exception.Message
+        }
     }
 
     if ($centralApplied -and $synced) {
@@ -1804,7 +1794,7 @@ $themeCombo.Add_SelectedIndexChanged({
     }
     elseif ($centralApplied) {
         $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
-        Set-StatusMessage ("A Central mudou de aparência, mas o módulo aberto não atualizou: " + $detail) "Warning"
+        Set-StatusMessage ("A Central mudou, mas o módulo aberto não atualizou: " + $detail) "Warning"
     }
 })
 $openGeneratorButton.Add_Click({ Start-GeneratorModule })

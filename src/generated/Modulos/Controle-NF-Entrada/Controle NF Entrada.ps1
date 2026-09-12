@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.6.5"
+$script:ModuleVersion = "2.6.6"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -2053,7 +2053,7 @@ function Set-HostedNFEntradaTheme {
     }
 
     $script:CurrentPalette = $newPalette
-    $queue = New-Object 'System.Collections.Generic.Queue[System.Windows.Forms.Control]'
+    $queue = New-Object System.Collections.Queue
     $queue.Enqueue($form)
 
     while ($queue.Count -gt 0) {
@@ -2161,7 +2161,13 @@ function Set-HostedNFEntradaTheme {
         $form.Update()
         $form.Refresh()
     }
-    catch {}
+    catch { return $false }
+
+    try {
+        if ([int]$form.BackColor.ToArgb() -ne [int]$newPalette.Background.ToArgb()) { return $false }
+        if ([int]$form.ForeColor.ToArgb() -ne [int]$newPalette.Text.ToArgb()) { return $false }
+    }
+    catch { return $false }
     return $true
 }
 
