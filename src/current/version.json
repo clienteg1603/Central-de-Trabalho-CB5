@@ -1,6 +1,6 @@
 {
   "version": "0.21.28",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "CURA 2: coordenador exclusivo de aparência para a Central e os módulos integrados.",
     "A Central deixa de usar o nome genérico Apply-AppTheme e passa a ter um aplicador próprio, isolado das funções de tema dos módulos.",
