@@ -1,13 +1,13 @@
 {
-  "version": "0.21.24",
-  "buildRevision": 2,
+  "version": "0.21.25",
+  "buildRevision": 1,
   "releaseNotes": [
-    "CURA 2: aparência sincronizada entre a Central e os módulos integrados.",
-    "A troca de tema passa a atualizar o módulo aberto imediatamente e refazer o layout e a pintura da interface.",
-    "Central de Manutenção e Gerenciador passam a seguir a aparência selecionada na Central enquanto estiverem integrados.",
-    "O Controle de NF reforça a legibilidade de textos, campos e grades durante trocas sucessivas de aparência.",
-    "Nenhuma regra de negócio ou dado do usuário foi alterado.",
-    "Central de Manutenção v0.6.5, Gerenciador v3.7.6 e Controle de NF v2.6.4.",
+    "Hotfix da CURA 2: corrige o erro de DataGridView ao trocar a aparência com módulos integrados.",
+    "O Gerenciador deixa de recarregar a grade de componentes durante a aplicação puramente visual do tema quando as colunas ainda não estão prontas.",
+    "A atualização da grade de componentes agora possui uma proteção explícita contra tentativa de adicionar linhas antes da criação das colunas.",
+    "Gerenciador e Central de Manutenção evitam dupla aplicação do mesmo tema causada pelo evento interno do seletor de aparência.",
+    "A sincronização visual entre Central e módulos permanece ativa e não altera regras de negócio ou dados do usuário.",
+    "Central de Manutenção v0.6.6, Gerenciador v3.7.7 e Controle de NF permanece v2.6.4.",
     "A Estável permanece v0.20.2; esta versão é somente Teste."
   ]
 }
