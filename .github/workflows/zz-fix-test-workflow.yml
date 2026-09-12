@@ -1,0 +1,40 @@
+name: Fix Test Workflow Encoding
+
+on:
+  push:
+    paths:
+      - '.github/workflows/zz-fix-test-workflow.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove PowerShell 5.1 smart-quote trap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/build-test-package-v2.yml')
+          text = path.read_text(encoding='utf-8')
+          old = 'Write-Host "PACOTE WINDOWS REAL: OK — executável nativo validado em dois processos completos, com capturas e propriedades reais."'
+          new = 'Write-Host "PACOTE WINDOWS REAL: OK - executavel nativo validado em dois processos completos, com capturas e propriedades reais."'
+          if text.count(old) != 1:
+              raise SystemExit(f'Marcador esperado uma vez; encontrado {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+          git config user.name "Central de Trabalho Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/zz-fix-test-workflow.yml
+          git add .github/workflows/build-test-package-v2.yml
+          git commit -m "Corrige parsing PowerShell 5.1 na validação do pacote"
+          git push
