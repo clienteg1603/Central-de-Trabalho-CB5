@@ -1,16 +1,13 @@
 {
-  "version": "0.21.33",
-  "buildRevision": 5,
+  "version": "0.21.34",
+  "buildRevision": 1,
   "releaseNotes": [
-    "A Central passa a ser a única autoridade de aparência dos módulos hospedados, por meio de um contexto compartilhado com tema e revisão.",
-    "A troca de aparência agora é transacional e não reentrante: Central e módulo confirmam juntos o novo tema ou ambos retornam ao último tema válido.",
-    "Preferências standalone do Gerenciador e da Manutenção são preservadas, mas nunca podem vencer a Central durante a hospedagem.",
-    "Gerenciador validado em TV5 e CB5 nos temas Escuro profissional, Claro corporativo, Técnico industrial e Alto contraste, incluindo alternância rápida, resize, refresh, reabertura e espera por eventos tardios.",
-    "Manutenção e Controle de NF receberam a mesma autoridade compartilhada e auditoria de cabeçalho, abas, cards, inputs, botões, grades, painéis e fundo geral.",
-    "O Controle de NF agora aplica cores por papel semântico do controle, evitando a inferência ambígua por cores anteriores ao sair de Claro ou Alto contraste.",
-    "Trocar aparência não recarrega nem grava dados operacionais; o pacote valida por SHA-256 que saldos, NFs, históricos, componentes e registros permanecem intactos.",
-    "O workflow oficial só publica depois de testar duas execuções completas do EXE dentro do ZIP real no Windows e gerar evidências visuais e auditorias das propriedades dos controles.",
-    "Central v0.21.33, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.9.",
+    "A opção de Aparência foi removida da interface da Central para eliminar definitivamente os conflitos de sincronização entre Central e módulos.",
+    "A Central de Trabalho passa a usar exclusivamente o tema Técnico industrial em uso normal.",
+    "Preferências antigas de tema gravadas no computador deixam de alterar a aparência da Central; ao iniciar, o tema operacional é sempre Técnico industrial.",
+    "Gerenciador de Planilhas, Central de Manutenção e Controle de NF recebem o mesmo tema Técnico industrial ao serem abertos dentro da Central.",
+    "Nenhuma regra operacional, saldo, NF, histórico, planilha, componente ou registro de manutenção foi alterado por esta simplificação visual.",
+    "Central v0.21.34, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.9.",
     "A Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
   ]
 }
