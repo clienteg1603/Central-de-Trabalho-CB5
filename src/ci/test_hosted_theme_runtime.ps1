@@ -163,3 +163,7 @@ foreach ($case in $cases) {
 }
 
 Write-Host 'FIXED THEME RUNTIME: OK — Gerenciador, Manutenção e NF hospedados confirmaram a aparência Técnico industrial.'
+
+# GERAL 2 / ETAPA 8 — depois da auditoria de aparência, o mesmo candidato real
+# passa por uma matriz de tamanhos e por fechamento/reabertura dos três módulos.
+& (Join-Path $PSScriptRoot 'test_geral2_layout_matrix.ps1') -GeneratedRoot $GeneratedRoot
