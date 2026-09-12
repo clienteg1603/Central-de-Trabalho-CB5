@@ -1,6 +1,6 @@
 {
   "version": "0.21.50",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "GERAL 2 — Etapa 2: revisão completa da responsividade do Gerenciador de Planilhas.",
     "Gerenciador v3.7.15: Gerar, Manutenções, Componentes, Juntar lotes e Códigos passam a respeitar melhor a largura e a altura reais disponíveis dentro da Central.",
