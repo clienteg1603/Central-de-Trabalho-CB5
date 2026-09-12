@@ -36,12 +36,14 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $utf8 = [Text.Encoding]::UTF8
           $utf8Bom = New-Object Text.UTF8Encoding($true)
-          $files = @(Get-ChildItem -LiteralPath 'src/generated' -Filter '*.ps1' -File -Recurse)
+          $files = [Collections.Generic.List[IO.FileInfo]]::new()
+          foreach ($file in @(Get-ChildItem -LiteralPath 'src/generated' -Filter '*.ps1' -File -Recurse)) { $files.Add($file) }
+          $files.Add((Get-Item -LiteralPath 'src/ci/test_hosted_theme_runtime.ps1'))
           foreach ($file in $files) {
             $text = [IO.File]::ReadAllText($file.FullName, $utf8)
             [IO.File]::WriteAllText($file.FullName, $text, $utf8Bom)
           }
-          Write-Host "Scripts normalizados com UTF-8 BOM como no pacote real: $($files.Count)"
+          Write-Host "Scripts normalizados com UTF-8 BOM: $($files.Count)"
 
       - name: Hosted theme runtime test
         shell: powershell
