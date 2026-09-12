@@ -1,6 +1,6 @@
 {
   "version": "0.21.40",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "CURA 6: polimento visual do Controle de NF de Entrada no modo integrado.",
     "O cabeçalho do Controle de NF fica mais compacto dentro da Central, preservando Importar Excel e Excel Oficial com os mesmos eventos e regras.",
