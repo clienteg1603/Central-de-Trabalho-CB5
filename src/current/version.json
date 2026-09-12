@@ -1,14 +1,15 @@
 {
-  "version": "0.21.46",
-  "buildRevision": 2,
+  "version": "0.21.47",
+  "buildRevision": 1,
   "releaseNotes": [
-    "CURA 8: fechamento final da cura visual e preventiva da Central de Trabalho no canal Teste.",
-    "Controle de NF v2.6.15: EDITAR e SAÍDA agora mantêm texto branco e legível mesmo quando ficam desabilitados por não haver uma linha selecionada.",
-    "Os botões secundários do Controle de NF passam a usar texto branco para manter contraste consistente no tema Técnico industrial.",
-    "A correção preserva Enabled=False em EDITAR e SAÍDA quando não existe seleção; nenhuma regra de segurança ou operação foi afrouxada.",
-    "A navegação em botões do NF, os contadores de CB5/TV5 e o TabControl nativo interno foram preservados.",
-    "Continuam proibidos no NF OwnerDrawFixed, ItemSize, SizeChanged e HandleCreated no mecanismo das abas.",
-    "Central v0.21.46, Gerenciador v3.7.14, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.15.",
+    "Pós-cura visual: restaura o resumo persistente da Central de Manutenção acima da faixa de navegação no modo integrado.",
+    "Central de Manutenção v0.6.11: os cartões de Séries diferentes, Passagens registradas, Em andamento e Retornos voltam a permanecer visíveis dentro da Central.",
+    "Controle de NF v2.6.16: reorganiza os quatro cartões superiores para eliminar textos cortados.",
+    "SALDO TOTAL, COMPUTADOR DE BORDO CB5, TECLADO V5 e NFs EM ABERTO passam para o canto superior direito de seus respectivos cartões.",
+    "Os complementos peças disponíveis, saldo atual e com saldo maior que zero permanecem visíveis e alinhados à direita logo abaixo dos títulos.",
+    "Os valores numéricos continuam destacados à esquerda e os cartões ganham alguns pixels de altura no modo integrado para preservar a leitura.",
+    "A navegação em botões do NF e o mecanismo interno estável do TabControl foram preservados, sem OwnerDrawFixed, ItemSize, SizeChanged ou HandleCreated.",
+    "Central v0.21.47, Gerenciador v3.7.14, Central de Manutenção v0.6.11 e Controle de NF de Entrada v2.6.16.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
