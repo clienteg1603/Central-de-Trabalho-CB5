@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.30"
+$script:AppVersion = "0.21.31"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.8"
 $script:MaintenanceVersion = "0.6.6"
@@ -902,6 +902,60 @@ function Update-CentralAvailabilityState {
     } catch {}
 }
 
+function Refresh-CentralSidebarTheme {
+    if ($null -eq $script:CurrentPalette -or $null -eq $sidebar) { return }
+
+    $theme = Get-CentralSelectedTheme
+    $sidebarColor = Get-SidebarColor $theme
+
+    $sidebar.SuspendLayout()
+    try {
+        $sidebar.BackColor = $sidebarColor
+        $brandPanel.BackColor = $sidebarColor
+        $navPanel.BackColor = $sidebarColor
+        $sidebarBottom.BackColor = $sidebarColor
+
+        $stack = New-Object System.Collections.Stack
+        $stack.Push($sidebar)
+        while ($stack.Count -gt 0) {
+            $control = $stack.Pop()
+
+            if ($control -is [Windows.Forms.Label]) {
+                $control.ForeColor = $script:CurrentPalette.Text
+            }
+            elseif ($control -is [Windows.Forms.ComboBox]) {
+                $control.BackColor = $script:CurrentPalette.Input
+                $control.ForeColor = $script:CurrentPalette.Text
+            }
+            elseif ($control -is [Windows.Forms.Button]) {
+                $control.ForeColor = $script:CurrentPalette.Text
+            }
+
+            foreach ($child in $control.Controls) {
+                $stack.Push($child)
+            }
+        }
+
+        # Exceções semânticas da barra lateral.
+        $brandMark.ForeColor = [Drawing.Color]::White
+        $brandSub.ForeColor = $script:CurrentPalette.Muted
+        $sidebarStatusSub.ForeColor = $script:CurrentPalette.Muted
+        $sidebarVersion.ForeColor = $script:CurrentPalette.Muted
+        $themeCombo.BackColor = $script:CurrentPalette.Input
+        $themeCombo.ForeColor = $script:CurrentPalette.Text
+
+        # Reaplica o estado ativo/inativo da navegação com a paleta atual.
+        Set-ActiveNavigation $script:ActiveNavName
+    }
+    finally {
+        $sidebar.ResumeLayout($true)
+    }
+
+    $sidebar.Invalidate($true)
+    $sidebar.Update()
+    $sidebar.Refresh()
+}
+
 function Apply-CentralTheme {
     $selectedTheme = (Get-CentralSelectedTheme)
     if ([string]::IsNullOrWhiteSpace($selectedTheme) -or -not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $selectedTheme)) {
@@ -1074,6 +1128,11 @@ function Apply-CentralTheme {
         }
     }
     [Windows.Forms.Application]::DoEvents()
+
+    # CURA 2.6 — repinta a barra lateral por último para impedir texto herdado do tema anterior.
+    Refresh-CentralSidebarTheme
+    Update-CentralAvailabilityState
+
 }
 
 function Update-ResponsiveLayout {
