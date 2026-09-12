@@ -23,9 +23,7 @@ def many(text: str, old: str, new: str, minimum: int, label: str) -> str:
     return text.replace(old, new)
 
 
-# ---------------------------------------------------------------------------
-# VERSÕES — continuação da CURA 6, somente canal Teste.
-# ---------------------------------------------------------------------------
+# Versões desta padronização visual. A Estável não é tocada por este transform.
 central = one(central, '$script:AppVersion = "0.21.40"', '$script:AppVersion = "0.21.41"', 'versao Central')
 central = one(central, '$script:GeneratorVersion = "3.7.12"', '$script:GeneratorVersion = "3.7.13"', 'versao Gerenciador na Central')
 central = one(central, '$script:NFEntradaVersion = "2.6.11"', '$script:NFEntradaVersion = "2.6.12"', 'versao NF na Central')
@@ -34,9 +32,7 @@ nf = one(nf, '$script:ModuleVersion = "2.6.11"', '$script:ModuleVersion = "2.6.1
 
 
 # ---------------------------------------------------------------------------
-# GERENCIADOR — mesma linguagem dos botões da Central de Manutenção:
-# ciano = principal/seleção, laranja = ação final, escuro contornado = secundário.
-# Mantemos todos os eventos e fluxos existentes.
+# GERENCIADOR — mesma linguagem visual da Central de Manutenção.
 # ---------------------------------------------------------------------------
 old_generator_button = '''function Set-ButtonTheme {
     param($Button, $Palette)
@@ -66,7 +62,6 @@ new_generator_button = '''function Set-ButtonTheme {
         $Button.FlatAppearance.BorderSize = 0
     }
     elseif ($role -eq "Action") {
-        # Mesma ação laranja que dá destaque ao + NOVA PASSAGEM da Manutenção.
         $Button.BackColor = [Drawing.Color]::FromArgb(244, 142, 40)
         $Button.ForeColor = [Drawing.Color]::FromArgb(27, 24, 17)
         $Button.FlatAppearance.BorderSize = 0
@@ -81,29 +76,21 @@ new_generator_button = '''function Set-ButtonTheme {
 }'''
 generator = one(generator, old_generator_button, new_generator_button, 'estilo dos botoes do Gerenciador')
 
-# No tema único Técnico industrial, o acento do Gerenciador passa a ser o mesmo
-# ciano da Manutenção inclusive quando o produto selecionado é TV5.
 generator = one(
     generator,
     '$accent = if ($Product -eq "TV5") { [Drawing.Color]::FromArgb(72, 202, 143) } else { [Drawing.Color]::FromArgb(44, 189, 197) }\n            return [pscustomobject]@{',
     '$accent = [Drawing.Color]::FromArgb(44, 189, 197)\n            return [pscustomobject]@{',
-    'acento tecnico do Gerenciador'
+    'acento Tecnico industrial do Gerenciador'
 )
 
-# As duas ações finais ficam laranja; seleção de mestre e demais ações principais
-# permanecem ciano, reproduzindo a hierarquia da Central de Manutenção.
 generator = one(generator, '$generateButton.Tag = "Primary"', '$generateButton.Tag = "Action"', 'acao gerar planilhas')
-# O botão de união aparece no mesmo rodapé e é a ação final equivalente.
 combine_marker = '$combineGenerateButton.Tag = "Primary"'
 if combine_marker in generator:
     generator = one(generator, combine_marker, '$combineGenerateButton.Tag = "Action"', 'acao juntar lotes')
 else:
-    # Algumas bases antigas herdam o papel do botão ao serem alternadas. Nesse
-    # caso definimos o papel logo após a criação, sem tocar no evento Click.
     anchor = '$combineGenerateButton = New-Object Windows.Forms.Button\n'
     generator = one(generator, anchor, anchor + '$combineGenerateButton.Tag = "Action"\n', 'papel do botao juntar lotes')
 
-# Arredondamento também é reaplicado quando o layout responsivo recalcula tamanhos.
 generator = one(
     generator,
     '''    foreach ($button in @($masterButton, $openDestinationCardButton, $previewMasterButton, $copyStatusButton, $componentSearchClearButton, $componentLaunchButton, $componentAdjustButton, $componentNewButton, $componentEditButton, $componentBackupButton, $componentRestoreButton, $combineAddButton, $combineRemoveButton, $combineUpButton, $combineDownButton, $combineClearButton, $combineCopyQuantitiesButton, $combinePasteQuantitiesButton, $previewCombineButton, $copyCombineStatusButton, $openFolderButton, $updateMasterButton, $generateButton, $combineGenerateButton)) {
@@ -116,18 +103,17 @@ generator = one(
     'reaplicacao visual dos botoes do Gerenciador'
 )
 
-# Auditoria hospedada: o botão final agora é Action (laranja), não Accent.
 generator = one(
     generator,
     '[pscustomobject]@{ Name = "botão principal"; Actual = [int]$generateButton.BackColor.ToArgb(); Expected = [int]$palette.Accent.ToArgb() },',
-    '[pscustomobject]@{ Name = "botão principal"; Actual = [int]$generateButton.BackColor.ToArgb(); Expected = [int][Drawing.Color]::FromArgb(244, 142, 40).ToArgb() },',
+    '[pscustomobject]@{ Name = "botão principal"; Actual = [int]$generateButton.BackColor.ToArgb(); Expected = [int]([Drawing.Color]::FromArgb(244, 142, 40).ToArgb()) },',
     'auditoria do botao principal do Gerenciador'
 )
 
 
 # ---------------------------------------------------------------------------
-# CONTROLE DE NF — aproxima a paleta e os botões do padrão da Manutenção.
-# NÃO toca em DrawMode, ItemSize, SizeChanged ou HandleCreated das abas.
+# CONTROLE DE NF — paleta, hierarquia e acabamento iguais à Manutenção.
+# O mecanismo nativo das abas não é modificado.
 # ---------------------------------------------------------------------------
 old_nf_technical = '''        "Técnico industrial" {
             return [pscustomobject]@{
@@ -254,11 +240,11 @@ function Set-NFButtonStyle {
 }'''
 nf = one(nf, old_nf_button, new_nf_button, 'estilo dos botoes do NF')
 
-# Ações de criação/importação em laranja, como a ação principal da Manutenção.
+# Importar Excel e Nova NF são ações de criação, equivalentes a + NOVA PASSAGEM.
 nf = many(nf, 'Set-NFButtonStyle $importButton "Secondary"', 'Set-NFButtonStyle $importButton "Action"', 2, 'papel do Importar Excel')
 nf = many(nf, 'Set-NFButtonStyle $newButton "Primary"', 'Set-NFButtonStyle $newButton "Action"', 2, 'papel da Nova NF')
 
-# Reaplicação semântica passa a reconhecer Action.
+# A árvore semântica reconhece explicitamente o novo papel Action.
 nf = one(
     nf,
     '''        if ($role -eq "Theme.Button.Primary") { Set-NFButtonStyle $Control "Primary" }
@@ -271,8 +257,7 @@ nf = one(
     'papel Action na arvore do NF'
 )
 
-# Na reaplicação final da CURA 2, Importar e Nova NF não podem ser rebaixados
-# novamente para Secondary/Primary.
+# A reaplicação final do tema precisa preservar os novos papéis.
 nf = one(
     nf,
     'foreach ($button in @($importButton,$editButton,$outputButton,$clearFiltersButton,$exportListButton,$movementExportButton,$movementOpenButton,$historyDetailsButton,$historyExportButton,$integrityButton,$manualBackupButton,$restoreBackupButton,$reviewIssuesButton)) {',
@@ -301,7 +286,30 @@ nf = one(
     'lista Action final do NF'
 )
 
-# Marcadores para auditoria/regressão desta padronização.
+# As auditorias antigas conferiam NOVA NF contra AccentStrong. Agora a ação é
+# deliberadamente laranja, portanto os contratos visuais passam a validar a cor
+# Action sem afrouxar os demais testes de hospedagem.
+action_argb = '[int]([Drawing.Color]::FromArgb(244, 142, 40).ToArgb())'
+nf = one(
+    nf,
+    'if ([int]$newButton.BackColor.ToArgb() -ne [int]$newPalette.AccentStrong.ToArgb()) {',
+    f'if ([int]$newButton.BackColor.ToArgb() -ne {action_argb}) {{',
+    'auditoria legada da Nova NF'
+)
+nf = one(
+    nf,
+    'if ([int]$newButton.BackColor.ToArgb() -ne [int]$palette.AccentStrong.ToArgb()) { return $false }',
+    f'if ([int]$newButton.BackColor.ToArgb() -ne {action_argb}) {{ return $false }}',
+    'validacao hospedada da Nova NF'
+)
+nf = one(
+    nf,
+    '[pscustomobject]@{ Name = "botão"; Actual = [int]$newButton.BackColor.ToArgb(); Expected = [int]$palette.AccentStrong.ToArgb() },',
+    f'[pscustomobject]@{{ Name = "botão"; Actual = [int]$newButton.BackColor.ToArgb(); Expected = {action_argb} }},',
+    'auditoria hospedada da Nova NF'
+)
+
+# Marcadores úteis para regressão futura.
 generator += '\n# VISUAL_UNIFICADO_MANUTENCAO_GENERATOR_V03713\n'
 nf += '\n# VISUAL_UNIFICADO_MANUTENCAO_NF_V02612\n'
 
@@ -316,8 +324,8 @@ for marker in (
 for marker in (
     '$script:AppVersion = "3.7.13"',
     'VISUAL_UNIFICADO_MANUTENCAO_GENERATOR_V03713',
-    '$Button.Cursor = [Windows.Forms.Cursors]::Hand',
     '$generateButton.Tag = "Action"',
+    '[Windows.Forms.Cursors]::Hand',
 ):
     if marker not in generator:
         raise SystemExit('marcador ausente no Gerenciador: ' + marker)
@@ -344,4 +352,4 @@ for forbidden in (
 central_path.write_text(central, encoding='utf-8')
 generator_path.write_text(generator, encoding='utf-8')
 nf_path.write_text(nf, encoding='utf-8')
-print('PADRONIZACAO VISUAL: OK - Gerenciador e NF alinhados ao estilo da Central de Manutencao, sem alterar fluxos operacionais ou abas estaveis do NF.')
+print('PADRONIZACAO VISUAL: OK - Gerenciador e NF alinhados ao estilo da Manutencao; auditorias atualizadas para a hierarquia laranja/ciano; abas nativas do NF preservadas.')
