@@ -1,15 +1,13 @@
 {
-  "version": "0.21.43",
+  "version": "0.21.44",
   "buildRevision": 1,
   "releaseNotes": [
-    "CURA 7 concluída e publicada no canal Teste.",
-    "Auditoria pós-publicação consolidada para os três módulos: Gerenciador de Planilhas, Central de Manutenção e Controle de NF de Entrada.",
-    "Os três módulos foram validados em ciclos repetidos de abertura, redimensionamento, fechamento e reabertura dentro da Central.",
-    "Controle de NF: mantidas as seis abas nativas, os contadores dinâmicos CB5/TV5 e a proteção contra OwnerDrawFixed e mecanismos instáveis de recálculo das abas.",
-    "Controle de NF: contratos de cadastro, edição, saída, estorno, histórico, persistência, integridade, backup e restauração permanecem validados.",
-    "Gerenciador: identidade CB5 ciano / TV5 verde técnico e navegação refinada permanecem preservadas após a CURA 7.",
-    "Nenhuma regra operacional de planilhas, manutenção ou NF foi alterada nesta etapa de fechamento; a publicação formaliza o estado validado da CURA 7.",
-    "Central v0.21.43, Gerenciador v3.7.14, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.12.",
+    "Refino visual do Controle de NF de Entrada para igualar a geometria dos botões à Central de Manutenção.",
+    "IMPORTAR EXCEL e EXCEL OFICIAL agora usam cantos mais arredondados, margens simétricas, menor altura visual e espaçamento equivalente ao padrão da Manutenção.",
+    "Os botões do NF passam a usar raio 10, aproximando o acabamento do padrão visual adotado na Central de Manutenção.",
+    "Ajuste exclusivamente visual: nenhuma regra de importação, exportação, cadastro, movimentação, histórico, segurança ou resumo foi alterada.",
+    "O mecanismo nativo das abas do NF permanece preservado, sem SizeChanged, HandleCreated, OwnerDrawFixed ou recálculo de ItemSize.",
+    "Central v0.21.44, Gerenciador v3.7.14, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.13.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
