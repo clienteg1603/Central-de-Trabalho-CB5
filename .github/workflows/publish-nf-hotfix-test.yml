@@ -98,13 +98,18 @@ jobs:
           pwsh -NoProfile -NonInteractive -File src/ci/parse_powershell.ps1 -Root "$OUT_ROOT"
 
           python3 - "$OUT_ROOT" "$VERSION" <<'PY'
-          import hashlib,json,pathlib,sys,zipfile
+          import hashlib,json,pathlib,re,sys,zipfile
           root=pathlib.Path(sys.argv[1]); version=sys.argv[2]
           central=(root/'Central de Trabalho.ps1').read_text(encoding='utf-8-sig')
           nf=(root/'Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1').read_text(encoding='utf-8-sig')
           for marker in ['$settings.Theme = "Técnico industrial"','$sidebarThemeLabel.Visible = $false','$themeCombo.Visible = $false']:
               if marker not in central: raise SystemExit('Tema fixo ausente: '+marker)
-          if '$script:ModuleVersion = "2.6.10"' not in nf: raise SystemExit('NF v2.6.10 não aplicado.')
+          module_match=re.search(r'\$script:ModuleVersion\s*=\s*"([0-9.]+)"',nf)
+          central_match=re.search(r'\$script:NFEntradaVersion\s*=\s*"([0-9.]+)"',central)
+          if not module_match or not central_match:
+              raise SystemExit('Não foi possível localizar as versões do Controle de NF no candidato.')
+          if module_match.group(1) != central_match.group(1):
+              raise SystemExit('Versão do Controle de NF diverge entre módulo e Central: '+module_match.group(1)+' x '+central_match.group(1))
           if 'Update-NFMainTabStripLayout' in nf: raise SystemExit('Ajuste experimental que causava reentrada ainda presente no NF.')
           files=[]
           for p in sorted(x for x in root.rglob('*') if x.is_file() and x.name!='PACOTE-MANIFESTO.json'):
