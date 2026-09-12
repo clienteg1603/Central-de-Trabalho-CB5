@@ -1,14 +1,15 @@
 {
-  "version": "0.21.39",
+  "version": "0.21.40",
   "buildRevision": 1,
   "releaseNotes": [
-    "CURA 5: polimento visual do Gerenciador de Planilhas no modo integrado.",
-    "As abas principais e as subtelas de Componentes passam a usar navegação mais discreta: superfície escura, texto de destaque e linha inferior de acento no item ativo.",
-    "O visual standalone permanece com o comportamento anterior; a mudança de navegação é específica para o uso dentro da Central de Trabalho.",
-    "Os títulos operacionais da tela Gerar ganham hierarquia visual com a cor de acento do produto ativo, preservando todos os textos e controles.",
-    "A barra inferior de ações recebe uma divisória discreta para separar conteúdo, progresso e ações sem alterar os botões ou seus eventos.",
-    "O espaçamento do conteúdo hospedado foi refinado sem mudar formulários, grades, regras, cálculos, Excel, saldos, exportações ou arquivos.",
-    "Central v0.21.39, Gerenciador v3.7.12, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.10.",
+    "CURA 6: polimento visual do Controle de NF de Entrada no modo integrado.",
+    "O cabeçalho do Controle de NF fica mais compacto dentro da Central, preservando Importar Excel e Excel Oficial com os mesmos eventos e regras.",
+    "Os cards de saldo ganham acabamento mais limpo e números principais em destaque no Técnico industrial, sem alterar nenhum valor ou cálculo.",
+    "As grades integradas deixam de usar a moldura quadrada externa redundante; cabeçalhos, seleção, filtros e conteúdo permanecem funcionalmente iguais.",
+    "A área de abas usa mais espaço útil e permanece deliberadamente no mecanismo nativo estável, sem SizeChanged, HandleCreated ou recálculo de ItemSize.",
+    "O rodapé e os espaços internos ficam mais enxutos no modo hospedado, mantendo todas as ações disponíveis.",
+    "Nenhuma NF, entrada, saída, estorno, histórico, backup, importação, exportação, saldo ou regra operacional foi alterada.",
+    "Central v0.21.40, Gerenciador v3.7.12, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.11.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
