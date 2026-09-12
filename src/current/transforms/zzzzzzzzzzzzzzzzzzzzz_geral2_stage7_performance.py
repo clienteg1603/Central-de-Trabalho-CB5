@@ -87,8 +87,8 @@ if ($script:IsInProcessHosted) {
 )
 g = one(
     g,
-    '$form.Add_HandleCreated({ try { Apply-AppTheme; Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })',
-    '$form.Add_HandleCreated({ try { Apply-AppTheme; Invoke-GeneratorLayoutPass } catch {} })',
+    '$form.Add_HandleCreated({ try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })',
+    '$form.Add_HandleCreated({ try { Invoke-GeneratorLayoutPass } catch {} })',
     'HandleCreated Gerenciador'
 )
 g = one(
