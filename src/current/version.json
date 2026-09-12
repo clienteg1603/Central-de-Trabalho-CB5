@@ -1,6 +1,6 @@
 {
   "version": "0.21.33",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "A Central passa a ser a única autoridade de aparência dos módulos hospedados, por meio de um contexto compartilhado com tema e revisão.",
     "A troca de aparência agora é transacional e não reentrante: Central e módulo confirmam juntos o novo tema ou ambos retornam ao último tema válido.",
