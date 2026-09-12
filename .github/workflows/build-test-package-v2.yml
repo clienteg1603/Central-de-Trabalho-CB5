@@ -107,7 +107,6 @@ jobs:
           test -f "$NATIVE_HOST"
           test -f "$NATIVE_UPDATER_HOST"
 
-          # Todos os arquivos operacionais de texto devem existir no próprio fonte atual.
           required_sources=(
             "$SOURCE_ROOT/Central de Trabalho.ps1"
             "$SOURCE_ROOT/Atualizador/CANAIS.json"
@@ -124,7 +123,6 @@ jobs:
             test -s "$source" || { echo "ERRO: fonte runtime ausente ou vazio: $source"; exit 1; }
           done
 
-          # Evoluções incrementais ficam em transforms somente até serem aplicadas.
           if compgen -G "src/current/transforms/*.py" > /dev/null; then
             for transform in src/current/transforms/*.py; do
               echo "Aplicando transformação: $transform"
@@ -139,7 +137,6 @@ jobs:
                    "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5" \
                    "$OUT_ROOT/Modulos/Controle-NF-Entrada"
 
-          # Todo o runtime vem diretamente do fonte versionado atual.
           cp "$NATIVE_HOST" "$OUT_ROOT/Central de Trabalho.exe"
           cp "$SOURCE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
           cp "$SOURCE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
@@ -153,7 +150,6 @@ jobs:
           cp "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1" "$OUT_ROOT/Modulos/Controle-NF-Entrada/"
           cp "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1" "$OUT_ROOT/Modulos/Controle-NF-Entrada/"
 
-          # Windows PowerShell lê estes scripts de forma mais segura com UTF-8 BOM.
           python3 - "$OUT_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
@@ -182,12 +178,10 @@ jobs:
             exit 1
           fi
 
-          # Barreiras antes do empacotamento: integridade, contratos funcionais e sintaxe.
           python3 src/ci/audit_release.py tree "$OUT_ROOT" "$VERSION"
           python3 src/ci/regression_contracts.py "$OUT_ROOT"
           pwsh -NoProfile -NonInteractive -File src/ci/parse_powershell.ps1 -Root "$OUT_ROOT"
 
-          # O pacote de Teste não pode voltar a carregar um lançador de PowerShell externo.
           python3 - "$OUT_ROOT" <<'PY'
           import pathlib, sys
           root = pathlib.Path(sys.argv[1])
@@ -237,7 +231,6 @@ jobs:
           print(f'Pacote {version}: {len(package)} bytes / {channel["PackageSha256"]}')
           PY
 
-          # Segunda barreira: valida o ZIP pronto, manifesto e metadados do canal.
           python3 src/ci/audit_release.py package "$OUT_ROOT" "$VERSION" \
             "updates/packages/Central-de-Trabalho-v${VERSION}.zip" \
             "updates/test.json"
@@ -278,7 +271,7 @@ jobs:
           path: ${{ runner.temp }}/central-test-candidate
 
       - name: Validate the real ZIP and run the packaged Windows application
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           Set-StrictMode -Version Latest
@@ -304,8 +297,6 @@ jobs:
           $installRoot = Join-Path $validationRoot ([string]$channel.PackageRoot)
           if (-not (Test-Path -LiteralPath $installRoot -PathType Container)) { throw "Raiz declarada não existe dentro do ZIP." }
 
-          # Parser, contratos e auditorias rodam novamente contra os bytes
-          # efetivamente extraídos do pacote que será publicado.
           & ".\src\ci\parse_powershell.ps1" -Root $installRoot
           python src/ci/regression_contracts.py "$installRoot"
           python src/ci/audit_release.py tree "$installRoot" "$version"
@@ -331,8 +322,6 @@ jobs:
           $updaterSmoke = Start-Process -FilePath $updaterExe -ArgumentList $updaterSmokeArgs -WorkingDirectory (Split-Path -Parent $updaterExe) -Wait -PassThru
           if ($updaterSmoke.ExitCode -ne 0) { throw "Smoke test do Atualizador empacotado falhou: $($updaterSmoke.ExitCode)." }
 
-          # Todos os dados do runtime usam uma raiz isolada. Preferências standalone
-          # conflitantes são pré-gravadas para provar que não vencem a Central.
           $dataRoot = Join-Path $env:RUNNER_TEMP "central-theme-isolated-data"
           if (Test-Path -LiteralPath $dataRoot) { Remove-Item -LiteralPath $dataRoot -Recurse -Force }
           $centralSettings = Join-Path $dataRoot "CentralDeTrabalho"
@@ -345,7 +334,6 @@ jobs:
           $env:CENTRAL_THEME_RUNTIME_TEST = "1"
           $env:CENTRAL_THEME_TEST_DATA_ROOT = $dataRoot
 
-          # Teste complementar de cada módulo no mesmo tipo de painel hospedado.
           & ".\src\ci\test_hosted_theme_runtime.ps1" -GeneratedRoot $installRoot
 
           function Invoke-PackagedThemeRuntime {
@@ -453,7 +441,6 @@ jobs:
           test -s "$STABLE_PACKAGE"
           STABLE_PACKAGE_HASH="$(sha256sum "$STABLE_PACKAGE" | awk '{print $1}')"
 
-          # Mantém somente o pacote da Estável declarada e o pacote de Teste atual.
           for package in updates/packages/Central-de-Trabalho-v*.zip; do
             [ -e "$package" ] || continue
             name="$(basename "$package")"
