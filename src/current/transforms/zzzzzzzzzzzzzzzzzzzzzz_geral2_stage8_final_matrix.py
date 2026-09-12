@@ -22,7 +22,10 @@ def one(text, old, new, label):
 # aqui não há novo bump de módulo porque a mudança funcional é a auditoria final.
 c = one(c, '$script:AppVersion = "0.21.55"', '$script:AppVersion = "0.21.56"', 'versao Central')
 
+# A Etapa 1 já havia acrescentado 900x620 à matriz antiga da CURA 3. A Etapa 8
+# substitui o bloco inteiro pela matriz final, incluindo o alvo literal 1366x768.
 old_cases = '''    $layoutCases = @(
+        (Assert-CentralDashboardLayout ([Drawing.Size]::new(900, 620)) 'Central/minimum'),
         (Assert-CentralDashboardLayout ([Drawing.Size]::new(980, 640)) 'Central/compact'),
         (Assert-CentralDashboardLayout ([Drawing.Size]::new(1260, 760)) 'Central/balanced'),
         (Assert-CentralDashboardLayout ([Drawing.Size]::new(1680, 940)) 'Central/comfortable')
