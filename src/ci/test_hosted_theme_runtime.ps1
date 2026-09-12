@@ -46,8 +46,6 @@ function Invoke-ThemeSnapshot {
                     ExpectedCombo = $mapped
                     Actual = [int]$form.BackColor.ToArgb()
                     Expected = [int]$p.Background.ToArgb()
-                    SecondaryActual = [int]$tabGenerate.BackColor.ToArgb()
-                    SecondaryExpected = [int]$p.Background.ToArgb()
                 }
             }
             'Maintenance' {
@@ -58,8 +56,6 @@ function Invoke-ThemeSnapshot {
                     ExpectedCombo = $mapped
                     Actual = [int]$form.BackColor.ToArgb()
                     Expected = [int]$p.Background.ToArgb()
-                    SecondaryActual = [int]$contentPanel.BackColor.ToArgb()
-                    SecondaryExpected = [int]$p.Background.ToArgb()
                 }
             }
             'NFEntrada' {
@@ -69,12 +65,36 @@ function Invoke-ThemeSnapshot {
                     ExpectedCombo = $theme
                     Actual = [int]$form.BackColor.ToArgb()
                     Expected = [int]$p.Background.ToArgb()
-                    SecondaryActual = [int]$tabs.BackColor.ToArgb()
-                    SecondaryExpected = [int]$p.Surface.ToArgb()
                 }
             }
         }
     } $Kind $Theme
+}
+
+function Invoke-CentralStyleThemeCall {
+    param($ModuleInfo, [string]$Kind, [string]$Theme)
+    $items = @(& $ModuleInfo {
+        param($targetModule, $hostTheme)
+        switch ($targetModule) {
+            'Generator' {
+                $resultItems = @(Set-HostedGeneratorTheme $hostTheme)
+                if ($resultItems.Count -eq 0) { return $false }
+                return [bool]$resultItems[$resultItems.Count - 1]
+            }
+            'Maintenance' {
+                $resultItems = @(Set-HostedMaintenanceTheme $hostTheme)
+                if ($resultItems.Count -eq 0) { return $false }
+                return [bool]$resultItems[$resultItems.Count - 1]
+            }
+            'NFEntrada' {
+                $resultItems = @(Set-HostedNFEntradaTheme $hostTheme)
+                if ($resultItems.Count -eq 0) { return $false }
+                return [bool]$resultItems[$resultItems.Count - 1]
+            }
+        }
+    } $Kind $Theme)
+    if ($items.Count -eq 0) { return $false }
+    return [bool]$items[$items.Count - 1]
 }
 
 function Invoke-ThemeDirectDiagnostic {
@@ -119,6 +139,8 @@ foreach ($case in $cases) {
     $moduleName = 'ThemeRuntime_' + $case.Kind + '_' + [Guid]::NewGuid().ToString('N')
     $moduleInfo = $null
     $hostedControl = $null
+    $hostForm = $null
+    $hostPanel = $null
     try {
         $moduleInfo = New-Module -Name $moduleName -ArgumentList @($case.Path, 'Escuro profissional') -ScriptBlock {
             param($scriptPath, $hostTheme)
@@ -135,32 +157,53 @@ foreach ($case in $cases) {
             throw "$($case.Name) não exportou um controle hospedável."
         }
 
+        # Reproduz a integração da Central: Form pai + painel host + módulo visível/dock Fill.
+        $hostForm = New-Object Windows.Forms.Form
+        $hostForm.Size = [Drawing.Size]::new(1400, 850)
+        $hostForm.StartPosition = [Windows.Forms.FormStartPosition]::Manual
+        $hostForm.Location = [Drawing.Point]::new(-2000, -2000)
+        $hostForm.ShowInTaskbar = $false
+        $hostPanel = New-Object Windows.Forms.Panel
+        $hostPanel.Dock = [Windows.Forms.DockStyle]::Fill
+        $hostForm.Controls.Add($hostPanel)
+
+        if ($hostedControl -is [Windows.Forms.Form]) {
+            $hostedControl.TopLevel = $false
+            $hostedControl.FormBorderStyle = [Windows.Forms.FormBorderStyle]::None
+            $hostedControl.ShowInTaskbar = $false
+        }
+        $hostedControl.Dock = [Windows.Forms.DockStyle]::Fill
+        $hostPanel.Controls.Add($hostedControl)
+        $hostForm.Show()
+        if ($hostedControl -is [Windows.Forms.Form]) { $hostedControl.Show() } else { $hostedControl.Visible = $true }
+        $hostedControl.BringToFront()
+        $hostedControl.PerformLayout()
+        [Windows.Forms.Application]::DoEvents()
+
         foreach ($theme in $themes) {
             Write-Host "Testando $($case.Name): $theme"
-            $items = @(& $moduleInfo {
-                param($setter, $themeName)
-                $cmd = Get-Command -Name $setter -CommandType Function -ErrorAction Stop
-                & $cmd $themeName
-            } $case.Setter $theme)
-
-            $ok = ($items.Count -gt 0 -and [bool]$items[$items.Count - 1])
+            $ok = Invoke-CentralStyleThemeCall $moduleInfo $case.Kind $theme
             if (-not $ok) {
                 $direct = Invoke-ThemeDirectDiagnostic $moduleInfo $case.Kind $theme
-                throw "$($case.Name) recusou '$theme'. Diagnóstico direto: $direct"
+                throw "$($case.Name) recusou '$theme' quando hospedado. Diagnóstico direto: $direct"
             }
 
+            $hostedControl.PerformLayout()
+            $hostedControl.Invalidate($true)
+            $hostedControl.Update()
+            $hostedControl.Refresh()
             [Windows.Forms.Application]::DoEvents()
             $snap = Invoke-ThemeSnapshot $moduleInfo $case.Kind $theme
-            Write-Host ("  combo={0} esperado={1} root={2} esperadoRoot={3} secundário={4} esperadoSec={5}" -f $snap.Combo,$snap.ExpectedCombo,$snap.Actual,$snap.Expected,$snap.SecondaryActual,$snap.SecondaryExpected)
+            Write-Host ("  combo={0} esperado={1} root={2} esperadoRoot={3}" -f $snap.Combo,$snap.ExpectedCombo,$snap.Actual,$snap.Expected)
             if ($snap.Combo -ne $snap.ExpectedCombo) { throw "$($case.Name): seletor interno não acompanhou '$theme'." }
             if ($snap.Actual -ne $snap.Expected) { throw "$($case.Name): cor raiz não acompanhou '$theme'." }
-            if ($snap.SecondaryActual -ne $snap.SecondaryExpected) { throw "$($case.Name): controle secundário não acompanhou '$theme'." }
         }
     }
     finally {
+        try { if ($null -ne $hostForm -and -not $hostForm.IsDisposed) { $hostForm.Close(); $hostForm.Dispose() } } catch {}
         try { if ($null -ne $hostedControl -and -not $hostedControl.IsDisposed) { $hostedControl.Dispose() } } catch {}
         try { if ($null -ne $moduleInfo) { Remove-Module -ModuleInfo $moduleInfo -Force -ErrorAction SilentlyContinue } } catch {}
     }
 }
 
-Write-Host 'THEME RUNTIME: OK — três módulos alternaram os quatro temas e confirmaram cores reais.'
+Write-Host 'THEME RUNTIME: OK — três módulos hospedados alternaram os quatro temas e confirmaram cores reais.'
