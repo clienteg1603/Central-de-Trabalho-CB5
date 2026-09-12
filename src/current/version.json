@@ -1,6 +1,6 @@
 {
   "version": "0.21.36",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Otimiza a abertura do Gerenciador de Planilhas e da Central de Manutenção quando usados dentro da Central de Trabalho.",
     "Bases já gravadas no esquema atual usam caminho rápido de leitura e deixam de renormalizar todo o histórico em cada abertura; bases antigas continuam usando a migração completa existente.",
