@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.6.6"
+$script:ModuleVersion = "2.6.7"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -2155,19 +2155,74 @@ function Set-HostedNFEntradaTheme {
     try { Set-NFButtonStyle $deleteButton "Danger" } catch {}
     try { Set-NFButtonStyle $movementReverseButton "Danger" } catch {}
 
+    # CURA 2 — reforço explícito dos elementos mais visíveis do NF.
+    $form.BackColor = $newPalette.Background
+    $form.ForeColor = $newPalette.Text
+    $root.BackColor = $newPalette.Background
+    $header.BackColor = $newPalette.Background
+    $heading.BackColor = $newPalette.Background
+    $cards.BackColor = $newPalette.Background
+    $mainTabs.ForeColor = $newPalette.Text
+
+    foreach ($tab in @($computerTab,$keyboardTab,$movementTab,$historyTab,$securityTab,$summaryTab)) {
+        if ($null -ne $tab -and -not $tab.IsDisposed) {
+            $tab.BackColor = $newPalette.Background
+            $tab.ForeColor = $newPalette.Text
+        }
+    }
+
+    foreach ($grid in @($computerGrid,$keyboardGrid,$movementGrid,$historyGrid,$backupGrid,$productSummaryGrid,$codeSummaryGrid)) {
+        if ($null -eq $grid -or $grid.IsDisposed) { continue }
+        $grid.BackgroundColor = $newPalette.Surface
+        $grid.GridColor = $newPalette.Border
+        $grid.EnableHeadersVisualStyles = $false
+        $grid.ColumnHeadersDefaultCellStyle.BackColor = $newPalette.Card
+        $grid.ColumnHeadersDefaultCellStyle.ForeColor = $newPalette.Text
+        $grid.DefaultCellStyle.BackColor = $newPalette.Surface
+        $grid.DefaultCellStyle.ForeColor = $newPalette.Text
+        $grid.DefaultCellStyle.SelectionBackColor = $newPalette.AccentStrong
+        $grid.DefaultCellStyle.SelectionForeColor = $newPalette.AccentText
+        $grid.Invalidate()
+    }
+
+    try { $title.ForeColor = $newPalette.Text } catch {}
+    try { $subtitle.ForeColor = $newPalette.Muted } catch {}
+    try { Set-NFButtonStyle $importButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $exportButton "Primary" } catch {}
+    try { Set-NFButtonStyle $newButton "Primary" } catch {}
+    try { Set-NFButtonStyle $editButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $outputButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $clearFiltersButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $exportListButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $deleteButton "Danger" } catch {}
+    try { Set-NFButtonStyle $movementReverseButton "Danger" } catch {}
+
+    # Não basta a raiz mudar: confirma também aba, grade e ação principal.
+    if ([int]$computerTab.BackColor.ToArgb() -ne [int]$newPalette.Background.ToArgb()) {
+        throw "A aba principal do Controle de NF não recebeu o tema $Theme."
+    }
+    if ([int]$computerGrid.DefaultCellStyle.BackColor.ToArgb() -ne [int]$newPalette.Surface.ToArgb()) {
+        throw "A grade do Controle de NF não recebeu o tema $Theme."
+    }
+    if ([int]$newButton.BackColor.ToArgb() -ne [int]$newPalette.AccentStrong.ToArgb()) {
+        throw "Os botões do Controle de NF não receberam o tema $Theme."
+    }
+
     try {
         $form.PerformLayout()
         $form.Invalidate($true)
         $form.Update()
         $form.Refresh()
+        [Windows.Forms.Application]::DoEvents()
     }
-    catch { return $false }
+    catch { throw "Falha ao redesenhar o Controle de NF: $($_.Exception.Message)" }
 
-    try {
-        if ([int]$form.BackColor.ToArgb() -ne [int]$newPalette.Background.ToArgb()) { return $false }
-        if ([int]$form.ForeColor.ToArgb() -ne [int]$newPalette.Text.ToArgb()) { return $false }
+    if ([int]$form.BackColor.ToArgb() -ne [int]$newPalette.Background.ToArgb()) {
+        throw "A raiz do Controle de NF não recebeu o tema $Theme."
     }
-    catch { return $false }
+    if ([int]$form.ForeColor.ToArgb() -ne [int]$newPalette.Text.ToArgb()) {
+        throw "O texto raiz do Controle de NF não recebeu o tema $Theme."
+    }
     return $true
 }
 
