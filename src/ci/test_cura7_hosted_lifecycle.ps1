@@ -149,8 +149,12 @@ function Test-NFEntradaRuntime {
         }
     }
 
+    Write-Host ('  NF abas: ' + ($result.TabTexts -join ' | '))
     Assert-True ($result.Pages -eq 6) "NF: esperado 6 abas nativas, obtido $($result.Pages)."
-    foreach ($expected in @('COMPUTADOR DE BORDO CB5','TECLADO V5','MOVIMENTAÇÕES','HISTÓRICO','SEGURANÇA','RESUMO')) {
+    Assert-True ($result.TabTexts.Count -eq 6) 'NF: lista de abas inconsistente.'
+    Assert-True ([string]$result.TabTexts[0] -like 'COMPUTADOR DE BORDO*') 'NF: primeira aba deixou de representar Computador de Bordo.'
+    Assert-True ([string]$result.TabTexts[1] -eq 'TECLADO V5') 'NF: segunda aba deixou de representar Teclado V5.'
+    foreach ($expected in @('MOVIMENTAÇÕES','HISTÓRICO','SEGURANÇA','RESUMO')) {
         Assert-True ($result.TabTexts -contains $expected) "NF: aba ausente: $expected"
     }
     Assert-True ($result.DrawMode -ne 'OwnerDrawFixed') 'NF: OwnerDrawFixed reapareceu nas abas nativas.'
