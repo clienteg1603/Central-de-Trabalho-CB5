@@ -1,6 +1,6 @@
 {
   "version": "0.21.47",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Pós-cura visual: restaura o resumo persistente da Central de Manutenção acima da faixa de navegação no modo integrado.",
     "Central de Manutenção v0.6.11: os cartões de Séries diferentes, Passagens registradas, Em andamento e Retornos voltam a permanecer visíveis dentro da Central.",
