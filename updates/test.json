@@ -2,20 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.35",
+  "Version": "0.21.36",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.35.zip",
-  "PackageSha256": "A2A231DB854377FD530302713899D16D533998A88BB4CB9B23D551AD67E15105",
-  "PackageSize": 345539,
-  "PackageRoot": "Central-de-Trabalho-v0.21.35",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.36.zip",
+  "PackageSha256": "FD1378462A54D17AB771D6FDA6727BFB8D38A92DF0D3B466EAF4DB40A1246AB3",
+  "PackageSize": 346534,
+  "PackageRoot": "Central-de-Trabalho-v0.21.36",
   "ReleaseNotes": [
-    "Corrige o Controle de NF de Entrada que podia ficar preso em carregamento ao ser aberto dentro da Central.",
-    "Foi removido o ajuste experimental owner-draw das abas do NF que recalculava ItemSize durante SizeChanged/HandleCreated e podia causar reentrada no WinForms.",
-    "O Controle de NF volta a usar a estrutura estável das abas, mantendo o tema Técnico industrial fixo da Central.",
-    "A auditoria runtime das abas foi corrigida para validar a estrutura nativa e as páginas reais, sem depender do BackColor do TabControl nativo do Windows.",
-    "A publicação exige teste runtime hospedado dos três módulos; o NF precisa abrir, exportar controle hospedável e responder ao host sem travar.",
-    "Nenhuma regra operacional, saldo, NF, histórico, planilha, componente ou registro de manutenção foi alterado.",
-    "Central v0.21.35, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.10.",
-    "A Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
+    "Otimiza a abertura do Gerenciador de Planilhas e da Central de Manutenção quando usados dentro da Central de Trabalho.",
+    "Bases já gravadas no esquema atual usam caminho rápido de leitura e deixam de renormalizar todo o histórico em cada abertura; bases antigas continuam usando a migração completa existente.",
+    "O Gerenciador elimina repinturas e salvamentos redundantes no caminho crítico de abertura hospedada.",
+    "A Central de Manutenção deixa de preencher Dashboard, Estatísticas e Esquemáticos antes de aparecer; essas áreas são atualizadas sob demanda quando abertas, enquanto o Histórico inicial continua carregado normalmente.",
+    "O hotfix do Controle de NF permanece preservado em v2.6.10.",
+    "Nenhum saldo, NF, histórico, passagem, componente, planilha ou regra operacional é alterado por esta otimização.",
+    "Central v0.21.36, Gerenciador v3.7.11, Central de Manutenção v0.6.9 e Controle de NF de Entrada v2.6.10.",
+    "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
