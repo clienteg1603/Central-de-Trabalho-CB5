@@ -1,0 +1,37 @@
+name: Theme runtime diagnostic
+
+on:
+  push:
+    paths:
+      - 'src/ci/test_hosted_theme_runtime.ps1'
+      - 'src/generated/Central de Trabalho.ps1'
+      - 'src/generated/Modulos/**'
+      - 'src/current/transforms/**'
+      - '.github/workflows/theme-runtime-diagnostic.yml'
+  workflow_dispatch:
+
+jobs:
+  theme-runtime:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply pending transforms in test workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $transforms = @(Get-ChildItem -LiteralPath 'src/current/transforms' -Filter '*.py' -File -ErrorAction SilentlyContinue | Sort-Object Name)
+          foreach ($transform in $transforms) {
+            Write-Host "Aplicando transform somente para diagnóstico: $($transform.FullName)"
+            python $transform.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Transform falhou: $($transform.Name)" }
+          }
+
+      - name: Hosted theme runtime test
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\ci\test_hosted_theme_runtime.ps1' -GeneratedRoot '.\src\generated'
