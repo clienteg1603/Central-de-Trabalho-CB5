@@ -16,7 +16,6 @@ jobs:
     timeout-minutes: 8
     env:
       CENTRAL_THEME_RUNTIME_TEST: '1'
-      CENTRAL_THEME_TEST_DATA_ROOT: ${{ runner.temp }}\central-fixed-theme-source-data
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,4 +53,5 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
+          $env:CENTRAL_THEME_TEST_DATA_ROOT = Join-Path $env:RUNNER_TEMP 'central-fixed-theme-source-data'
           & '.\src\ci\test_hosted_theme_runtime.ps1' -GeneratedRoot '.\src\generated'
