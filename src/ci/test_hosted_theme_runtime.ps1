@@ -8,26 +8,26 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
-$themes = @('Escuro profissional','Técnico industrial','Claro corporativo','Alto contraste')
+# A Central trabalha com uma única aparência oficial. Este teste deixou de
+# alternar temas legados e agora valida somente o Técnico industrial que chega
+# aos três módulos quando eles estão hospedados dentro da Central.
+$theme = 'Técnico industrial'
 
 $cases = @(
     [pscustomobject]@{
         Name = 'Gerenciador'
         Kind = 'Generator'
         Path = Join-Path $GeneratedRoot 'Modulos\Gerador-de-Planilhas-CB5-TV5\Gerador Planilhas.ps1'
-        Setter = 'Set-HostedGeneratorTheme'
     },
     [pscustomobject]@{
         Name = 'Manutenção'
         Kind = 'Maintenance'
         Path = Join-Path $GeneratedRoot 'Modulos\Central-de-Manutencao-CB5\Central Manutencao CB5.ps1'
-        Setter = 'Set-HostedMaintenanceTheme'
     },
     [pscustomobject]@{
         Name = 'NF Entrada'
         Kind = 'NFEntrada'
         Path = Join-Path $GeneratedRoot 'Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1'
-        Setter = 'Set-HostedNFEntradaTheme'
     }
 )
 
@@ -79,30 +79,13 @@ function Invoke-ThemeDirectDiagnostic {
         param($kind, $theme)
         try {
             switch ($kind) {
-                'Generator' {
-                    $script:HostedCentralTheme = $theme
-                    $mapped = Get-GeneratorThemeFromHost $theme
-                    $themeCombo.SelectedItem = $mapped
-                    Apply-AppTheme
-                    Update-GeneratorResponsiveLayout
-                    Update-RootLayout
-                }
-                'Maintenance' {
-                    $script:HostedCentralTheme = $theme
-                    $mapped = Get-MaintenanceThemeFromHost $theme
-                    $themeCombo.SelectedItem = $mapped
-                    Apply-MaintenanceTheme
-                    Update-MaintenanceResponsiveLayout
-                }
-                'NFEntrada' {
-                    [void](Set-HostedNFEntradaTheme $theme)
-                }
+                'Generator' { [void](Set-HostedGeneratorTheme $theme) }
+                'Maintenance' { [void](Set-HostedMaintenanceTheme $theme) }
+                'NFEntrada' { [void](Set-HostedNFEntradaTheme $theme) }
             }
             return 'SEM EXCEÇÃO DIRETA'
         }
-        catch {
-            return $_.Exception.ToString()
-        }
+        catch { return $_.Exception.ToString() }
     } $Kind $Theme
 }
 
@@ -111,14 +94,14 @@ foreach ($case in $cases) {
         throw "Arquivo ausente para $($case.Name): $($case.Path)"
     }
 
-    Write-Host "=== $($case.Name) ==="
-    $moduleName = 'ThemeRuntime_' + $case.Kind + '_' + [Guid]::NewGuid().ToString('N')
+    Write-Host "=== $($case.Name) / $theme ==="
+    $moduleName = 'FixedThemeRuntime_' + $case.Kind + '_' + [Guid]::NewGuid().ToString('N')
     $moduleInfo = $null
     $hostedControl = $null
     $hostForm = $null
     $hostPanel = $null
     try {
-        $hostContext = [pscustomobject]@{ Theme = 'Escuro profissional'; Revision = 0 }
+        $hostContext = [pscustomobject]@{ Theme = $theme; Revision = 0 }
         $moduleInfo = New-Module -Name $moduleName -ArgumentList @($case.Path, $hostContext) -ScriptBlock {
             param($scriptPath, $context)
             . $scriptPath -HostedInCentral -HostTheme ([string]$context.Theme) -HostThemeContext $context
@@ -134,7 +117,6 @@ foreach ($case in $cases) {
             throw "$($case.Name) não exportou um controle hospedável."
         }
 
-        # Reproduz a integração da Central: Form pai + painel host + módulo visível/dock Fill.
         $hostForm = New-Object Windows.Forms.Form
         $hostForm.Size = [Drawing.Size]::new(1400, 850)
         $hostForm.StartPosition = [Windows.Forms.FormStartPosition]::Manual
@@ -157,24 +139,21 @@ foreach ($case in $cases) {
         $hostedControl.PerformLayout()
         [Windows.Forms.Application]::DoEvents()
 
-        foreach ($theme in $themes) {
-            Write-Host "Testando $($case.Name): $theme"
-            $ok = Invoke-CentralStyleThemeCall $moduleInfo $case.Kind $theme $hostContext
-            if (-not $ok) {
-                $direct = Invoke-ThemeDirectDiagnostic $moduleInfo $case.Kind $theme
-                throw "$($case.Name) recusou '$theme' quando hospedado. Diagnóstico direto: $direct"
-            }
-
-            $hostedControl.PerformLayout()
-            $hostedControl.Invalidate($true)
-            [Windows.Forms.Application]::DoEvents()
-            $snap = Invoke-ThemeSnapshot $moduleInfo $case.Kind
-            $invalid = @($snap.InvalidChecks | ForEach-Object { [string]$_.Name }) -join ', '
-            Write-Host ("  autoridade={0} interno={1} revisão={2} controles={3}" -f $snap.AuthorityTheme,$snap.InternalTheme,$snap.Revision,@($snap.Checks).Count)
-            if (-not [bool]$snap.Valid) { throw "$($case.Name): controles fora da paleta em '$theme': $invalid" }
-            if ([string]$snap.AuthorityTheme -ne $theme) { throw "$($case.Name): autoridade hospedada não acompanhou '$theme'." }
-            if ([int]$snap.Revision -ne [int]$hostContext.Revision) { throw "$($case.Name): revisão de aparência divergente em '$theme'." }
+        $ok = Invoke-CentralStyleThemeCall $moduleInfo $case.Kind $theme $hostContext
+        if (-not $ok) {
+            $direct = Invoke-ThemeDirectDiagnostic $moduleInfo $case.Kind $theme
+            throw "$($case.Name) recusou a aparência oficial '$theme' quando hospedado. Diagnóstico: $direct"
         }
+
+        $hostedControl.PerformLayout()
+        $hostedControl.Invalidate($true)
+        [Windows.Forms.Application]::DoEvents()
+        $snap = Invoke-ThemeSnapshot $moduleInfo $case.Kind
+        $invalid = @($snap.InvalidChecks | ForEach-Object { [string]$_.Name }) -join ', '
+        Write-Host ("  autoridade={0} interno={1} revisão={2} controles={3}" -f $snap.AuthorityTheme,$snap.InternalTheme,$snap.Revision,@($snap.Checks).Count)
+        if (-not [bool]$snap.Valid) { throw "$($case.Name): controles fora da aparência oficial: $invalid" }
+        if ([string]$snap.AuthorityTheme -ne $theme) { throw "$($case.Name): autoridade hospedada não está em '$theme'." }
+        if ([int]$snap.Revision -ne [int]$hostContext.Revision) { throw "$($case.Name): revisão de aparência divergente." }
     }
     finally {
         try { if ($null -ne $hostForm -and -not $hostForm.IsDisposed) { $hostForm.Close(); $hostForm.Dispose() } } catch {}
@@ -183,4 +162,4 @@ foreach ($case in $cases) {
     }
 }
 
-Write-Host 'THEME RUNTIME: OK — três módulos hospedados alternaram os quatro temas e confirmaram cores reais.'
+Write-Host 'FIXED THEME RUNTIME: OK — Gerenciador, Manutenção e NF hospedados confirmaram a aparência Técnico industrial.'
