@@ -1,12 +1,11 @@
 {
-  "version": "0.21.29",
+  "version": "0.21.30",
   "buildRevision": 1,
   "releaseNotes": [
-    "CURA 2: hotfix do Gerenciador integrado para obedecer sempre à aparência escolhida na Central.",
-    "Quando hospedado, o tema da Central passa a ser a única fonte de verdade do Gerenciador.",
-    "O Gerenciador deixa de permitir que o seletor interno ou uma configuração salva reapliquem um tema antigo enquanto está integrado.",
-    "A troca de aparência valida a cor real da janela do Gerenciador antes de confirmar sucesso.",
-    "O fluxo operacional, Excel, saldos, componentes e demais regras não foram alterados.",
+    "CURA 2: correção da causa raiz do seletor de aparência da Central.",
+    "O evento do seletor volta a usar SelectedIndexChanged com trava de reentrada, cobrindo teclado, mouse e alterações do ComboBox que antes podiam mudar o texto sem reaplicar a interface.",
+    "A sincronização deixa de aceitar falso sucesso quando um módulo devolve múltiplas saídas do pipeline PowerShell; a última confirmação precisa ser verdadeira.",
+    "Central, Gerenciador, Manutenção e Controle de NF continuam com as mesmas regras operacionais e dados.",
     "Central de Manutenção v0.6.6, Gerenciador v3.7.8 e Controle de NF v2.6.7.",
     "A Estável permanece v0.20.2; esta versão é somente Teste."
   ]
