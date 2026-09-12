@@ -1,10 +1,11 @@
 {
   "version": "0.21.35",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Corrige o Controle de NF de Entrada que podia ficar preso em carregamento ao ser aberto dentro da Central.",
     "Foi removido o ajuste experimental owner-draw das abas do NF que recalculava ItemSize durante SizeChanged/HandleCreated e podia causar reentrada no WinForms.",
     "O Controle de NF volta a usar a estrutura estável das abas, mantendo o tema Técnico industrial fixo da Central.",
+    "A auditoria runtime das abas foi corrigida para validar a estrutura nativa e as páginas reais, sem depender do BackColor do TabControl nativo do Windows.",
     "O pipeline volta a exigir o teste runtime hospedado dos três módulos antes de publicar; o NF precisa abrir, exportar controle hospedável e responder ao host sem travar.",
     "Nenhuma regra operacional, saldo, NF, histórico, planilha, componente ou registro de manutenção foi alterado.",
     "Central v0.21.35, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.10.",
