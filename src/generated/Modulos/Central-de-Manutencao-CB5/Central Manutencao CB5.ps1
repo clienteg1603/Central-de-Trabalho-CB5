@@ -1,7 +1,8 @@
 param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
-    [string]$HostTheme = ""
+    [string]$HostTheme = "",
+    [AllowNull()][object]$HostThemeContext = $null
 )
 
 Set-StrictMode -Version Latest
@@ -79,7 +80,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.6.7"
+$script:AppVersion = "0.6.8"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -141,7 +142,8 @@ $script:HostedOverviewPanel = $null
 $script:HostedOverviewLayout = $null
 $script:HostedSectionNavPanel = $null
 $script:HostedShell = $null
-$script:HostedCentralTheme = ""
+$script:HostedThemeContext = $(if ($script:IsInProcessHosted) { $HostThemeContext } else { $null })
+$script:HostedCentralTheme = $(if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) { [string]$HostTheme } else { "" })
 $script:HostedThemeSyncInProgress = $false
 
 try {
@@ -178,7 +180,14 @@ function Save-MaintenanceSettings {
         if (-not [IO.Directory]::Exists($script:DataDirectory)) {
             [void][IO.Directory]::CreateDirectory($script:DataDirectory)
         }
-        $json = [pscustomobject]@{ Theme = [string]$themeCombo.SelectedItem } | ConvertTo-Json
+        $themeToPersist = [string]$themeCombo.SelectedItem
+        if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($script:StandaloneThemePreference)) {
+            $themeToPersist = $script:StandaloneThemePreference
+        }
+        else {
+            $script:StandaloneThemePreference = $themeToPersist
+        }
+        $json = [pscustomobject]@{ Theme = $themeToPersist } | ConvertTo-Json
         [IO.File]::WriteAllText($script:SettingsPath, $json, ([Text.UTF8Encoding]::new($true)))
     }
     catch {}
@@ -308,12 +317,42 @@ function Get-MaintenanceThemeFromHost {
     }
 }
 
+function Get-MaintenanceHostedCentralTheme {
+    $theme = ""
+    if ($script:IsInProcessHosted -and $null -ne $script:HostedThemeContext) {
+        try {
+            if ($script:HostedThemeContext.PSObject.Properties.Name -contains "Theme") {
+                $theme = [string]$script:HostedThemeContext.Theme
+            }
+        } catch {}
+    }
+    if ([string]::IsNullOrWhiteSpace($theme)) { $theme = [string]$script:HostedCentralTheme }
+    if (-not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $theme)) {
+        $theme = "Escuro profissional"
+    }
+    $script:HostedCentralTheme = $theme
+    return $theme
+}
+
+function Get-MaintenanceEffectiveTheme {
+    if ($script:IsInProcessHosted) {
+        return (Get-MaintenanceThemeFromHost (Get-MaintenanceHostedCentralTheme))
+    }
+    $theme = [string]$themeCombo.SelectedItem
+    if (-not (@("Claro moderno", "Escuro grafite", "Técnico industrial", "Alto contraste") -contains $theme)) {
+        $theme = "Claro moderno"
+    }
+    return $theme
+}
+
 function Set-HostedMaintenanceTheme {
     param([string]$CentralTheme)
     if (-not $script:IsInProcessHosted) { return $false }
     if ([string]::IsNullOrWhiteSpace($CentralTheme)) { $CentralTheme = "Escuro profissional" }
 
-    $mapped = Get-MaintenanceThemeFromHost $CentralTheme
+    if ($null -eq $script:HostedThemeContext) { $script:HostedCentralTheme = $CentralTheme }
+    $authoritativeTheme = Get-MaintenanceHostedCentralTheme
+    $mapped = Get-MaintenanceThemeFromHost $authoritativeTheme
     if (-not $themeCombo.Items.Contains($mapped)) { $mapped = "Escuro grafite" }
 
     $script:HostedCentralTheme = $CentralTheme
@@ -332,14 +371,45 @@ function Set-HostedMaintenanceTheme {
         Update-MaintenanceResponsiveLayout
         $form.PerformLayout()
         $form.Invalidate($true)
-        $form.Update()
-        $form.Refresh()
-        [Windows.Forms.Application]::DoEvents()
         if ([int]$form.BackColor.ToArgb() -ne [int]$script:CurrentPalette.Background.ToArgb()) { return $false }
+        if ($null -ne $script:HostedThemeContext -and [string]$script:HostedThemeContext.Theme -ne $authoritativeTheme) { return $false }
         return $true
     }
     finally {
         $script:HostedThemeSyncInProgress = $false
+    }
+}
+
+function Get-HostedMaintenanceThemeAudit {
+    if (-not $script:IsInProcessHosted) {
+        return [pscustomobject]@{ Valid = $false; AuthorityTheme = ""; InternalTheme = ""; Revision = -1; Checks = @() }
+    }
+    $authorityTheme = Get-MaintenanceHostedCentralTheme
+    $internalTheme = Get-MaintenanceThemeFromHost $authorityTheme
+    $palette = Get-MaintenancePalette $internalTheme
+    $saveExpected = if ([string]$savePassageButton.Tag -eq "Primary") { $palette.Accent } else { $palette.Surface }
+    $checks = @(
+        [pscustomobject]@{ Name = "fundo geral"; Actual = [int]$form.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "layout raiz"; Actual = [int]$rootLayout.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "abas"; Actual = [int]$mainTabs.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "painel inicial"; Actual = [int]$dashboardTab.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "painel passagem"; Actual = [int]$passageTab.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "card"; Actual = [int]$cardSeries.BackColor.ToArgb(); Expected = [int]$palette.Card.ToArgb() },
+        [pscustomobject]@{ Name = "input"; Actual = [int]$serialBox.BackColor.ToArgb(); Expected = [int]$palette.Input.ToArgb() },
+        [pscustomobject]@{ Name = "botão ação"; Actual = [int]$dashboardNewButton.BackColor.ToArgb(); Expected = [int]$palette.Action.ToArgb() },
+        [pscustomobject]@{ Name = "botão passagem"; Actual = [int]$savePassageButton.BackColor.ToArgb(); Expected = [int]$saveExpected.ToArgb() },
+        [pscustomobject]@{ Name = "grid histórico"; Actual = [int]$historyGrid.DefaultCellStyle.BackColor.ToArgb(); Expected = [int]$palette.Card.ToArgb() }
+    )
+    $invalid = @($checks | Where-Object { $_.Actual -ne $_.Expected })
+    $revision = if ($null -ne $script:HostedThemeContext -and $script:HostedThemeContext.PSObject.Properties.Name -contains "Revision") { [int]$script:HostedThemeContext.Revision } else { -1 }
+    return [pscustomobject]@{
+        Valid = ($invalid.Count -eq 0 -and [string]$themeCombo.SelectedItem -eq $internalTheme -and -not $themeCombo.Enabled)
+        AuthorityTheme = $authorityTheme
+        InternalTheme = [string]$themeCombo.SelectedItem
+        ExpectedInternalTheme = $internalTheme
+        Revision = $revision
+        Checks = $checks
+        InvalidChecks = $invalid
     }
 }
 
@@ -433,7 +503,20 @@ function Apply-ThemeToTree {
 }
 
 function Apply-MaintenanceTheme {
-    $script:CurrentPalette = Get-MaintenancePalette ([string]$themeCombo.SelectedItem)
+    $effectiveTheme = Get-MaintenanceEffectiveTheme
+    if ($script:IsInProcessHosted -and [string]$themeCombo.SelectedItem -ne $effectiveTheme) {
+        $oldSyncFlag = $script:HostedThemeSyncInProgress
+        $script:HostedThemeSyncInProgress = $true
+        try { $themeCombo.SelectedItem = $effectiveTheme }
+        finally { $script:HostedThemeSyncInProgress = $oldSyncFlag }
+    }
+    $script:CurrentPalette = Get-MaintenancePalette $effectiveTheme
+    $form.BackColor = $script:CurrentPalette.Background
+    $form.ForeColor = $script:CurrentPalette.Text
+    $rootLayout.BackColor = $script:CurrentPalette.Background
+    $rootLayout.ForeColor = $script:CurrentPalette.Text
+    $mainTabs.BackColor = $script:CurrentPalette.Background
+    $mainTabs.ForeColor = $script:CurrentPalette.Text
     Apply-ThemeToTree $form
     $headerPanel.BackColor = $script:CurrentPalette.Surface
     $footerPanel.BackColor = $script:CurrentPalette.Surface
@@ -518,7 +601,8 @@ function Apply-MaintenanceTheme {
     $codeRulesText.BorderStyle = [Windows.Forms.BorderStyle]::None
     $statusLabel.ForeColor = $script:CurrentPalette.Muted
     $statsTabs.Invalidate()
-    Refresh-CurrentSeriesHistory
+    # Aparência é estritamente visual. Histórico, estatísticas e registros só
+    # são recarregados pelos fluxos operacionais correspondentes.
     $mainTabs.Invalidate()
     $form.Invalidate($true)
 }
@@ -1460,8 +1544,9 @@ function Refresh-AllViews {
 }
 
 $settings = Get-MaintenanceSettings
-if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) {
-    $settings.Theme = Get-MaintenanceThemeFromHost $HostTheme
+$script:StandaloneThemePreference = [string]$settings.Theme
+if ($script:IsInProcessHosted) {
+    $settings.Theme = Get-MaintenanceThemeFromHost (Get-MaintenanceHostedCentralTheme)
 }
 
 if ($script:IsInProcessHosted) {
@@ -1559,6 +1644,7 @@ $themeCombo.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
 [void]$themeCombo.Items.AddRange(@("Claro moderno", "Escuro grafite", "Técnico industrial", "Alto contraste"))
 $themeCombo.SelectedItem = $settings.Theme
 if ($themeCombo.SelectedIndex -lt 0) { $themeCombo.SelectedIndex = 0 }
+if ($script:IsInProcessHosted) { $themeCombo.Enabled = $false }
 $themePanel.Controls.Add($themeCombo, 0, 1)
 
 $versionBadge = New-Object Windows.Forms.Label
@@ -3190,7 +3276,7 @@ $mainTabs.Add_DrawItem({
 })
 
 $themeCombo.Add_SelectedIndexChanged({
-    if ($script:HostedThemeSyncInProgress) { return }
+    if ($script:IsInProcessHosted -or $script:HostedThemeSyncInProgress) { return }
     Apply-MaintenanceTheme
     Update-MaintenanceResponsiveLayout
     Update-MaintenanceInternalNavigation

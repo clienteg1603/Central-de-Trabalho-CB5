@@ -1,7 +1,8 @@
 param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
-    [string]$HostTheme = ""
+    [string]$HostTheme = "",
+    [AllowNull()][object]$HostThemeContext = $null
 )
 
 Set-StrictMode -Version Latest
@@ -18,6 +19,7 @@ $script:HostedControlExport = $null
 $script:EmbeddedParentHandle = [IntPtr]::new($EmbeddedParentHandle)
 $script:EmbeddedResizeTimer = $null
 $script:GeneratorHostedShell = $null
+$script:HostedThemeContext = $(if ($script:IsInProcessHosted) { $HostThemeContext } else { $null })
 $script:HostedCentralTheme = $(if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) { [string]$HostTheme } else { "" })
 $script:HostedThemeSyncInProgress = $false
 
@@ -81,7 +83,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.9"
+$script:AppVersion = "3.7.10"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1566,7 +1568,11 @@ function Get-RepairPreviewRows {
     return $rows.ToArray()
 }
 
-$script:SettingsDirectory = [IO.Path]::Combine([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData), "GeradorPlanilhasCB5TV5")
+$generatorLocalDataRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+if ($script:IsInProcessHosted -and $env:CENTRAL_THEME_RUNTIME_TEST -eq "1" -and -not [string]::IsNullOrWhiteSpace($env:CENTRAL_THEME_TEST_DATA_ROOT)) {
+    $generatorLocalDataRoot = [IO.Path]::GetFullPath($env:CENTRAL_THEME_TEST_DATA_ROOT)
+}
+$script:SettingsDirectory = [IO.Path]::Combine($generatorLocalDataRoot, "GeradorPlanilhasCB5TV5")
 $script:SettingsPath = [IO.Path]::Combine($script:SettingsDirectory, "preferencias.json")
 $script:BillingComponentStorePath = Initialize-BillingComponentStore -DataDirectory $script:SettingsDirectory
 $script:BillingComponentStore = Read-BillingComponentStore -Path $script:BillingComponentStorePath
@@ -1601,8 +1607,15 @@ function Save-AppSettings {
         if (-not [IO.Directory]::Exists($script:SettingsDirectory)) {
             [void][IO.Directory]::CreateDirectory($script:SettingsDirectory)
         }
+        $themeToPersist = [string]$themeCombo.SelectedItem
+        if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($script:StandaloneThemePreference)) {
+            $themeToPersist = $script:StandaloneThemePreference
+        }
+        else {
+            $script:StandaloneThemePreference = $themeToPersist
+        }
         [pscustomobject]@{
-            Theme = [string]$themeCombo.SelectedItem
+            Theme = $themeToPersist
             Product = [string]$productCombo.SelectedItem
             LastInputDirectory = [string]$script:LastInputDirectory
         } | ConvertTo-Json | Set-Content -LiteralPath $script:SettingsPath -Encoding UTF8
@@ -1750,15 +1763,46 @@ function Get-GeneratorThemeFromHost {
     }
 }
 
+function Get-GeneratorHostedCentralTheme {
+    $theme = ""
+    if ($script:IsInProcessHosted -and $null -ne $script:HostedThemeContext) {
+        try {
+            if ($script:HostedThemeContext.PSObject.Properties.Name -contains "Theme") {
+                $theme = [string]$script:HostedThemeContext.Theme
+            }
+        } catch {}
+    }
+    if ([string]::IsNullOrWhiteSpace($theme)) { $theme = [string]$script:HostedCentralTheme }
+    if (-not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $theme)) {
+        $theme = "Escuro profissional"
+    }
+    $script:HostedCentralTheme = $theme
+    return $theme
+}
+
+function Get-GeneratorEffectiveTheme {
+    if ($script:IsInProcessHosted) {
+        return (Get-GeneratorThemeFromHost (Get-GeneratorHostedCentralTheme))
+    }
+    $theme = [string]$themeCombo.SelectedItem
+    if (-not (@("Claro moderno", "Escuro grafite", "Técnico industrial", "Alto contraste") -contains $theme)) {
+        $theme = "Claro moderno"
+    }
+    return $theme
+}
+
 function Set-HostedGeneratorTheme {
     param([string]$CentralTheme)
     if (-not $script:IsInProcessHosted) { return $false }
     if ([string]::IsNullOrWhiteSpace($CentralTheme)) { $CentralTheme = "Escuro profissional" }
 
-    $mapped = Get-GeneratorThemeFromHost $CentralTheme
+    # Quando há contexto compartilhado, ele é a autoridade. O argumento existe
+    # apenas para compatibilidade com hosts antigos e nunca vence a Central atual.
+    if ($null -eq $script:HostedThemeContext) { $script:HostedCentralTheme = $CentralTheme }
+    $authoritativeTheme = Get-GeneratorHostedCentralTheme
+    $mapped = Get-GeneratorThemeFromHost $authoritativeTheme
     if (-not $themeCombo.Items.Contains($mapped)) { return $false }
 
-    $script:HostedCentralTheme = $CentralTheme
     $script:HostedThemeSyncInProgress = $true
     try {
         # Atualiza o seletor interno e aplica explicitamente. O evento interno é
@@ -1771,9 +1815,6 @@ function Set-HostedGeneratorTheme {
         Update-RootLayout
         $form.PerformLayout()
         $form.Invalidate($true)
-        $form.Update()
-        $form.Refresh()
-        [Windows.Forms.Application]::DoEvents()
 
         # Validação visual real: não basta o ComboBox ter mudado. A raiz do
         # Gerenciador precisa terminar com a cor da paleta correspondente.
@@ -1786,6 +1827,7 @@ function Set-HostedGeneratorTheme {
         if ([int]$masterCard.BackColor.ToArgb() -ne [int]$expectedPalette.Surface.ToArgb()) { return $false }
         if ([int]$infoBox.BackColor.ToArgb() -ne [int]$expectedPalette.Info.ToArgb()) { return $false }
         if ([int]$tabGenerate.BackColor.ToArgb() -ne [int]$expectedPalette.Background.ToArgb()) { return $false }
+        if ($null -ne $script:HostedThemeContext -and [string]$script:HostedThemeContext.Theme -ne $authoritativeTheme) { return $false }
 
         return $true
     }
@@ -1794,6 +1836,47 @@ function Set-HostedGeneratorTheme {
     }
     finally {
         $script:HostedThemeSyncInProgress = $false
+    }
+}
+
+function Get-HostedGeneratorThemeAudit {
+    if (-not $script:IsInProcessHosted) {
+        return [pscustomobject]@{ Valid = $false; AuthorityTheme = ""; InternalTheme = ""; Revision = -1; Checks = @() }
+    }
+    $authorityTheme = Get-GeneratorHostedCentralTheme
+    $internalTheme = Get-GeneratorThemeFromHost $authorityTheme
+    $product = [string]$productCombo.SelectedItem
+    if (@("CB5", "TV5") -notcontains $product) { $product = "CB5" }
+    $palette = Get-ThemePalette $internalTheme $product
+    $checks = @(
+        [pscustomobject]@{ Name = "fundo geral"; Actual = [int]$form.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "casca hospedada"; Actual = [int]$script:GeneratorHostedShell.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "cabeçalho"; Actual = [int]$headerPanel.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "abas"; Actual = [int]$tabs.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "área Gerar"; Actual = [int]$tabGenerate.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "card mestre"; Actual = [int]$masterCard.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "card resumo"; Actual = [int]$summaryCard.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "painel de resultado"; Actual = [int]$statusText.BackColor.ToArgb(); Expected = [int]$palette.Input.ToArgb() },
+        [pscustomobject]@{ Name = "caixa informativa"; Actual = [int]$infoBox.BackColor.ToArgb(); Expected = [int]$palette.Info.ToArgb() },
+        [pscustomobject]@{ Name = "input"; Actual = [int]$masterText.BackColor.ToArgb(); Expected = [int]$palette.Input.ToArgb() },
+        [pscustomobject]@{ Name = "botão de seleção"; Actual = [int]$masterButton.BackColor.ToArgb(); Expected = [int]$palette.Accent.ToArgb() },
+        [pscustomobject]@{ Name = "botão secundário"; Actual = [int]$previewMasterButton.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "botão principal"; Actual = [int]$generateButton.BackColor.ToArgb(); Expected = [int]$palette.Accent.ToArgb() },
+        [pscustomobject]@{ Name = "grid manutenções"; Actual = [int]$extraGrid.DefaultCellStyle.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "grid componentes"; Actual = [int]$componentGrid.DefaultCellStyle.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "grid união"; Actual = [int]$combineGrid.DefaultCellStyle.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() }
+    )
+    $invalid = @($checks | Where-Object { $_.Actual -ne $_.Expected })
+    $revision = if ($null -ne $script:HostedThemeContext -and $script:HostedThemeContext.PSObject.Properties.Name -contains "Revision") { [int]$script:HostedThemeContext.Revision } else { -1 }
+    return [pscustomobject]@{
+        Valid = ($invalid.Count -eq 0 -and [string]$themeCombo.SelectedItem -eq $internalTheme -and -not $themeCombo.Enabled)
+        AuthorityTheme = $authorityTheme
+        InternalTheme = [string]$themeCombo.SelectedItem
+        ExpectedInternalTheme = $internalTheme
+        Product = $product
+        Revision = $revision
+        Checks = $checks
+        InvalidChecks = $invalid
     }
 }
 
@@ -2379,20 +2462,18 @@ function Show-BillingComponentDialog {
 }
 
 function Apply-AppTheme {
-    $theme = [string]$themeCombo.SelectedItem
+    $theme = Get-GeneratorEffectiveTheme
 
-    if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($script:HostedCentralTheme)) {
-        $hostMappedTheme = Get-GeneratorThemeFromHost $script:HostedCentralTheme
-        if (-not $themeCombo.Items.Contains($hostMappedTheme)) {
-            throw "O tema hospedado '$hostMappedTheme' não existe no Gerenciador."
+    if ($script:IsInProcessHosted) {
+        if (-not $themeCombo.Items.Contains($theme)) {
+            throw "O tema hospedado '$theme' não existe no Gerenciador."
         }
-        if ([string]$themeCombo.SelectedItem -ne $hostMappedTheme) {
+        if ([string]$themeCombo.SelectedItem -ne $theme) {
             $oldSyncFlag = $script:HostedThemeSyncInProgress
             $script:HostedThemeSyncInProgress = $true
-            try { $themeCombo.SelectedItem = $hostMappedTheme }
+            try { $themeCombo.SelectedItem = $theme }
             finally { $script:HostedThemeSyncInProgress = $oldSyncFlag }
         }
-        $theme = $hostMappedTheme
     }
 
     if ([string]::IsNullOrWhiteSpace($theme)) { $theme = "Claro moderno" }
@@ -2403,8 +2484,14 @@ function Apply-AppTheme {
     $baseFontSize = if ($theme -eq "Alto contraste") { if ($script:IsInProcessHosted) { 10.0 } else { 10.75 } } else { if ($script:IsInProcessHosted) { 9.25 } else { 10 } }
     $form.Font = New-Object Drawing.Font("Segoe UI", $baseFontSize)
     $form.BackColor = $palette.Background
+    if ($null -ne $script:GeneratorHostedShell) {
+        $script:GeneratorHostedShell.BackColor = $palette.Background
+        $script:GeneratorHostedShell.ForeColor = $palette.Text
+    }
     $headerPanel.BackColor = $palette.Surface
     $footerPanel.BackColor = $palette.Surface
+    $tabs.BackColor = $palette.Background
+    $tabs.ForeColor = $palette.Text
     $accentStrip.BackColor = $palette.Accent
     $title.ForeColor = $palette.Text
     $subtitle.ForeColor = $palette.Muted
@@ -2568,8 +2655,9 @@ function Show-AppSplash {
 }
 
 $script:AppSettings = Get-AppSettings
-if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) {
-    $script:AppSettings.Theme = Get-GeneratorThemeFromHost $HostTheme
+$script:StandaloneThemePreference = [string]$script:AppSettings.Theme
+if ($script:IsInProcessHosted) {
+    $script:AppSettings.Theme = Get-GeneratorThemeFromHost (Get-GeneratorHostedCentralTheme)
 }
 $script:LastInputDirectory = [string]$script:AppSettings.LastInputDirectory
 $initialPalette = Get-ThemePalette $script:AppSettings.Theme $script:AppSettings.Product
@@ -3553,6 +3641,7 @@ if ($script:IsInProcessHosted) {
     $subtitle.Visible = $false
     $themeLabel.Visible = $false
     $themeCombo.Visible = $false
+    $themeCombo.Enabled = $false
 
     $productLabel.Anchor = "Top,Left"
     $productLabel.Location = New-Object Drawing.Point(16, 12)
@@ -4468,7 +4557,7 @@ $previewMasterButton.Add_Click({
         $updateMasterButton.Enabled = $true
         $generateButton.Enabled = $true
         $productCombo.Enabled = $true
-        $themeCombo.Enabled = $true
+        $themeCombo.Enabled = (-not $script:IsInProcessHosted)
         $tabs.Enabled = $true
     }
 })
@@ -4587,7 +4676,7 @@ $updateMasterButton.Add_Click({
         $updateMasterButton.Enabled = $true
         $generateButton.Enabled = $true
         $productCombo.Enabled = $true
-        $themeCombo.Enabled = $true
+        $themeCombo.Enabled = (-not $script:IsInProcessHosted)
         $tabs.Enabled = $true
     }
 })
@@ -4825,7 +4914,7 @@ $generateButton.Add_Click({
         $form.UseWaitCursor = $false
         $generateButton.Enabled = $true
         $productCombo.Enabled = $true
-        $themeCombo.Enabled = $true
+        $themeCombo.Enabled = (-not $script:IsInProcessHosted)
         $tabs.Enabled = $true
     }
 })
@@ -5004,7 +5093,7 @@ $previewCombineButton.Add_Click({
         $previewCombineButton.Enabled = $true
         $combineGenerateButton.Enabled = $true
         $productCombo.Enabled = $true
-        $themeCombo.Enabled = $true
+        $themeCombo.Enabled = (-not $script:IsInProcessHosted)
         $tabs.Enabled = $true
     }
 })
@@ -5373,7 +5462,7 @@ $combineGenerateButton.Add_Click({
         $form.UseWaitCursor = $false
         $combineGenerateButton.Enabled = $true
         $productCombo.Enabled = $true
-        $themeCombo.Enabled = $true
+        $themeCombo.Enabled = (-not $script:IsInProcessHosted)
         $tabs.Enabled = $true
     }
 })
@@ -5381,7 +5470,7 @@ $combineGenerateButton.Add_Click({
 if ($script:IsInProcessHosted) {
     $form.MinimumSize = [Drawing.Size]::new(1, 1)
     $form.Dock = [Windows.Forms.DockStyle]::Fill
-    $form.Add_HandleCreated({ try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })
+    $form.Add_HandleCreated({ try { Apply-AppTheme; Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })
     if ($null -ne $script:GeneratorHostedShell) {
         $script:GeneratorHostedShell.Add_SizeChanged({ try { Update-GeneratorResponsiveLayout; Update-RootLayout } catch {} })
     }

@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 8
     env:
       CENTRAL_THEME_RUNTIME_TEST: '1'
+      CENTRAL_THEME_TEST_DATA_ROOT: ${{ runner.temp }}\central-theme-source-data
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,7 +54,11 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          & '.\src\generated\Central de Trabalho.ps1' -ThemeRuntimeSelfTest
+          $report = Join-Path $env:RUNNER_TEMP 'theme-source-report.json'
+          $artifacts = Join-Path $env:RUNNER_TEMP 'theme-source-screenshots'
+          & '.\src\generated\Central de Trabalho.ps1' -ThemeRuntimeSelfTest -ThemeRuntimeReportPath $report -ThemeRuntimeArtifactsPath $artifacts
+          $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+          if (-not [bool]$result.Success) { throw "Autoteste integrado reportou falha: $($result.Failure)" }
 
       - name: Hosted module theme runtime test
         timeout-minutes: 3
@@ -61,3 +66,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           & '.\src\ci\test_hosted_theme_runtime.ps1' -GeneratedRoot '.\src\generated'
+
+      - name: Upload source-runtime diagnostic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-theme-source-runtime-evidence
+          path: |
+            ${{ runner.temp }}/theme-source-report.json
+            ${{ runner.temp }}/theme-source-screenshots
+          if-no-files-found: error
+          retention-days: 7

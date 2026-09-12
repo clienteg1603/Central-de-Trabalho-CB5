@@ -1,7 +1,8 @@
 param(
     [Int64]$EmbeddedParentHandle = 0,
     [switch]$HostedInCentral,
-    [string]$HostTheme = ""
+    [string]$HostTheme = "",
+    [AllowNull()][object]$HostThemeContext = $null
 )
 
 Set-StrictMode -Version Latest
@@ -14,8 +15,10 @@ if (-not $HostedInCentral) { [System.Windows.Forms.Application]::SetCompatibleTe
 $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
+$script:HostedThemeContext = $(if ($script:IsInProcessHosted) { $HostThemeContext } else { $null })
+$script:HostedCentralTheme = $(if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) { [string]$HostTheme } else { "" })
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.6.8"
+$script:ModuleVersion = "2.6.9"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -140,6 +143,23 @@ function Get-NFEntradaPalette {
     }
 }
 
+function Get-NFEntradaHostedCentralTheme {
+    $theme = ""
+    if ($script:IsInProcessHosted -and $null -ne $script:HostedThemeContext) {
+        try {
+            if ($script:HostedThemeContext.PSObject.Properties.Name -contains "Theme") {
+                $theme = [string]$script:HostedThemeContext.Theme
+            }
+        } catch {}
+    }
+    if ([string]::IsNullOrWhiteSpace($theme)) { $theme = [string]$script:HostedCentralTheme }
+    if (-not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $theme)) {
+        $theme = "Escuro profissional"
+    }
+    $script:HostedCentralTheme = $theme
+    return $theme
+}
+
 function Set-NFStatus {
     param(
         [string]$Message,
@@ -157,6 +177,7 @@ function Set-NFStatus {
 
 function Set-NFButtonStyle {
     param([Windows.Forms.Button]$Button, [ValidateSet("Primary", "Secondary", "Danger")][string]$Kind = "Secondary")
+    $Button.Tag = "Theme.Button.$Kind"
     $Button.FlatStyle = [Windows.Forms.FlatStyle]::Flat
     $Button.Cursor = [Windows.Forms.Cursors]::Hand
     $Button.Font = [Drawing.Font]::new("Segoe UI Semibold", 9)
@@ -1298,6 +1319,7 @@ function New-NFSummaryCard {
     $panel.Dock = [Windows.Forms.DockStyle]::Fill
     $panel.Margin = [Windows.Forms.Padding]::new(6)
     $panel.BackColor = $script:CurrentPalette.Card
+    $panel.Tag = "Theme.Card"
     $panel.BorderStyle = [Windows.Forms.BorderStyle]::FixedSingle
     $layout = New-Object Windows.Forms.TableLayoutPanel
     $layout.Dock = [Windows.Forms.DockStyle]::Fill
@@ -1327,6 +1349,7 @@ function New-NFSummaryCard {
     $hint.TextAlign = [Drawing.ContentAlignment]::TopLeft
     $hint.Font = [Drawing.Font]::new("Segoe UI", 7.9)
     $hint.ForeColor = $script:CurrentPalette.Muted
+    $hint.Tag = "Theme.Muted"
     $layout.Controls.Add($hint, 0, 2)
     $ValueLabel.Value = $value
     return $panel
@@ -1436,7 +1459,8 @@ function New-ProductTabContent {
     $CountRef.Value = $countLabel
 }
 
-$script:CurrentPalette = Get-NFEntradaPalette $(if ([string]::IsNullOrWhiteSpace($HostTheme)) { "Escuro profissional" } else { $HostTheme })
+$initialHostTheme = if ($script:IsInProcessHosted) { Get-NFEntradaHostedCentralTheme } elseif ([string]::IsNullOrWhiteSpace($HostTheme)) { "Escuro profissional" } else { $HostTheme }
+$script:CurrentPalette = Get-NFEntradaPalette $initialHostTheme
 
 if ($script:IsInProcessHosted) {
     $form = New-Object Windows.Forms.UserControl
@@ -2021,9 +2045,14 @@ Deseja selecionar agora?",
     if ($answer -eq [Windows.Forms.DialogResult]::Yes) { [void](Import-NFSourceFromUI) }
 }
 
-function Set-HostedNFEntradaTheme {
+function Set-HostedNFEntradaThemeLegacy {
     param([string]$Theme)
     if ([string]::IsNullOrWhiteSpace($Theme)) { $Theme = "Escuro profissional" }
+
+    if ($script:IsInProcessHosted) {
+        if ($null -eq $script:HostedThemeContext) { $script:HostedCentralTheme = $Theme }
+        $Theme = Get-NFEntradaHostedCentralTheme
+    }
 
     $oldPalette = $script:CurrentPalette
     $newPalette = Get-NFEntradaPalette $Theme
@@ -2168,6 +2197,7 @@ function Set-HostedNFEntradaTheme {
     $header.BackColor = $newPalette.Background
     $heading.BackColor = $newPalette.Background
     $cards.BackColor = $newPalette.Background
+    $mainTabs.BackColor = $newPalette.Background
     $mainTabs.ForeColor = $newPalette.Text
 
     foreach ($tab in @($computerTab,$keyboardTab,$movementTab,$historyTab,$securityTab,$summaryTab)) {
@@ -2217,9 +2247,6 @@ function Set-HostedNFEntradaTheme {
     try {
         $form.PerformLayout()
         $form.Invalidate($true)
-        $form.Update()
-        $form.Refresh()
-        [Windows.Forms.Application]::DoEvents()
     }
     catch { throw "Falha ao redesenhar o Controle de NF: $($_.Exception.Message)" }
 
@@ -2229,7 +2256,198 @@ function Set-HostedNFEntradaTheme {
     if ([int]$form.ForeColor.ToArgb() -ne [int]$newPalette.Text.ToArgb()) {
         throw "O texto raiz do Controle de NF não recebeu o tema $Theme."
     }
+    if ($null -ne $script:HostedThemeContext -and [string]$script:HostedThemeContext.Theme -ne $Theme) {
+        throw "O Controle de NF perdeu a autoridade de aparência da Central."
+    }
     return $true
+}
+
+function Apply-NFEntradaThemeControl {
+    param([Windows.Forms.Control]$Control)
+    if ($null -eq $Control) { return }
+    try { if ($Control.IsDisposed -or $Control.Disposing) { return } } catch { return }
+
+    $palette = $script:CurrentPalette
+    if ($Control -is [Windows.Forms.DataGridView]) {
+        $Control.BackgroundColor = $palette.Surface
+        $Control.GridColor = $palette.Border
+        $Control.EnableHeadersVisualStyles = $false
+        $Control.ColumnHeadersDefaultCellStyle.BackColor = $palette.Card
+        $Control.ColumnHeadersDefaultCellStyle.ForeColor = $palette.Text
+        $Control.DefaultCellStyle.BackColor = $palette.Surface
+        $Control.DefaultCellStyle.ForeColor = $palette.Text
+        $Control.DefaultCellStyle.SelectionBackColor = $palette.AccentStrong
+        $Control.DefaultCellStyle.SelectionForeColor = $palette.AccentText
+        $Control.AlternatingRowsDefaultCellStyle.BackColor = $palette.Surface
+        $Control.AlternatingRowsDefaultCellStyle.ForeColor = $palette.Text
+    }
+    elseif ($Control -is [Windows.Forms.TextBox] -or
+            $Control -is [Windows.Forms.ComboBox] -or
+            $Control -is [Windows.Forms.NumericUpDown] -or
+            $Control -is [Windows.Forms.DateTimePicker]) {
+        $Control.BackColor = $palette.Input
+        $Control.ForeColor = $palette.Text
+    }
+    elseif ($Control -is [Windows.Forms.Button]) {
+        $role = [string]$Control.Tag
+        if ($role -eq "Theme.Button.Primary") { Set-NFButtonStyle $Control "Primary" }
+        elseif ($role -eq "Theme.Button.Danger") { Set-NFButtonStyle $Control "Danger" }
+        else { Set-NFButtonStyle $Control "Secondary" }
+    }
+    elseif ($Control -is [Windows.Forms.TabPage]) {
+        $Control.BackColor = $palette.Background
+        $Control.ForeColor = $palette.Text
+    }
+    elseif ($Control -is [Windows.Forms.GroupBox]) {
+        $Control.BackColor = $palette.Background
+        $Control.ForeColor = $palette.Text
+    }
+    elseif ($Control -is [Windows.Forms.Panel] -or
+            $Control -is [Windows.Forms.TableLayoutPanel] -or
+            $Control -is [Windows.Forms.FlowLayoutPanel]) {
+        $role = [string]$Control.Tag
+        if ($role -eq "Theme.Card") { $Control.BackColor = $palette.Card }
+        elseif ($role -eq "Theme.Surface") { $Control.BackColor = $palette.Surface }
+        elseif ($null -ne $Control.Parent) { $Control.BackColor = $Control.Parent.BackColor }
+        else { $Control.BackColor = $palette.Background }
+        $Control.ForeColor = $palette.Text
+    }
+    elseif ($Control -is [Windows.Forms.Label]) {
+        $Control.ForeColor = if ([string]$Control.Tag -eq "Theme.Muted") { $palette.Muted } else { $palette.Text }
+    }
+    else {
+        try { $Control.ForeColor = $palette.Text } catch {}
+    }
+
+    foreach ($child in @($Control.Controls)) { Apply-NFEntradaThemeControl $child }
+}
+
+function Set-NFEntradaStatusRowTheme {
+    param(
+        [Windows.Forms.DataGridView]$Grid,
+        [string]$StatusColumn
+    )
+    if ($null -eq $Grid -or -not $Grid.Columns.Contains($StatusColumn)) { return }
+    foreach ($row in @($Grid.Rows)) {
+        if ($row.IsNewRow) { continue }
+        $status = [string]$row.Cells[$StatusColumn].Value
+        if ($StatusColumn -eq "MovementStatus") {
+            if ($status -eq "Estornada") {
+                $row.DefaultCellStyle.BackColor = $script:CurrentPalette.DangerBack
+                $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Danger
+            }
+            else {
+                $row.DefaultCellStyle.BackColor = $script:CurrentPalette.Surface
+                $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Text
+            }
+        }
+        else {
+            switch ($status) {
+                "Revisar" { $row.DefaultCellStyle.BackColor = $script:CurrentPalette.DangerBack; $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Danger }
+                "Encerrada" { $row.DefaultCellStyle.BackColor = $script:CurrentPalette.SuccessBack; $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Success }
+                default { $row.DefaultCellStyle.BackColor = $script:CurrentPalette.WarningBack; $row.DefaultCellStyle.ForeColor = $script:CurrentPalette.Warning }
+            }
+        }
+    }
+}
+
+function Set-HostedNFEntradaTheme {
+    param([string]$Theme)
+    if ([string]::IsNullOrWhiteSpace($Theme)) { $Theme = "Escuro profissional" }
+    if ($script:IsInProcessHosted) {
+        if ($null -eq $script:HostedThemeContext) { $script:HostedCentralTheme = $Theme }
+        $Theme = Get-NFEntradaHostedCentralTheme
+    }
+
+    $palette = Get-NFEntradaPalette $Theme
+    if ($null -eq $palette -or $null -eq $form -or $form.IsDisposed) { return $false }
+    $script:CurrentPalette = $palette
+
+    # A árvore é tematizada pelo papel semântico do controle, nunca pela cor
+    # anterior. Isso é essencial ao sair de Claro/Alto contraste, cujas cores
+    # coincidentes tornavam impossível inferir se um branco/preto era card,
+    # input, superfície ou aviso.
+    $form.BackColor = $palette.Background
+    $form.ForeColor = $palette.Text
+    Apply-NFEntradaThemeControl $form
+
+    foreach ($control in @($root,$header,$heading,$cards,$mainTabs,$summaryLayout,$movementLayout,$movementFilters,$movementFooter,$historyLayout,$historyFilters,$historyButtons,$securityLayout,$securityActions)) {
+        if ($null -ne $control) { $control.BackColor = $palette.Background; $control.ForeColor = $palette.Text }
+    }
+    foreach ($control in @($footerHost,$actionPanel)) {
+        if ($null -ne $control) { $control.Tag = "Theme.Surface"; $control.BackColor = $palette.Surface; $control.ForeColor = $palette.Text }
+    }
+    foreach ($control in @($lastPanel,$summaryActionPanel)) {
+        if ($null -ne $control) { $control.Tag = "Theme.Card"; $control.BackColor = $palette.Card; $control.ForeColor = $palette.Text }
+    }
+    foreach ($tab in @($computerTab,$keyboardTab,$movementTab,$historyTab,$securityTab,$summaryTab)) {
+        if ($null -ne $tab) { $tab.BackColor = $palette.Background; $tab.ForeColor = $palette.Text }
+    }
+    foreach ($group in @($productGroup,$conferenceGroup,$codeGroup,$activityGroup)) {
+        if ($null -ne $group) { $group.BackColor = $palette.Background; $group.ForeColor = $palette.Text }
+    }
+
+    foreach ($label in @($subtitle,$lastTitle,$movementSearchLabel,$movementProductLabel,$movementPeriodLabel,$movementCountLabel,$historySearchLabel,$historyTypeLabel,$historyPeriodLabel,$historyCountLabel,$securityInfo,$backupCountLabel,$footerStatus)) {
+        if ($null -ne $label) { $label.Tag = "Theme.Muted"; $label.ForeColor = $palette.Muted }
+    }
+    $title.ForeColor = $palette.Text
+    $lastMovementValue.ForeColor = $palette.Text
+
+    # Reaplica papéis explícitos dos botões, inclusive depois de operações que
+    # alteram Enabled/Visible, sem tocar em nenhuma ação operacional.
+    foreach ($button in @($importButton,$editButton,$outputButton,$clearFiltersButton,$exportListButton,$movementExportButton,$movementOpenButton,$historyDetailsButton,$historyExportButton,$integrityButton,$manualBackupButton,$restoreBackupButton,$reviewIssuesButton)) {
+        if ($null -ne $button) { Set-NFButtonStyle $button "Secondary" }
+    }
+    foreach ($button in @($exportButton,$newButton)) {
+        if ($null -ne $button) { Set-NFButtonStyle $button "Primary" }
+    }
+    foreach ($button in @($deleteButton,$movementReverseButton)) {
+        if ($null -ne $button) { Set-NFButtonStyle $button "Danger" }
+    }
+
+    Set-NFEntradaStatusRowTheme $computerGrid "Status"
+    Set-NFEntradaStatusRowTheme $keyboardGrid "Status"
+    Set-NFEntradaStatusRowTheme $movementGrid "MovementStatus"
+    $form.PerformLayout()
+    $form.Invalidate($true)
+
+    if ([int]$form.BackColor.ToArgb() -ne [int]$palette.Background.ToArgb()) { return $false }
+    if ([int]$computerGrid.DefaultCellStyle.BackColor.ToArgb() -ne [int]$palette.Surface.ToArgb()) { return $false }
+    if ([int]$newButton.BackColor.ToArgb() -ne [int]$palette.AccentStrong.ToArgb()) { return $false }
+    if ($script:IsInProcessHosted -and $null -ne $script:HostedThemeContext -and [string]$script:HostedThemeContext.Theme -ne $Theme) { return $false }
+    return $true
+}
+
+function Get-HostedNFEntradaThemeAudit {
+    if (-not $script:IsInProcessHosted) {
+        return [pscustomobject]@{ Valid = $false; AuthorityTheme = ""; InternalTheme = ""; Revision = -1; Checks = @() }
+    }
+    $authorityTheme = Get-NFEntradaHostedCentralTheme
+    $palette = Get-NFEntradaPalette $authorityTheme
+    $checks = @(
+        [pscustomobject]@{ Name = "fundo geral"; Actual = [int]$form.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "layout raiz"; Actual = [int]$root.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "cabeçalho"; Actual = [int]$header.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "abas"; Actual = [int]$mainTabs.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "aba computador"; Actual = [int]$computerTab.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "card de produto"; Actual = [int]$productGroup.BackColor.ToArgb(); Expected = [int]$palette.Background.ToArgb() },
+        [pscustomobject]@{ Name = "painel de ações"; Actual = [int]$actionPanel.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "input"; Actual = [int]$computerFilter.BackColor.ToArgb(); Expected = [int]$palette.Input.ToArgb() },
+        [pscustomobject]@{ Name = "botão"; Actual = [int]$newButton.BackColor.ToArgb(); Expected = [int]$palette.AccentStrong.ToArgb() },
+        [pscustomobject]@{ Name = "grid"; Actual = [int]$computerGrid.DefaultCellStyle.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() },
+        [pscustomobject]@{ Name = "rodapé"; Actual = [int]$footerHost.BackColor.ToArgb(); Expected = [int]$palette.Surface.ToArgb() }
+    )
+    $invalid = @($checks | Where-Object { $_.Actual -ne $_.Expected })
+    $revision = if ($null -ne $script:HostedThemeContext -and $script:HostedThemeContext.PSObject.Properties.Name -contains "Revision") { [int]$script:HostedThemeContext.Revision } else { -1 }
+    return [pscustomobject]@{
+        Valid = ($invalid.Count -eq 0)
+        AuthorityTheme = $authorityTheme
+        InternalTheme = $authorityTheme
+        ExpectedInternalTheme = $authorityTheme
+        Revision = $revision
+        Checks = $checks
+        InvalidChecks = $invalid
+    }
 }
 
 function Invoke-NFThemeBoundaryMarker { return }
@@ -2252,4 +2470,3 @@ else {
 # CRIAR BACKUP AGORA -> NOVO BACKUP
 # RESTAURAR SELECIONADO -> RESTAURAR
 # VER PENDÊNCIAS -> PENDÊNCIAS
-

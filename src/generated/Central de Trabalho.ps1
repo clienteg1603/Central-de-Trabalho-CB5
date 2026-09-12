@@ -1,5 +1,7 @@
 param(
-    [switch]$ThemeRuntimeSelfTest
+    [switch]$ThemeRuntimeSelfTest,
+    [string]$ThemeRuntimeReportPath = "",
+    [string]$ThemeRuntimeArtifactsPath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -37,10 +39,10 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.32"
+$script:AppVersion = "0.21.33"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.7.9"
-$script:MaintenanceVersion = "0.6.7"
+$script:GeneratorVersion = "3.7.10"
+$script:MaintenanceVersion = "0.6.8"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -56,7 +58,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.6.8"
+$script:NFEntradaVersion = "2.6.9"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -69,10 +71,11 @@ $script:UpdaterExecutable = [IO.Path]::Combine($script:UpdaterDirectory, "Centra
 $script:UpdaterScript = [IO.Path]::Combine($script:UpdaterDirectory, "Central de Trabalho Updater.ps1")
 $script:UpdaterCore = [IO.Path]::Combine($script:UpdaterDirectory, "Update.Core.ps1")
 $script:UpdaterChannels = [IO.Path]::Combine($script:UpdaterDirectory, "CANAIS.json")
-$script:SettingsDirectory = [IO.Path]::Combine(
-    [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData),
-    "CentralDeTrabalho"
-)
+$centralLocalDataRoot = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+if ($ThemeRuntimeSelfTest -and $env:CENTRAL_THEME_RUNTIME_TEST -eq "1" -and -not [string]::IsNullOrWhiteSpace($env:CENTRAL_THEME_TEST_DATA_ROOT)) {
+    $centralLocalDataRoot = [IO.Path]::GetFullPath($env:CENTRAL_THEME_TEST_DATA_ROOT)
+}
+$script:SettingsDirectory = [IO.Path]::Combine($centralLocalDataRoot, "CentralDeTrabalho")
 $script:SettingsPath = [IO.Path]::Combine($script:SettingsDirectory, "preferencias.json")
 
 # Desde a linha 0.17.x a Central possui um host Windows gráfico próprio. O VBS antigo
@@ -131,6 +134,15 @@ $script:LastAvailabilitySignature = ""
 $script:LastThemeSyncError = ""
 $script:CentralThemeCombo = $null
 $script:CentralThemeChanging = $false
+$script:CentralTheme = "Escuro profissional"
+$script:AppliedCentralTheme = "Escuro profissional"
+$script:PendingCentralTheme = ""
+$script:CentralThemeDispatchScheduled = $false
+$script:ThemeTransactionFailureCount = 0
+$script:HostedThemeContext = [pscustomobject]@{
+    Theme = "Escuro profissional"
+    Revision = 0
+}
 
 $script:SingleInstanceMutex = $null
 $script:OwnsSingleInstanceMutex = $false
@@ -389,43 +401,63 @@ function Sync-HostedModuleTheme {
 
     $theme = (Get-CentralSelectedTheme)
     if ([string]::IsNullOrWhiteSpace($theme)) { $theme = "Escuro profissional" }
+    if ($null -eq $script:HostedThemeContext -or [string]$script:HostedThemeContext.Theme -ne $theme) {
+        [void](Set-CentralThemeAuthority $theme)
+    }
     $moduleName = [string]$script:EmbeddedModule
 
     try {
         $handled = & $script:HostedModule {
-            param($targetModule, $hostTheme)
+            param($targetModule, $hostTheme, $hostRevision)
 
+            $audit = $null
             switch ($targetModule) {
                 "Maintenance" {
-                    $cmd = Get-Command -Name Set-HostedMaintenanceTheme -CommandType Function -ErrorAction SilentlyContinue
-                    if ($null -eq $cmd) { throw "A função de aparência da Manutenção não foi encontrada." }
+                    if ($null -eq (Get-Command -Name Set-HostedMaintenanceTheme -CommandType Function -ErrorAction SilentlyContinue)) {
+                        throw "A função de aparência da Manutenção não foi encontrada."
+                    }
                     $resultItems = @(Set-HostedMaintenanceTheme $hostTheme)
-                    if ($resultItems.Count -eq 0) { throw "Manutenção não retornou confirmação de aparência." }
-                    $resultOk = [bool]$resultItems[$resultItems.Count - 1]
-                    if (-not $resultOk) { throw "A Manutenção recusou a aparência selecionada." }
-                    return $true
+                    if ($resultItems.Count -eq 0 -or -not [bool]$resultItems[$resultItems.Count - 1]) {
+                        throw "A Manutenção recusou a aparência selecionada."
+                    }
+                    $audit = Get-HostedMaintenanceThemeAudit
                 }
                 "Generator" {
-                    $cmd = Get-Command -Name Set-HostedGeneratorTheme -CommandType Function -ErrorAction SilentlyContinue
-                    if ($null -eq $cmd) { throw "A função de aparência do Gerenciador não foi encontrada." }
+                    if ($null -eq (Get-Command -Name Set-HostedGeneratorTheme -CommandType Function -ErrorAction SilentlyContinue)) {
+                        throw "A função de aparência do Gerenciador não foi encontrada."
+                    }
                     $resultItems = @(Set-HostedGeneratorTheme $hostTheme)
-                    if ($resultItems.Count -eq 0) { throw "Gerenciador não retornou confirmação de aparência." }
-                    $resultOk = [bool]$resultItems[$resultItems.Count - 1]
-                    if (-not $resultOk) { throw "O Gerenciador recusou a aparência selecionada." }
-                    return $true
+                    if ($resultItems.Count -eq 0 -or -not [bool]$resultItems[$resultItems.Count - 1]) {
+                        throw "O Gerenciador recusou a aparência selecionada."
+                    }
+                    $audit = Get-HostedGeneratorThemeAudit
                 }
                 "NFEntrada" {
-                    $cmd = Get-Command -Name Set-HostedNFEntradaTheme -CommandType Function -ErrorAction SilentlyContinue
-                    if ($null -eq $cmd) { throw "A função de aparência do Controle de NF não foi encontrada." }
+                    if ($null -eq (Get-Command -Name Set-HostedNFEntradaTheme -CommandType Function -ErrorAction SilentlyContinue)) {
+                        throw "A função de aparência do Controle de NF não foi encontrada."
+                    }
                     $resultItems = @(Set-HostedNFEntradaTheme $hostTheme)
-                    if ($resultItems.Count -eq 0) { throw "Controle de NF não retornou confirmação de aparência." }
-                    $resultOk = [bool]$resultItems[$resultItems.Count - 1]
-                    if (-not $resultOk) { throw "O Controle de NF não conseguiu aplicar a aparência selecionada." }
-                    return $true
+                    if ($resultItems.Count -eq 0 -or -not [bool]$resultItems[$resultItems.Count - 1]) {
+                        throw "O Controle de NF não conseguiu aplicar a aparência selecionada."
+                    }
+                    $audit = Get-HostedNFEntradaThemeAudit
                 }
                 default { throw "Módulo integrado desconhecido: $targetModule" }
             }
-        } $moduleName $theme
+
+            if ($null -eq $audit) { throw "$targetModule não retornou auditoria visual." }
+            if (-not [bool]$audit.Valid) {
+                $invalidNames = @($audit.InvalidChecks | ForEach-Object { [string]$_.Name }) -join ", "
+                throw "$targetModule terminou com controles fora da paleta: $invalidNames"
+            }
+            if ([string]$audit.AuthorityTheme -ne $hostTheme) {
+                throw "$targetModule não reconheceu a autoridade da Central: '$($audit.AuthorityTheme)' != '$hostTheme'."
+            }
+            if ([int]$audit.Revision -ne [int]$hostRevision) {
+                throw "$targetModule está na revisão de aparência $($audit.Revision), mas a Central está na revisão $hostRevision."
+            }
+            return $true
+        } $moduleName $theme ([int]$script:HostedThemeContext.Revision)
 
         if (-not [bool]$handled) {
             $script:LastThemeSyncError = "O módulo não confirmou a aplicação da aparência."
@@ -435,8 +467,6 @@ function Sync-HostedModuleTheme {
         try {
             $script:HostedForm.PerformLayout()
             $script:HostedForm.Invalidate($true)
-            $script:HostedForm.Update()
-            $script:HostedForm.Refresh()
         } catch {}
         return $true
     }
@@ -486,6 +516,9 @@ function Start-EmbeddedModule {
     if (-not $moduleAvailable) {
         $missingText = Format-MissingCentralFiles $moduleMissing
         Set-StatusMessage "Não foi possível abrir: instalação do módulo incompleta." "Error"
+        if ($ThemeRuntimeSelfTest) {
+            throw "A instalação de $moduleName está incompleta no pacote: $missingText"
+        }
         [Windows.Forms.MessageBox]::Show(
             "A instalação de $moduleName está incompleta.`r`n`r`nArquivos necessários que não foram encontrados:`r`n$missingText`r`n`r`nUse Atualizações para reparar ou reinstalar a versão atual.",
             "Central de Trabalho",
@@ -523,9 +556,9 @@ function Start-EmbeddedModule {
         # continuam compatíveis exportando um Form filho.
         $dynamicName = "CentralHosted_{0}_{1}" -f $Module, ([Guid]::NewGuid().ToString("N"))
         $hostTheme = (Get-CentralSelectedTheme)
-        $moduleInfo = New-Module -Name $dynamicName -ArgumentList @($moduleScript, $hostTheme) -ScriptBlock {
-            param($scriptPath, $hostTheme)
-            . $scriptPath -HostedInCentral -HostTheme $hostTheme
+        $moduleInfo = New-Module -Name $dynamicName -ArgumentList @($moduleScript, $hostTheme, $script:HostedThemeContext) -ScriptBlock {
+            param($scriptPath, $hostTheme, $hostThemeContext)
+            . $scriptPath -HostedInCentral -HostTheme $hostTheme -HostThemeContext $hostThemeContext
         }
         if ($null -eq $moduleInfo) { throw "Não foi possível criar o escopo isolado do módulo." }
 
@@ -582,14 +615,24 @@ function Start-EmbeddedModule {
         $hostedForm.BringToFront()
         $embeddedLoading.Visible = $false
 
+        # O módulo só é considerado aberto depois de confirmar o mesmo contexto
+        # de aparência usado pela Central. O objeto de contexto é compartilhado:
+        # módulos hospedados não mantêm uma preferência concorrente.
+        if (-not [bool](Sync-HostedModuleTheme)) {
+            $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
+            throw "O módulo abriu, mas não confirmou a aparência da Central: $detail"
+        }
+
         Set-StatusMessage "$moduleName integrado à Central." "Success"
     }
     catch {
+        $moduleFailure = $_.Exception.Message
         try { Close-EmbeddedModule -Force } catch {}
         Show-Dashboard -SkipClose
         Set-StatusMessage "Falha ao integrar $moduleName à Central." "Error"
+        if ($ThemeRuntimeSelfTest) { throw "Não foi possível integrar $moduleName à Central: $moduleFailure" }
         [Windows.Forms.MessageBox]::Show(
-            "Não foi possível integrar $moduleName à Central.`r`n`r`n$($_.Exception.Message)",
+            "Não foi possível integrar $moduleName à Central.`r`n`r`n$moduleFailure",
             "Central de Trabalho",
             [Windows.Forms.MessageBoxButtons]::OK,
             [Windows.Forms.MessageBoxIcon]::Error
@@ -670,17 +713,43 @@ function Get-SidebarColor {
     }
 }
 
-function Get-CentralSelectedTheme {
-    $theme = ""
-    try {
-        if ($null -ne $script:CentralThemeCombo -and -not $script:CentralThemeCombo.IsDisposed) {
-            $theme = [string]$script:CentralThemeCombo.SelectedItem
-        }
-    } catch {}
-    if (-not (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $theme)) {
-        $theme = "Escuro profissional"
+function Resolve-CentralThemeName {
+    param([string]$Theme)
+    if (@("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste") -contains $Theme) {
+        return $Theme
     }
-    return $theme
+    return "Escuro profissional"
+}
+
+function Set-CentralThemeAuthority {
+    param([string]$Theme)
+
+    $resolved = Resolve-CentralThemeName $Theme
+    $changed = -not [string]::Equals($script:CentralTheme, $resolved, [StringComparison]::Ordinal)
+    $script:CentralTheme = $resolved
+    if ($null -eq $script:HostedThemeContext) {
+        $script:HostedThemeContext = [pscustomobject]@{ Theme = $resolved; Revision = 0 }
+    }
+    if ($changed -or -not [string]::Equals([string]$script:HostedThemeContext.Theme, $resolved, [StringComparison]::Ordinal)) {
+        $script:HostedThemeContext.Theme = $resolved
+        $script:HostedThemeContext.Revision = [int]$script:HostedThemeContext.Revision + 1
+    }
+    return $resolved
+}
+
+function Get-CentralSelectedTheme {
+    return (Resolve-CentralThemeName ([string]$script:CentralTheme))
+}
+
+function Set-CentralThemeComboSelection {
+    param([string]$Theme)
+    $resolved = Resolve-CentralThemeName $Theme
+    if ($null -eq $script:CentralThemeCombo -or $script:CentralThemeCombo.IsDisposed) { return }
+    if ([string]$script:CentralThemeCombo.SelectedItem -eq $resolved) { return }
+    $oldChanging = $script:CentralThemeChanging
+    $script:CentralThemeChanging = $true
+    try { $script:CentralThemeCombo.SelectedItem = $resolved }
+    finally { $script:CentralThemeChanging = $oldChanging }
 }
 
 function Get-ModuleAccent {
@@ -1131,8 +1200,6 @@ function Apply-CentralTheme {
             $control.Refresh()
         }
     }
-    [Windows.Forms.Application]::DoEvents()
-
     # CURA 2.6 — repinta a barra lateral por último para impedir texto herdado do tema anterior.
     Refresh-CentralSidebarTheme
     Update-CentralAvailabilityState
@@ -1522,6 +1589,8 @@ $themeCombo.IntegralHeight = $true
 $themeCombo.SelectedItem = $settings.Theme
 if ($themeCombo.SelectedIndex -lt 0) { $themeCombo.SelectedIndex = 0 }
 $script:CentralThemeCombo = $themeCombo
+[void](Set-CentralThemeAuthority ([string]$themeCombo.SelectedItem))
+$script:AppliedCentralTheme = Get-CentralSelectedTheme
 $sidebarBottom.Controls.Add($themeCombo)
 
 $sidebarStatus = New-Object Windows.Forms.Label
@@ -1910,7 +1979,7 @@ $openNFEntradaFolderButton.TabIndex = 15
 $embeddedBackButton.TabIndex = 0
 $embeddedFolderButton.TabIndex = 1
 
-function Invoke-CentralThemeRuntimeSelfTest {
+function Invoke-CentralThemeRuntimeSelfTestLegacy {
     $themes = @("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste")
     $modules = @("Generator", "Maintenance", "NFEntrada")
 
@@ -2039,49 +2108,498 @@ function Invoke-CentralThemeRuntimeSelfTest {
     }
 }
 
-# Eventos
-$themeCombo.Add_SelectedIndexChanged({
-    if ($script:CentralThemeChanging) { return }
-    $script:CentralThemeChanging = $true
-    $theme = Get-CentralSelectedTheme
-    try {
-        Apply-CentralTheme
-        Save-AppSettings
+function Wait-CentralThemeRuntimeUi {
+    param([int]$Milliseconds = 350)
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    while ($watch.ElapsedMilliseconds -lt $Milliseconds) {
+        [Windows.Forms.Application]::DoEvents()
+        Start-Sleep -Milliseconds 25
+    }
+    [Windows.Forms.Application]::DoEvents()
+}
 
-        $synced = [bool](Sync-HostedModuleTheme)
-        if (-not $synced) {
-            $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
-            throw ("O módulo aberto não atualizou: " + $detail)
+function Get-CentralThemeRuntimeAudit {
+    if ($null -eq $script:HostedModule -or [string]::IsNullOrWhiteSpace($script:EmbeddedModule)) {
+        throw "Não há módulo hospedado para auditar."
+    }
+    $auditItems = @(& $script:HostedModule {
+        param($targetModule)
+        switch ($targetModule) {
+            "Generator" { Get-HostedGeneratorThemeAudit }
+            "Maintenance" { Get-HostedMaintenanceThemeAudit }
+            "NFEntrada" { Get-HostedNFEntradaThemeAudit }
+            default { throw "Módulo desconhecido no teste: $targetModule" }
+        }
+    } ([string]$script:EmbeddedModule))
+    if ($auditItems.Count -eq 0) { throw "$($script:EmbeddedModule) não retornou auditoria visual." }
+    return $auditItems[$auditItems.Count - 1]
+}
+
+function Assert-CentralThemeRuntimeState {
+    param(
+        [string]$ExpectedTheme,
+        [string]$Scenario
+    )
+
+    $expected = Resolve-CentralThemeName $ExpectedTheme
+    if ((Get-CentralSelectedTheme) -ne $expected -or [string]$script:AppliedCentralTheme -ne $expected) {
+        throw "${Scenario}: a autoridade da Central não permaneceu em '$expected'."
+    }
+    if ([string]$themeCombo.SelectedItem -ne $expected) {
+        throw "${Scenario}: o seletor visual da Central não permaneceu em '$expected'."
+    }
+    if ([string]$script:HostedThemeContext.Theme -ne $expected) {
+        throw "${Scenario}: o contexto compartilhado não permaneceu em '$expected'."
+    }
+
+    $centralPalette = Get-ThemePalette $expected
+    if ([int]$form.BackColor.ToArgb() -ne [int]$centralPalette.Background.ToArgb()) {
+        throw "${Scenario}: o fundo da Central não recebeu '$expected'."
+    }
+    $sidebarColor = Get-SidebarColor $expected
+    if ([int]$sidebar.BackColor.ToArgb() -ne [int]$sidebarColor.ToArgb()) {
+        throw "${Scenario}: a barra lateral da Central não recebeu '$expected'."
+    }
+
+    $audit = Get-CentralThemeRuntimeAudit
+    if (-not [bool]$audit.Valid) {
+        $invalid = @($audit.InvalidChecks | ForEach-Object { [string]$_.Name }) -join ", "
+        throw "${Scenario}: $($script:EmbeddedModule) terminou com controles fora da paleta: $invalid"
+    }
+    if ([string]$audit.AuthorityTheme -ne $expected) {
+        throw "${Scenario}: $($script:EmbeddedModule) reconheceu '$($audit.AuthorityTheme)' em vez de '$expected'."
+    }
+    if ([int]$audit.Revision -ne [int]$script:HostedThemeContext.Revision) {
+        throw "${Scenario}: $($script:EmbeddedModule) não confirmou a revisão compartilhada $($script:HostedThemeContext.Revision)."
+    }
+    return $audit
+}
+
+function Set-CentralThemeForRuntimeTest {
+    param(
+        [string]$Theme,
+        [string]$Scenario,
+        [int]$LateWaitMilliseconds = 700
+    )
+
+    $resolved = Resolve-CentralThemeName $Theme
+    if ([string]$themeCombo.SelectedItem -ne $resolved) {
+        # A alteração programática dispara o mesmo SelectedIndexChanged usado pelo
+        # ComboBox real; o processamento continua via BeginInvoke no host nativo.
+        $themeCombo.SelectedItem = $resolved
+    }
+    elseif ([string]$script:AppliedCentralTheme -ne $resolved) {
+        Request-CentralThemeChange $resolved
+    }
+
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    while ($watch.ElapsedMilliseconds -lt 5000) {
+        [Windows.Forms.Application]::DoEvents()
+        if ([string]$script:AppliedCentralTheme -eq $resolved -and
+            [string]$script:HostedThemeContext.Theme -eq $resolved -and
+            [string]::IsNullOrWhiteSpace($script:PendingCentralTheme) -and
+            -not $script:CentralThemeChanging -and
+            -not $script:CentralThemeDispatchScheduled) {
+            break
+        }
+        Start-Sleep -Milliseconds 25
+    }
+    if ([string]$script:AppliedCentralTheme -ne $resolved) {
+        $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "sem diagnóstico adicional" } else { $script:LastThemeSyncError }
+        throw "${Scenario}: a transação de '$resolved' não concluiu em cinco segundos. $detail"
+    }
+
+    Wait-CentralThemeRuntimeUi $LateWaitMilliseconds
+    return (Assert-CentralThemeRuntimeState $resolved $Scenario)
+}
+
+function Invoke-CentralThemeRuntimeLateEvents {
+    param([string]$ModuleName)
+
+    # Exercita exatamente as famílias de eventos que historicamente podiam
+    # reconstruir controles ou reaplicar a preferência autônoma do módulo.
+    $originalSize = $form.Size
+    $form.Size = [Drawing.Size]::new([Math]::Max(1180, $originalSize.Width - 37), [Math]::Max(720, $originalSize.Height - 23))
+    $form.PerformLayout()
+    if ($null -ne $script:HostedForm -and -not $script:HostedForm.IsDisposed) {
+        $script:HostedForm.Bounds = $embeddedContent.ClientRectangle
+        $script:HostedForm.PerformLayout()
+        $script:HostedForm.Refresh()
+    }
+
+    & $script:HostedModule {
+        param($targetModule)
+        switch ($targetModule) {
+            "Generator" {
+                Update-ProductInterface
+                Update-GeneratorResponsiveLayout
+                Update-RootLayout
+            }
+            "Maintenance" {
+                Refresh-AllViews
+                Update-MaintenanceResponsiveLayout
+            }
+            "NFEntrada" {
+                Refresh-NFAll
+                Update-NFActions
+            }
+        }
+    } $ModuleName
+
+    $form.Size = $originalSize
+    $form.PerformLayout()
+    Wait-CentralThemeRuntimeUi 275
+}
+
+function Get-CentralThemeRuntimeFileSnapshot {
+    param([string]$Directory)
+
+    $snapshot = [ordered]@{}
+    if ([string]::IsNullOrWhiteSpace($Directory) -or -not [IO.Directory]::Exists($Directory)) { return $snapshot }
+    $root = [IO.Path]::GetFullPath($Directory).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    foreach ($path in [IO.Directory]::GetFiles($root, "*", [IO.SearchOption]::AllDirectories)) {
+        if ([string]::Equals([IO.Path]::GetFileName($path), "preferencias.json", [StringComparison]::OrdinalIgnoreCase)) { continue }
+        $relative = $path.Substring($root.Length).TrimStart([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+        $snapshot[$relative] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+    }
+    return $snapshot
+}
+
+function Assert-CentralThemeRuntimeFileSnapshot {
+    param(
+        [Collections.IDictionary]$Before,
+        [Collections.IDictionary]$After,
+        [string]$Scenario
+    )
+    if ($Before.Count -ne $After.Count) {
+        throw "${Scenario}: a troca de aparência alterou a quantidade de arquivos operacionais ($($Before.Count) -> $($After.Count))."
+    }
+    foreach ($key in $Before.Keys) {
+        if (-not $After.Contains($key) -or [string]$After[$key] -ne [string]$Before[$key]) {
+            throw "${Scenario}: a troca de aparência modificou o arquivo operacional '$key'."
+        }
+    }
+}
+
+function Save-CentralThemeRuntimeScreenshot {
+    param([string]$Name)
+    if ([string]::IsNullOrWhiteSpace($ThemeRuntimeArtifactsPath)) { return "" }
+
+    if (-not [IO.Directory]::Exists($ThemeRuntimeArtifactsPath)) {
+        [void][IO.Directory]::CreateDirectory($ThemeRuntimeArtifactsPath)
+    }
+    $safeName = $Name -replace '[^A-Za-z0-9._-]', '-'
+    $path = [IO.Path]::Combine($ThemeRuntimeArtifactsPath, ($safeName + ".png"))
+    $bitmap = New-Object Drawing.Bitmap([Math]::Max(1, $form.ClientSize.Width), [Math]::Max(1, $form.ClientSize.Height))
+    try {
+        $form.DrawToBitmap($bitmap, [Drawing.Rectangle]::new(0, 0, $bitmap.Width, $bitmap.Height))
+        $bitmap.Save($path, [Drawing.Imaging.ImageFormat]::Png)
+    }
+    finally { $bitmap.Dispose() }
+    if (-not [IO.File]::Exists($path) -or ([IO.FileInfo]$path).Length -le 0) {
+        throw "A captura visual '$Name' não foi gerada."
+    }
+    return $path
+}
+
+function Get-CentralThemeRuntimePreference {
+    param([string]$Path)
+    try {
+        if ([IO.File]::Exists($Path)) {
+            return [string]((Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json).Theme)
+        }
+    } catch {}
+    return ""
+}
+
+function Invoke-CentralThemeRuntimeSelfTest {
+    $normalSequence = @("Escuro profissional", "Claro corporativo", "Técnico industrial", "Alto contraste", "Claro corporativo")
+    $rapidSequence = @("Alto contraste", "Escuro profissional", "Técnico industrial", "Claro corporativo", "Escuro profissional", "Alto contraste", "Claro corporativo")
+    $startupTheme = Get-CentralSelectedTheme
+    $startedAt = [DateTime]::UtcNow
+    $caseResults = New-Object 'Collections.Generic.List[object]'
+    $screenshots = New-Object 'Collections.Generic.List[string]'
+    $dataChecks = New-Object 'Collections.Generic.List[object]'
+    $success = $false
+    $failure = ""
+
+    if ([string]::IsNullOrWhiteSpace($ThemeRuntimeReportPath)) {
+        $ThemeRuntimeReportPath = [IO.Path]::Combine($script:RootPath, "theme-runtime-report.json")
+    }
+
+    $testDataRoot = [IO.Path]::GetFullPath($env:CENTRAL_THEME_TEST_DATA_ROOT)
+    $generatorSettingsPath = [IO.Path]::Combine($testDataRoot, "GeradorPlanilhasCB5TV5", "preferencias.json")
+    $maintenanceSettingsPath = [IO.Path]::Combine($testDataRoot, "CentralDeTrabalho", "ManutencaoCB5", "preferencias.json")
+    $generatorPreferenceBefore = Get-CentralThemeRuntimePreference $generatorSettingsPath
+    $maintenancePreferenceBefore = Get-CentralThemeRuntimePreference $maintenanceSettingsPath
+
+    $form.StartPosition = [Windows.Forms.FormStartPosition]::Manual
+    $form.Location = [Drawing.Point]::new(24, 24)
+    $form.Size = [Drawing.Size]::new(1440, 900)
+    $form.ShowInTaskbar = $false
+    $form.Show()
+    Wait-CentralThemeRuntimeUi 450
+
+    try {
+        foreach ($product in @("TV5", "CB5")) {
+            Start-EmbeddedModule "Generator"
+            if ($script:EmbeddedModule -ne "Generator") { throw "O Gerenciador não abriu no host nativo." }
+            $openAudit = Assert-CentralThemeRuntimeState (Get-CentralSelectedTheme) "Gerenciador/$product/abertura-hospedada"
+            $caseResults.Add([pscustomobject]@{
+                Module = "Generator"; Product = $product; Theme = (Get-CentralSelectedTheme); Scenario = "hosted-open";
+                Revision = [int]$openAudit.Revision; Checks = @($openAudit.Checks); Valid = [bool]$openAudit.Valid
+            })
+            & $script:HostedModule {
+                param($targetProduct)
+                $productCombo.SelectedItem = $targetProduct
+                Update-ProductInterface
+            } $product
+            Wait-CentralThemeRuntimeUi 300
+
+            $generatorDataDirectory = & $script:HostedModule { return [string]$script:SettingsDirectory }
+            $dataBefore = Get-CentralThemeRuntimeFileSnapshot $generatorDataDirectory
+            foreach ($themeName in $normalSequence) {
+                $scenario = "Gerenciador/$product/$themeName"
+                $audit = Set-CentralThemeForRuntimeTest $themeName $scenario
+                Invoke-CentralThemeRuntimeLateEvents "Generator"
+                $audit = Assert-CentralThemeRuntimeState $themeName ($scenario + "/eventos-tardios")
+                $shot = Save-CentralThemeRuntimeScreenshot ("Generator-{0}-{1}" -f $product, (@{
+                    "Escuro profissional" = "dark"; "Claro corporativo" = "light"; "Técnico industrial" = "industrial"; "Alto contraste" = "contrast"
+                }[$themeName]))
+                if (-not [string]::IsNullOrWhiteSpace($shot)) { $screenshots.Add($shot) }
+                $caseResults.Add([pscustomobject]@{
+                    Module = "Generator"; Product = $product; Theme = $themeName; Scenario = "normal";
+                    Revision = [int]$audit.Revision; Checks = @($audit.Checks); Valid = [bool]$audit.Valid
+                })
+            }
+
+            foreach ($themeName in $rapidSequence) {
+                $themeCombo.SelectedItem = $themeName
+                [Windows.Forms.Application]::DoEvents()
+                Start-Sleep -Milliseconds 35
+            }
+            Wait-CentralThemeRuntimeUi 3400
+            $rapidAudit = Assert-CentralThemeRuntimeState "Claro corporativo" "Gerenciador/$product/alternância-rápida"
+            $caseResults.Add([pscustomobject]@{
+                Module = "Generator"; Product = $product; Theme = "Claro corporativo"; Scenario = "rapid-and-late";
+                Revision = [int]$rapidAudit.Revision; Checks = @($rapidAudit.Checks); Valid = [bool]$rapidAudit.Valid
+            })
+
+            $dataAfter = Get-CentralThemeRuntimeFileSnapshot $generatorDataDirectory
+            Assert-CentralThemeRuntimeFileSnapshot $dataBefore $dataAfter "Gerenciador/$product"
+            $dataChecks.Add([pscustomobject]@{ Module = "Generator"; Product = $product; Unchanged = $true; Files = $dataAfter.Count })
+            Close-EmbeddedModule -Force
+            Wait-CentralThemeRuntimeUi 250
         }
 
-        # O módulo pode provocar invalidates no mesmo ciclo de mensagens. A casca
-        # da Central é reafirmada depois dele e mais uma vez no próximo ciclo UI.
-        Apply-CentralTheme
-        Set-StatusMessage ("Aparência aplicada: " + $theme + ".") "Success"
+        # Mudar primeiro e abrir depois garante que o Gerenciador já nasça no
+        # tema atual, sem restaurar a preferência autônoma salva anteriormente.
+        $themeCombo.SelectedItem = "Técnico industrial"
+        Wait-CentralThemeRuntimeUi 600
+        Start-EmbeddedModule "Generator"
+        $bornAudit = Assert-CentralThemeRuntimeState "Técnico industrial" "Gerenciador/abertura-após-troca"
+        $caseResults.Add([pscustomobject]@{ Module = "Generator"; Product = [string]$bornAudit.Product; Theme = "Técnico industrial"; Scenario = "born-current"; Revision = [int]$bornAudit.Revision; Checks = @($bornAudit.Checks); Valid = [bool]$bornAudit.Valid })
+        Close-EmbeddedModule -Force
 
-        $themeForDeferred = $theme
-        $deferredApply = [Action]{
-            try {
-                if ((Get-CentralSelectedTheme) -eq $themeForDeferred) {
-                    Apply-CentralTheme
-                }
-            } catch {}
-        }.GetNewClosure()
-        [void]$form.BeginInvoke($deferredApply)
+        foreach ($moduleName in @("Maintenance", "NFEntrada")) {
+            Start-EmbeddedModule $moduleName
+            if ($script:EmbeddedModule -ne $moduleName) { throw "$moduleName não abriu no host nativo." }
+            $openAudit = Assert-CentralThemeRuntimeState (Get-CentralSelectedTheme) "$moduleName/abertura-hospedada"
+            $caseResults.Add([pscustomobject]@{
+                Module = $moduleName; Product = ""; Theme = (Get-CentralSelectedTheme); Scenario = "hosted-open";
+                Revision = [int]$openAudit.Revision; Checks = @($openAudit.Checks); Valid = [bool]$openAudit.Valid
+            })
+            Wait-CentralThemeRuntimeUi 300
+            $moduleDataDirectory = & $script:HostedModule { return [string]$script:DataDirectory }
+            $dataBefore = Get-CentralThemeRuntimeFileSnapshot $moduleDataDirectory
+
+            foreach ($themeName in $normalSequence) {
+                $scenario = "$moduleName/$themeName"
+                $audit = Set-CentralThemeForRuntimeTest $themeName $scenario
+                Invoke-CentralThemeRuntimeLateEvents $moduleName
+                $audit = Assert-CentralThemeRuntimeState $themeName ($scenario + "/eventos-tardios")
+                $shot = Save-CentralThemeRuntimeScreenshot ("{0}-{1}" -f $moduleName, (@{
+                    "Escuro profissional" = "dark"; "Claro corporativo" = "light"; "Técnico industrial" = "industrial"; "Alto contraste" = "contrast"
+                }[$themeName]))
+                if (-not [string]::IsNullOrWhiteSpace($shot)) { $screenshots.Add($shot) }
+                $caseResults.Add([pscustomobject]@{
+                    Module = $moduleName; Product = ""; Theme = $themeName; Scenario = "normal";
+                    Revision = [int]$audit.Revision; Checks = @($audit.Checks); Valid = [bool]$audit.Valid
+                })
+            }
+
+            foreach ($themeName in $rapidSequence) {
+                $themeCombo.SelectedItem = $themeName
+                [Windows.Forms.Application]::DoEvents()
+                Start-Sleep -Milliseconds 35
+            }
+            Wait-CentralThemeRuntimeUi 3400
+            $rapidAudit = Assert-CentralThemeRuntimeState "Claro corporativo" "$moduleName/alternância-rápida"
+            $caseResults.Add([pscustomobject]@{
+                Module = $moduleName; Product = ""; Theme = "Claro corporativo"; Scenario = "rapid-and-late";
+                Revision = [int]$rapidAudit.Revision; Checks = @($rapidAudit.Checks); Valid = [bool]$rapidAudit.Valid
+            })
+
+            $dataAfter = Get-CentralThemeRuntimeFileSnapshot $moduleDataDirectory
+            Assert-CentralThemeRuntimeFileSnapshot $dataBefore $dataAfter $moduleName
+            $dataChecks.Add([pscustomobject]@{ Module = $moduleName; Product = ""; Unchanged = $true; Files = $dataAfter.Count })
+            Close-EmbeddedModule -Force
+            Wait-CentralThemeRuntimeUi 250
+
+            $themeCombo.SelectedItem = "Alto contraste"
+            Wait-CentralThemeRuntimeUi 600
+            Start-EmbeddedModule $moduleName
+            $bornAudit = Assert-CentralThemeRuntimeState "Alto contraste" "$moduleName/abertura-após-troca"
+            $caseResults.Add([pscustomobject]@{ Module = $moduleName; Product = ""; Theme = "Alto contraste"; Scenario = "born-current"; Revision = [int]$bornAudit.Revision; Checks = @($bornAudit.Checks); Valid = [bool]$bornAudit.Valid })
+            Close-EmbeddedModule -Force
+        }
+
+        # Estado final deliberado: o segundo processo do workflow deve iniciar em
+        # Claro corporativo e repetir todos os testes, cobrindo reinício completo.
+        $themeCombo.SelectedItem = "Claro corporativo"
+        Wait-CentralThemeRuntimeUi 750
+        if ([string]$script:AppliedCentralTheme -ne "Claro corporativo") { throw "A Central não persistiu o tema final do teste." }
+        Save-AppSettings
+
+        $generatorPreferenceAfter = Get-CentralThemeRuntimePreference $generatorSettingsPath
+        $maintenancePreferenceAfter = Get-CentralThemeRuntimePreference $maintenanceSettingsPath
+        if (-not [string]::IsNullOrWhiteSpace($generatorPreferenceBefore) -and $generatorPreferenceAfter -ne $generatorPreferenceBefore) {
+            throw "O modo hospedado sobrescreveu a preferência standalone do Gerenciador."
+        }
+        if (-not [string]::IsNullOrWhiteSpace($maintenancePreferenceBefore) -and $maintenancePreferenceAfter -ne $maintenancePreferenceBefore) {
+            throw "O modo hospedado sobrescreveu a preferência standalone da Manutenção."
+        }
+        if ([int]$script:ThemeTransactionFailureCount -ne 0) {
+            throw "Ocorreram $($script:ThemeTransactionFailureCount) falhas intermediárias de sincronização durante o teste."
+        }
+
+        $success = $true
+        Write-Host "CENTRAL THEME RUNTIME PACKAGE: OK — host nativo, 3 módulos, TV5/CB5, 4 temas, alternância rápida, reabertura e integridade de dados."
     }
     catch {
-        Set-StatusMessage ("Falha na aparência: " + $_.Exception.Message) "Error"
+        $failure = $_.Exception.ToString()
+        throw
+    }
+    finally {
+        try { Close-EmbeddedModule -Force } catch {}
+        try { $form.Hide() } catch {}
+        try { $form.Close() } catch {}
+
+        $reportDirectory = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($ThemeRuntimeReportPath))
+        if (-not [IO.Directory]::Exists($reportDirectory)) { [void][IO.Directory]::CreateDirectory($reportDirectory) }
+        $report = [ordered]@{
+            Success = $success
+            Failure = $failure
+            StartedUtc = $startedAt.ToString("o")
+            FinishedUtc = [DateTime]::UtcNow.ToString("o")
+            StartupTheme = $startupTheme
+            FinalTheme = Get-CentralSelectedTheme
+            CentralVersion = $script:AppVersion
+            GeneratorVersion = $script:GeneratorVersion
+            MaintenanceVersion = $script:MaintenanceVersion
+            NFEntradaVersion = $script:NFEntradaVersion
+            SharedRevision = [int]$script:HostedThemeContext.Revision
+            ThemeTransactionFailures = [int]$script:ThemeTransactionFailureCount
+            NativeHostProcess = [IO.Path]::GetFileName([Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
+            Cases = @($caseResults)
+            DataIntegrity = @($dataChecks)
+            StandalonePreferences = [ordered]@{
+                GeneratorBefore = $generatorPreferenceBefore
+                GeneratorAfter = (Get-CentralThemeRuntimePreference $generatorSettingsPath)
+                MaintenanceBefore = $maintenancePreferenceBefore
+                MaintenanceAfter = (Get-CentralThemeRuntimePreference $maintenanceSettingsPath)
+            }
+            Screenshots = @($screenshots)
+        }
+        $json = $report | ConvertTo-Json -Depth 12
+        [IO.File]::WriteAllText([IO.Path]::GetFullPath($ThemeRuntimeReportPath), $json, [Text.UTF8Encoding]::new($false))
+    }
+}
+
+# A escolha do ComboBox apenas agenda uma transação curta para o próximo ciclo
+# da interface. Isso evita executar Apply/Refresh/DoEvents enquanto o controle
+# ainda está finalizando SelectedIndexChanged, que era uma fonte de reentrada no
+# executável real. Mudanças rápidas são consolidadas no último tema escolhido.
+function Invoke-PendingCentralThemeChange {
+    if ($script:CentralThemeChanging) { return }
+    $script:CentralThemeDispatchScheduled = $false
+
+    $targetTheme = Resolve-CentralThemeName $script:PendingCentralTheme
+    $previousTheme = Resolve-CentralThemeName $script:AppliedCentralTheme
+    $script:PendingCentralTheme = ""
+    if ($targetTheme -eq $previousTheme) {
+        Set-CentralThemeComboSelection $previousTheme
+        return
+    }
+
+    $script:CentralThemeChanging = $true
+    try {
+        [void](Set-CentralThemeAuthority $targetTheme)
+        Apply-CentralTheme
+        if (-not [bool](Sync-HostedModuleTheme)) {
+            $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
+            throw "O módulo aberto não atualizou: $detail"
+        }
+
+        $script:AppliedCentralTheme = $targetTheme
+        Save-AppSettings
+        Set-StatusMessage ("Aparência aplicada: " + $targetTheme + ".") "Success"
+    }
+    catch {
+        $failure = $_.Exception.Message
+        $script:ThemeTransactionFailureCount = [int]$script:ThemeTransactionFailureCount + 1
+
+        # Uma falha não pode deixar Central e módulo em temas distintos. A troca
+        # é transacional: ambos retornam ao último tema confirmado.
+        try {
+            [void](Set-CentralThemeAuthority $previousTheme)
+            Set-CentralThemeComboSelection $previousTheme
+            Apply-CentralTheme
+            [void](Sync-HostedModuleTheme)
+            $script:AppliedCentralTheme = $previousTheme
+        } catch {}
+
+        Set-StatusMessage ("Falha na aparência; tema anterior restaurado: " + $failure) "Error"
         try {
             $diagPath = [IO.Path]::Combine($script:SettingsDirectory, "tema-diagnostico.log")
             if (-not [IO.Directory]::Exists($script:SettingsDirectory)) { [void][IO.Directory]::CreateDirectory($script:SettingsDirectory) }
-            $line = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + " | " + $theme + " | " + $_.Exception.Message
+            $line = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss") + " | " + $targetTheme + " | " + $failure
             [IO.File]::AppendAllText($diagPath, $line + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
         } catch {}
     }
     finally {
         $script:CentralThemeChanging = $false
     }
-})
+
+    # Se outra escolha chegou enquanto a transação estava ocupada, processa a
+    # mais recente sem permitir estados intermediários concorrentes.
+    if (-not [string]::IsNullOrWhiteSpace($script:PendingCentralTheme)) {
+        Request-CentralThemeChange $script:PendingCentralTheme
+    }
+}
+
+function Request-CentralThemeChange {
+    param([string]$Theme)
+    $script:PendingCentralTheme = Resolve-CentralThemeName $Theme
+    if ($script:CentralThemeDispatchScheduled -or $script:CentralThemeChanging) { return }
+    $script:CentralThemeDispatchScheduled = $true
+
+    $processor = ${function:Invoke-PendingCentralThemeChange}
+    $dispatch = [Action]{ & $processor }.GetNewClosure()
+    try { [void]$form.BeginInvoke($dispatch) }
+    catch {
+        $script:CentralThemeDispatchScheduled = $false
+        & $processor
+    }
+}
+
+# Eventos
+$themeSelectionChanged = {
+    if ($script:CentralThemeChanging) { return }
+    Request-CentralThemeChange ([string]$themeCombo.SelectedItem)
+}
+$themeCombo.Add_SelectedIndexChanged($themeSelectionChanged)
+$themeCombo.Add_SelectionChangeCommitted($themeSelectionChanged)
 $openGeneratorButton.Add_Click({ Start-GeneratorModule })
 $openMaintenanceButton.Add_Click({ Start-MaintenanceModule })
 $openNFEntradaButton.Add_Click({ Start-NFEntradaModule })
@@ -2161,6 +2679,7 @@ catch {
         [IO.File]::WriteAllText($logPath, $details, [Text.UTF8Encoding]::new($true))
     }
     catch {}
+    if ($ThemeRuntimeSelfTest) { throw }
     [Windows.Forms.MessageBox]::Show(
         $details + "`r`n`r`nSe precisar, envie o arquivo ERRO-INICIALIZACAO.txt.",
         "Central de Trabalho — erro de inicialização",

@@ -32,47 +32,23 @@ $cases = @(
 )
 
 function Invoke-ThemeSnapshot {
-    param($ModuleInfo, [string]$Kind, [string]$Theme)
-    & $ModuleInfo {
-        param($kind, $theme)
+    param($ModuleInfo, [string]$Kind)
+    $items = @(& $ModuleInfo {
+        param($kind)
         switch ($kind) {
-            'Generator' {
-                $mapped = Get-GeneratorThemeFromHost $theme
-                $product = [string]$productCombo.SelectedItem
-                if (@('CB5','TV5') -notcontains $product) { $product = 'CB5' }
-                $p = Get-ThemePalette $mapped $product
-                [pscustomobject]@{
-                    Combo = [string]$themeCombo.SelectedItem
-                    ExpectedCombo = $mapped
-                    Actual = [int]$form.BackColor.ToArgb()
-                    Expected = [int]$p.Background.ToArgb()
-                }
-            }
-            'Maintenance' {
-                $mapped = Get-MaintenanceThemeFromHost $theme
-                $p = Get-MaintenancePalette $mapped
-                [pscustomobject]@{
-                    Combo = [string]$themeCombo.SelectedItem
-                    ExpectedCombo = $mapped
-                    Actual = [int]$form.BackColor.ToArgb()
-                    Expected = [int]$p.Background.ToArgb()
-                }
-            }
-            'NFEntrada' {
-                $p = Get-NFEntradaPalette $theme
-                [pscustomobject]@{
-                    Combo = $theme
-                    ExpectedCombo = $theme
-                    Actual = [int]$form.BackColor.ToArgb()
-                    Expected = [int]$p.Background.ToArgb()
-                }
-            }
+            'Generator' { Get-HostedGeneratorThemeAudit }
+            'Maintenance' { Get-HostedMaintenanceThemeAudit }
+            'NFEntrada' { Get-HostedNFEntradaThemeAudit }
         }
-    } $Kind $Theme
+    } $Kind)
+    if ($items.Count -eq 0) { throw "$Kind não retornou auditoria de aparência." }
+    return $items[$items.Count - 1]
 }
 
 function Invoke-CentralStyleThemeCall {
-    param($ModuleInfo, [string]$Kind, [string]$Theme)
+    param($ModuleInfo, [string]$Kind, [string]$Theme, $HostContext)
+    $HostContext.Theme = $Theme
+    $HostContext.Revision = [int]$HostContext.Revision + 1
     $items = @(& $ModuleInfo {
         param($targetModule, $hostTheme)
         switch ($targetModule) {
@@ -142,9 +118,10 @@ foreach ($case in $cases) {
     $hostForm = $null
     $hostPanel = $null
     try {
-        $moduleInfo = New-Module -Name $moduleName -ArgumentList @($case.Path, 'Escuro profissional') -ScriptBlock {
-            param($scriptPath, $hostTheme)
-            . $scriptPath -HostedInCentral -HostTheme $hostTheme
+        $hostContext = [pscustomobject]@{ Theme = 'Escuro profissional'; Revision = 0 }
+        $moduleInfo = New-Module -Name $moduleName -ArgumentList @($case.Path, $hostContext) -ScriptBlock {
+            param($scriptPath, $context)
+            . $scriptPath -HostedInCentral -HostTheme ([string]$context.Theme) -HostThemeContext $context
         }
         if ($null -eq $moduleInfo) { throw "Falha ao criar módulo isolado para $($case.Name)." }
 
@@ -182,7 +159,7 @@ foreach ($case in $cases) {
 
         foreach ($theme in $themes) {
             Write-Host "Testando $($case.Name): $theme"
-            $ok = Invoke-CentralStyleThemeCall $moduleInfo $case.Kind $theme
+            $ok = Invoke-CentralStyleThemeCall $moduleInfo $case.Kind $theme $hostContext
             if (-not $ok) {
                 $direct = Invoke-ThemeDirectDiagnostic $moduleInfo $case.Kind $theme
                 throw "$($case.Name) recusou '$theme' quando hospedado. Diagnóstico direto: $direct"
@@ -190,13 +167,13 @@ foreach ($case in $cases) {
 
             $hostedControl.PerformLayout()
             $hostedControl.Invalidate($true)
-            $hostedControl.Update()
-            $hostedControl.Refresh()
             [Windows.Forms.Application]::DoEvents()
-            $snap = Invoke-ThemeSnapshot $moduleInfo $case.Kind $theme
-            Write-Host ("  combo={0} esperado={1} root={2} esperadoRoot={3}" -f $snap.Combo,$snap.ExpectedCombo,$snap.Actual,$snap.Expected)
-            if ($snap.Combo -ne $snap.ExpectedCombo) { throw "$($case.Name): seletor interno não acompanhou '$theme'." }
-            if ($snap.Actual -ne $snap.Expected) { throw "$($case.Name): cor raiz não acompanhou '$theme'." }
+            $snap = Invoke-ThemeSnapshot $moduleInfo $case.Kind
+            $invalid = @($snap.InvalidChecks | ForEach-Object { [string]$_.Name }) -join ', '
+            Write-Host ("  autoridade={0} interno={1} revisão={2} controles={3}" -f $snap.AuthorityTheme,$snap.InternalTheme,$snap.Revision,@($snap.Checks).Count)
+            if (-not [bool]$snap.Valid) { throw "$($case.Name): controles fora da paleta em '$theme': $invalid" }
+            if ([string]$snap.AuthorityTheme -ne $theme) { throw "$($case.Name): autoridade hospedada não acompanhou '$theme'." }
+            if ([int]$snap.Revision -ne [int]$hostContext.Revision) { throw "$($case.Name): revisão de aparência divergente em '$theme'." }
         }
     }
     finally {

@@ -9,6 +9,9 @@ using System.Windows.Forms;
 internal static class Program
 {
     private const string SelfTestSwitch = "--self-test";
+    private const string ThemeRuntimeSelfTestSwitch = "--theme-runtime-self-test";
+    private const string ThemeRuntimeReportArgument = "--theme-runtime-report";
+    private const string ThemeRuntimeArtifactsArgument = "--theme-runtime-artifacts";
     private const string AppUserModelId = "CentralDeTrabalho.Desktop";
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -19,6 +22,14 @@ internal static class Program
     {
         string appRoot = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string scriptPath = Path.Combine(appRoot, "Central de Trabalho.ps1");
+        bool themeRuntimeSelfTest = HasArgument(args, ThemeRuntimeSelfTestSwitch);
+        string themeRuntimeReportPath = GetArgumentValue(args, ThemeRuntimeReportArgument);
+        string themeRuntimeArtifactsPath = GetArgumentValue(args, ThemeRuntimeArtifactsArgument);
+
+        if (themeRuntimeSelfTest && string.IsNullOrWhiteSpace(themeRuntimeReportPath))
+        {
+            themeRuntimeReportPath = Path.Combine(appRoot, "theme-runtime-report.json");
+        }
 
         if (HasArgument(args, SelfTestSwitch))
         {
@@ -56,25 +67,42 @@ internal static class Program
                     // O script principal precisa viver no escopo persistente do runspace.
                     // Isso mantém funções e comandos disponíveis para callbacks WinForms
                     // disparados depois que a construção inicial da janela terminou.
-                    ps.AddScript(". '" + escapedScriptPath + "'");
+                    string invocation = ". '" + escapedScriptPath + "'";
+                    if (themeRuntimeSelfTest)
+                    {
+                        invocation += " -ThemeRuntimeSelfTest";
+                        invocation += " -ThemeRuntimeReportPath '" + EscapePowerShellLiteral(themeRuntimeReportPath) + "'";
+                        if (!string.IsNullOrWhiteSpace(themeRuntimeArtifactsPath))
+                        {
+                            invocation += " -ThemeRuntimeArtifactsPath '" + EscapePowerShellLiteral(themeRuntimeArtifactsPath) + "'";
+                        }
+                    }
+                    ps.AddScript(invocation);
                     ps.Invoke();
 
-                    if (ps.InvocationStateInfo != null && ps.InvocationStateInfo.State == PSInvocationState.Failed)
+                    if (ps.HadErrors || (ps.InvocationStateInfo != null && ps.InvocationStateInfo.State == PSInvocationState.Failed))
                     {
-                        string message = ps.InvocationStateInfo.Reason != null
+                        string message = ps.InvocationStateInfo != null && ps.InvocationStateInfo.Reason != null
                             ? ps.InvocationStateInfo.Reason.Message
                             : "A execução interna da Central foi encerrada com falha.";
-                        ShowFatal(message);
+                        if (!themeRuntimeSelfTest) ShowFatal(message);
                         return 3;
                     }
                 }
+            }
+
+            if (themeRuntimeSelfTest)
+            {
+                if (!File.Exists(themeRuntimeReportPath)) return 20;
+                string report = File.ReadAllText(themeRuntimeReportPath, System.Text.Encoding.UTF8);
+                if (!System.Text.RegularExpressions.Regex.IsMatch(report, "\\\"Success\\\"\\s*:\\s*true", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) return 21;
             }
 
             return 0;
         }
         catch (Exception ex)
         {
-            ShowFatal(ex.Message);
+            if (!themeRuntimeSelfTest) ShowFatal(ex.Message);
             return 1;
         }
     }
@@ -170,6 +198,24 @@ internal static class Program
             }
         }
         return false;
+    }
+
+    private static string GetArgumentValue(string[] args, string name)
+    {
+        if (args == null) return string.Empty;
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+            {
+                return args[i + 1] ?? string.Empty;
+            }
+        }
+        return string.Empty;
+    }
+
+    private static string EscapePowerShellLiteral(string value)
+    {
+        return (value ?? string.Empty).Replace("'", "''");
     }
 
     private static void ShowFatal(string details)

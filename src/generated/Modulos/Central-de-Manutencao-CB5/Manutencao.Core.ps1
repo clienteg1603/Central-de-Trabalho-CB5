@@ -205,6 +205,9 @@ function Test-CB5WorkDate {
 
 function Get-CB5DefaultDataDirectory {
     $local = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+    if ($env:CENTRAL_THEME_RUNTIME_TEST -eq "1" -and -not [string]::IsNullOrWhiteSpace($env:CENTRAL_THEME_TEST_DATA_ROOT)) {
+        $local = [IO.Path]::GetFullPath($env:CENTRAL_THEME_TEST_DATA_ROOT)
+    }
     return [IO.Path]::Combine($local, "CentralDeTrabalho", "ManutencaoCB5")
 }
 

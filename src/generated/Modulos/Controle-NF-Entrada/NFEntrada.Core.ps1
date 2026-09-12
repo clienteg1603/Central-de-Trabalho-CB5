@@ -14,8 +14,12 @@ function Get-NFEntradaProductDisplayName {
 }
 
 function Get-NFEntradaDefaultDataDirectory {
+    $local = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+    if ($env:CENTRAL_THEME_RUNTIME_TEST -eq "1" -and -not [string]::IsNullOrWhiteSpace($env:CENTRAL_THEME_TEST_DATA_ROOT)) {
+        $local = [IO.Path]::GetFullPath($env:CENTRAL_THEME_TEST_DATA_ROOT)
+    }
     return [IO.Path]::Combine(
-        [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData),
+        $local,
         "CentralDeTrabalho",
         "NFEntrada"
     )

@@ -65,7 +65,12 @@ def main():
     updater_core = read(paths["updater_core"])
 
     # CENTRAL — integração, instância única, tema e saúde da instalação.
-    for fn in ("Start-EmbeddedModule", "Close-EmbeddedModule", "Sync-HostedModuleTheme", "Update-CentralAvailabilityState", "Start-UpdaterModule"):
+    for fn in (
+        "Start-EmbeddedModule", "Close-EmbeddedModule", "Sync-HostedModuleTheme",
+        "Update-CentralAvailabilityState", "Start-UpdaterModule",
+        "Resolve-CentralThemeName", "Set-CentralThemeAuthority",
+        "Request-CentralThemeChange", "Invoke-PendingCentralThemeChange",
+    ):
         require_function(errors, central, fn, "Central")
     for marker in (
         "New-Module -Name $dynamicName",
@@ -81,8 +86,45 @@ def main():
         '"Técnico industrial"',
         '"Claro corporativo"',
         '"Alto contraste"',
+        "$script:HostedThemeContext",
+        "-HostThemeContext $hostThemeContext",
+        "Get-HostedGeneratorThemeAudit",
+        "Get-HostedMaintenanceThemeAudit",
+        "Get-HostedNFEntradaThemeAudit",
+        "$themeCombo.Add_SelectionChangeCommitted",
     ):
         require(errors, central, marker, "Central")
+
+    apply_central = re.search(r"function\s+Apply-CentralTheme\b(.*?)(?=\nfunction\s+)", central, re.S | re.I)
+    if not apply_central:
+        errors.append("Central / tema: Apply-CentralTheme não pôde ser auditada")
+    elif "[Windows.Forms.Application]::DoEvents()" in apply_central.group(1):
+        errors.append("Central / tema: Apply-CentralTheme voltou a permitir reentrada com DoEvents")
+
+    for label, text, functions, markers in (
+        (
+            "Gerenciador / autoridade hospedada",
+            generator,
+            ("Get-GeneratorHostedCentralTheme", "Get-GeneratorEffectiveTheme", "Set-HostedGeneratorTheme", "Get-HostedGeneratorThemeAudit"),
+            ("$script:HostedThemeContext", "$script:StandaloneThemePreference", "if ($script:IsInProcessHosted -or $script:HostedThemeSyncInProgress) { return }"),
+        ),
+        (
+            "Manutenção / autoridade hospedada",
+            maintenance,
+            ("Get-MaintenanceHostedCentralTheme", "Get-MaintenanceEffectiveTheme", "Set-HostedMaintenanceTheme", "Get-HostedMaintenanceThemeAudit"),
+            ("$script:HostedThemeContext", "$script:StandaloneThemePreference", "if ($script:IsInProcessHosted -or $script:HostedThemeSyncInProgress) { return }"),
+        ),
+        (
+            "NF Entrada / autoridade hospedada",
+            nf,
+            ("Get-NFEntradaHostedCentralTheme", "Set-HostedNFEntradaTheme", "Get-HostedNFEntradaThemeAudit"),
+            ("$script:HostedThemeContext",),
+        ),
+    ):
+        for fn in functions:
+            require_function(errors, text, fn, label)
+        for marker in markers:
+            require(errors, text, marker, label)
 
     # GERENCIADOR — caminhos CB5/TV5, validações de lote e gravação segura.
     for fn in ("Update-ProductInterface", "Update-CombinedProductInterface", "Update-CombineSummary", "Move-CombinedGridRow"):

@@ -242,12 +242,216 @@ jobs:
             "updates/packages/Central-de-Trabalho-v${VERSION}.zip" \
             "updates/test.json"
 
-      - name: Publish test package
+      - name: Stage candidate after static package validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
+          CANDIDATE_DIR="$RUNNER_TEMP/central-test-candidate"
+          rm -rf "$CANDIDATE_DIR"
+          mkdir -p "$CANDIDATE_DIR"
+          cp "updates/packages/Central-de-Trabalho-v${VERSION}.zip" "$CANDIDATE_DIR/"
+          cp "updates/test.json" "$CANDIDATE_DIR/"
+
+      - name: Upload unpublished test candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-test-candidate
+          path: ${{ runner.temp }}/central-test-candidate
+          if-no-files-found: error
+          retention-days: 7
+
+  validate-test-package-windows:
+    needs: build-test-package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout validation sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download unpublished candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: central-test-candidate
+          path: ${{ runner.temp }}/central-test-candidate
+
+      - name: Validate the real ZIP and run the packaged Windows application
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          Set-StrictMode -Version Latest
+
+          $version = (Get-Content -LiteralPath "src/current/version.json" -Raw | ConvertFrom-Json).version
+          $candidateDir = Join-Path $env:RUNNER_TEMP "central-test-candidate"
+          $zipPath = Join-Path $candidateDir "Central-de-Trabalho-v$version.zip"
+          $channelPath = Join-Path $candidateDir "test.json"
+          if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) { throw "ZIP candidato ausente: $zipPath" }
+          if (-not (Test-Path -LiteralPath $channelPath -PathType Leaf)) { throw "Metadados candidatos ausentes: $channelPath" }
+
+          $channel = Get-Content -LiteralPath $channelPath -Raw | ConvertFrom-Json
+          $actualHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToUpperInvariant()
+          $actualSize = ([IO.FileInfo]$zipPath).Length
+          if ([string]$channel.Version -ne $version) { throw "Versão divergente no test.json candidato." }
+          if ([string]$channel.PackageSha256 -ne $actualHash) { throw "SHA-256 divergente no ZIP candidato." }
+          if ([int64]$channel.PackageSize -ne $actualSize) { throw "Tamanho divergente no ZIP candidato." }
+
+          $validationRoot = Join-Path $env:RUNNER_TEMP "central-package-validation"
+          if (Test-Path -LiteralPath $validationRoot) { Remove-Item -LiteralPath $validationRoot -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $validationRoot | Out-Null
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $validationRoot -Force
+          $installRoot = Join-Path $validationRoot ([string]$channel.PackageRoot)
+          if (-not (Test-Path -LiteralPath $installRoot -PathType Container)) { throw "Raiz declarada não existe dentro do ZIP." }
+
+          # Parser, contratos e auditorias rodam novamente contra os bytes
+          # efetivamente extraídos do pacote que será publicado.
+          & ".\src\ci\parse_powershell.ps1" -Root $installRoot
+          python src/ci/regression_contracts.py "$installRoot"
+          python src/ci/audit_release.py tree "$installRoot" "$version"
+          python src/ci/audit_release.py package "$installRoot" "$version" "$zipPath" "$channelPath"
+
+          $nfCore = Join-Path $installRoot "Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
+          $nfUi = Join-Path $installRoot "Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1"
+          $centralUi = Join-Path $installRoot "Central de Trabalho.ps1"
+          & ".\src\ci\test_nfentrada_import.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_stage1.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_stage2.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_stage3.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_stage5.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_stage6.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_stage9.ps1" -CorePath $nfCore
+          & ".\src\ci\test_nfentrada_final.ps1" -CorePath $nfCore -UiPath $nfUi -CentralPath $centralUi
+
+          $hostExe = Join-Path $installRoot "Central de Trabalho.exe"
+          $updaterExe = Join-Path $installRoot "Atualizador\Central de Trabalho Updater.exe"
+          $hostSmoke = Start-Process -FilePath $hostExe -ArgumentList "--self-test" -WorkingDirectory $installRoot -Wait -PassThru
+          if ($hostSmoke.ExitCode -ne 0) { throw "Smoke test do host empacotado falhou: $($hostSmoke.ExitCode)." }
+          $updaterSmokeArgs = '--self-test -InstallRoot "' + $installRoot + '"'
+          $updaterSmoke = Start-Process -FilePath $updaterExe -ArgumentList $updaterSmokeArgs -WorkingDirectory (Split-Path -Parent $updaterExe) -Wait -PassThru
+          if ($updaterSmoke.ExitCode -ne 0) { throw "Smoke test do Atualizador empacotado falhou: $($updaterSmoke.ExitCode)." }
+
+          # Todos os dados do runtime usam uma raiz isolada. Preferências standalone
+          # conflitantes são pré-gravadas para provar que não vencem a Central.
+          $dataRoot = Join-Path $env:RUNNER_TEMP "central-theme-isolated-data"
+          if (Test-Path -LiteralPath $dataRoot) { Remove-Item -LiteralPath $dataRoot -Recurse -Force }
+          $centralSettings = Join-Path $dataRoot "CentralDeTrabalho"
+          $generatorSettings = Join-Path $dataRoot "GeradorPlanilhasCB5TV5"
+          $maintenanceSettings = Join-Path $centralSettings "ManutencaoCB5"
+          New-Item -ItemType Directory -Force -Path $centralSettings, $generatorSettings, $maintenanceSettings | Out-Null
+          @{ Theme = "Escuro profissional" } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $centralSettings "preferencias.json") -Encoding UTF8
+          @{ Theme = "Escuro grafite"; Product = "CB5"; LastInputDirectory = "" } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $generatorSettings "preferencias.json") -Encoding UTF8
+          @{ Theme = "Escuro grafite" } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $maintenanceSettings "preferencias.json") -Encoding UTF8
+          $env:CENTRAL_THEME_RUNTIME_TEST = "1"
+          $env:CENTRAL_THEME_TEST_DATA_ROOT = $dataRoot
+
+          # Teste complementar de cada módulo no mesmo tipo de painel hospedado.
+          & ".\src\ci\test_hosted_theme_runtime.ps1" -GeneratedRoot $installRoot
+
+          function Invoke-PackagedThemeRuntime {
+              param([string]$RunName)
+              $runRoot = Join-Path $env:RUNNER_TEMP ("theme-runtime-" + $RunName)
+              $shots = Join-Path $runRoot "screenshots"
+              $report = Join-Path $runRoot "report.json"
+              New-Item -ItemType Directory -Force -Path $shots | Out-Null
+              $arguments = '--theme-runtime-self-test --theme-runtime-report "' + $report + '" --theme-runtime-artifacts "' + $shots + '"'
+              $process = Start-Process -FilePath $hostExe -ArgumentList $arguments -WorkingDirectory $installRoot -PassThru
+              if (-not $process.WaitForExit(300000)) {
+                  try { Stop-Process -Id $process.Id -Force } catch {}
+                  throw "O host nativo bloqueou por mais de cinco minutos no teste $RunName."
+              }
+              $process.Refresh()
+              if ($process.ExitCode -ne 0) {
+                  if (Test-Path -LiteralPath $report) { Write-Host (Get-Content -LiteralPath $report -Raw) }
+                  throw "O host nativo retornou $($process.ExitCode) no teste $RunName."
+              }
+              if (-not (Test-Path -LiteralPath $report -PathType Leaf)) { throw "Relatório ausente no teste $RunName." }
+              $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+              if (-not [bool]$result.Success) { throw "O teste $RunName reportou falha: $($result.Failure)" }
+              if ([int]$result.ThemeTransactionFailures -ne 0) { throw "O teste $RunName registrou falha intermediária de sincronização." }
+              if ([string]$result.NativeHostProcess -ne "Central de Trabalho.exe") { throw "O teste $RunName não foi executado pelo EXE empacotado." }
+              if (@($result.Cases).Count -lt 27) { throw "O teste $RunName não cobriu todos os cenários obrigatórios." }
+              if (@($result.Cases | Where-Object { -not [bool]$_.Valid }).Count -gt 0) { throw "O teste $RunName contém auditoria visual inválida." }
+              if (@($result.DataIntegrity).Count -lt 4 -or @($result.DataIntegrity | Where-Object { -not [bool]$_.Unchanged }).Count -gt 0) {
+                  throw "O teste $RunName não comprovou a integridade dos dados operacionais."
+              }
+
+              Add-Type -AssemblyName System.Drawing
+              $pngs = @(Get-ChildItem -LiteralPath $shots -Filter "*.png" -File)
+              if ($pngs.Count -lt 16) { throw "O teste $RunName gerou somente $($pngs.Count) capturas visuais." }
+              foreach ($png in $pngs) {
+                  if ($png.Length -lt 1500) { throw "Captura visual vazia ou inválida: $($png.Name)" }
+                  $bitmap = [Drawing.Bitmap]::FromFile($png.FullName)
+                  try {
+                      if ($bitmap.Width -lt 1000 -or $bitmap.Height -lt 650) { throw "Captura visual com dimensão insuficiente: $($png.Name)" }
+                      $colors = New-Object 'Collections.Generic.HashSet[int]'
+                      for ($x = 0; $x -lt $bitmap.Width; $x += 80) {
+                          for ($y = 0; $y -lt $bitmap.Height; $y += 60) { [void]$colors.Add($bitmap.GetPixel($x, $y).ToArgb()) }
+                      }
+                      if ($colors.Count -lt 4) { throw "Captura visual aparentemente uniforme: $($png.Name)" }
+                  }
+                  finally { $bitmap.Dispose() }
+              }
+              return [pscustomobject]@{ Result = $result; Root = $runRoot }
+          }
+
+          $first = Invoke-PackagedThemeRuntime "first-start"
+          if ([string]$first.Result.StartupTheme -ne "Escuro profissional") { throw "O primeiro processo não carregou a preferência inicial esperada." }
+          if ([string]$first.Result.FinalTheme -ne "Claro corporativo") { throw "O primeiro processo não persistiu o tema final esperado." }
+          if ([string]$first.Result.StandalonePreferences.GeneratorAfter -ne "Escuro grafite") { throw "A preferência standalone do Gerenciador foi sobrescrita." }
+          if ([string]$first.Result.StandalonePreferences.MaintenanceAfter -ne "Escuro grafite") { throw "A preferência standalone da Manutenção foi sobrescrita." }
+
+          $second = Invoke-PackagedThemeRuntime "complete-restart"
+          if ([string]$second.Result.StartupTheme -ne "Claro corporativo") { throw "O segundo processo não nasceu com o tema persistido pela Central." }
+          if ([string]$second.Result.FinalTheme -ne "Claro corporativo") { throw "O segundo processo terminou em tema inesperado." }
+
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "central-theme-evidence"
+          New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
+          Copy-Item -LiteralPath $first.Root -Destination (Join-Path $evidenceRoot "first-start") -Recurse -Force
+          Copy-Item -LiteralPath $second.Root -Destination (Join-Path $evidenceRoot "complete-restart") -Recurse -Force
+          Copy-Item -LiteralPath $channelPath -Destination (Join-Path $evidenceRoot "candidate-test.json") -Force
+          Write-Host "PACOTE WINDOWS REAL: OK — executável nativo validado em dois processos completos, com capturas e propriedades reais."
+
+      - name: Upload visual and runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-theme-runtime-evidence
+          path: ${{ runner.temp }}/central-theme-evidence
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-test-package:
+    needs: validate-test-package-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout publication target
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download validated candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: central-test-candidate
+          path: ${{ runner.temp }}/central-test-candidate
+
+      - name: Publish only the validated Test candidate
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
           STABLE_VERSION="$(python3 -c 'import json; print(json.load(open("updates/stable.json", encoding="utf-8"))["Version"])')"
+          test "$STABLE_VERSION" = "0.20.2"
+          CANDIDATE_DIR="$RUNNER_TEMP/central-test-candidate"
+          CANDIDATE_ZIP="$CANDIDATE_DIR/Central-de-Trabalho-v${VERSION}.zip"
+          CANDIDATE_JSON="$CANDIDATE_DIR/test.json"
+          test -s "$CANDIDATE_ZIP"
+          test -s "$CANDIDATE_JSON"
+
+          STABLE_JSON_HASH="$(sha256sum updates/stable.json | awk '{print $1}')"
+          STABLE_PACKAGE="updates/packages/Central-de-Trabalho-v${STABLE_VERSION}.zip"
+          test -s "$STABLE_PACKAGE"
+          STABLE_PACKAGE_HASH="$(sha256sum "$STABLE_PACKAGE" | awk '{print $1}')"
 
           # Mantém somente o pacote da Estável declarada e o pacote de Teste atual.
           for package in updates/packages/Central-de-Trabalho-v*.zip; do
@@ -258,9 +462,19 @@ jobs:
             fi
           done
 
+          cp "$CANDIDATE_ZIP" "updates/packages/Central-de-Trabalho-v${VERSION}.zip"
+          cp "$CANDIDATE_JSON" "updates/test.json"
+          test "$(sha256sum updates/stable.json | awk '{print $1}')" = "$STABLE_JSON_HASH"
+          test "$(sha256sum "$STABLE_PACKAGE" | awk '{print $1}')" = "$STABLE_PACKAGE_HASH"
+          test "$(python3 -c 'import json; print(json.load(open("updates/test.json", encoding="utf-8"))["Version"])')" = "$VERSION"
+
           git config user.name "Central de Trabalho Builder"
           git config user.email "actions@users.noreply.github.com"
-          git add -A updates/packages updates/test.json src/generated src/current/transforms
+          git add -A updates/packages updates/test.json
+          if ! git diff --quiet -- updates/stable.json; then
+            echo "ERRO: o canal Estável foi alterado."
+            exit 1
+          fi
           if git diff --cached --quiet; then
             echo "Nada novo para publicar."
             exit 0

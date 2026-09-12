@@ -1,16 +1,16 @@
 {
-  "version": "0.21.32",
+  "version": "0.21.33",
   "buildRevision": 1,
   "releaseNotes": [
-    "CURA 2: correção profunda da troca de aparência com módulos abertos, validada em runtime no Windows.",
-    "O Gerenciador separa definitivamente aparência de dados: trocar tema não recarrega resumos, união, saldos ou componentes e não pode mais falhar por causa da base operacional.",
-    "O Gerenciador valida janela, cabeçalho, card principal, aviso informativo e página Gerar antes de confirmar a nova aparência.",
-    "A Central foi testada com Gerenciador em TV5, Manutenção e Controle de NF alternando Escuro profissional, Técnico industrial, Claro corporativo e Alto contraste, incluindo espera para detectar reaplicações tardias.",
-    "A Manutenção passa a aplicar e validar explicitamente a paleta na raiz da janela integrada.",
-    "O Controle de NF deixa erros de inicialização integrados subirem para a Central em vez de bloquear a interface com diálogo modal escondido; o fluxo normal de configuração inicial permanece inalterado.",
-    "Foi adicionado teste runtime permanente de aparência no runner Windows para impedir regressões futuras de sincronização visual.",
-    "Nenhuma regra operacional, planilha, saldo, histórico ou dado foi alterado.",
-    "Central de Manutenção v0.6.7, Gerenciador v3.7.9 e Controle de NF v2.6.8.",
-    "A Estável permanece v0.20.2; esta versão é somente Teste."
+    "A Central passa a ser a única autoridade de aparência dos módulos hospedados, por meio de um contexto compartilhado com tema e revisão.",
+    "A troca de aparência agora é transacional e não reentrante: Central e módulo confirmam juntos o novo tema ou ambos retornam ao último tema válido.",
+    "Preferências standalone do Gerenciador e da Manutenção são preservadas, mas nunca podem vencer a Central durante a hospedagem.",
+    "Gerenciador validado em TV5 e CB5 nos temas Escuro profissional, Claro corporativo, Técnico industrial e Alto contraste, incluindo alternância rápida, resize, refresh, reabertura e espera por eventos tardios.",
+    "Manutenção e Controle de NF receberam a mesma autoridade compartilhada e auditoria de cabeçalho, abas, cards, inputs, botões, grades, painéis e fundo geral.",
+    "O Controle de NF agora aplica cores por papel semântico do controle, evitando a inferência ambígua por cores anteriores ao sair de Claro ou Alto contraste.",
+    "Trocar aparência não recarrega nem grava dados operacionais; o pacote valida por SHA-256 que saldos, NFs, históricos, componentes e registros permanecem intactos.",
+    "O workflow oficial só publica depois de testar duas execuções completas do EXE dentro do ZIP real no Windows e gerar evidências visuais e auditorias das propriedades dos controles.",
+    "Central v0.21.33, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.9.",
+    "A Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
   ]
 }
