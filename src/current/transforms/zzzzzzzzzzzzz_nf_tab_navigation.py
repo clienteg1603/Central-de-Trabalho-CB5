@@ -108,8 +108,10 @@ $nfTabsViewport.Add_Resize({ Sync-NFTabViewport })''',
 'navegacao visual NF')
 
 n = r(n,
-'''$mainTabs.SelectedTab = $computerTab''',
-'''$mainTabs.SelectedTab = $computerTab
+'''$mainTabs.TabPages.Add($summaryTab)
+$mainTabs.SelectedTab = $computerTab''',
+'''$mainTabs.TabPages.Add($summaryTab)
+$mainTabs.SelectedTab = $computerTab
 
 function Update-NFSectionNavigation {
     $items = @(
