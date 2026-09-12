@@ -1,0 +1,59 @@
+name: CURA 7 post-publish audit
+
+on:
+  push:
+    paths:
+      - 'src/ci/test_cura7_hosted_lifecycle.ps1'
+      - '.github/workflows/cura7-postpublish-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit-published-test:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    env:
+      CENTRAL_THEME_RUNTIME_TEST: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download current published Test package
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $channel = Get-Content -LiteralPath 'updates/test.json' -Raw | ConvertFrom-Json
+          $zipPath = Join-Path $env:RUNNER_TEMP ("Central-de-Trabalho-v" + [string]$channel.Version + '.zip')
+          Invoke-WebRequest -Uri ([string]$channel.PackageUrl) -OutFile $zipPath -UseBasicParsing
+          $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToUpperInvariant()
+          if ($hash -ne [string]$channel.PackageSha256) { throw "SHA-256 divergente no pacote Teste publicado." }
+          if ((Get-Item -LiteralPath $zipPath).Length -ne [int64]$channel.PackageSize) { throw "Tamanho divergente no pacote Teste publicado." }
+          "CURA7_ZIP=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CURA7_VERSION=$($channel.Version)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CURA7_ROOT=$($channel.PackageRoot)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Expand published Test package
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $extract = Join-Path $env:RUNNER_TEMP 'cura7-published-test'
+          if (Test-Path -LiteralPath $extract) { Remove-Item -LiteralPath $extract -Recurse -Force }
+          Expand-Archive -LiteralPath $env:CURA7_ZIP -DestinationPath $extract -Force
+          $installRoot = Join-Path $extract $env:CURA7_ROOT
+          if (-not (Test-Path -LiteralPath $installRoot -PathType Container)) { throw "Raiz do pacote publicada ausente: $installRoot" }
+          "CURA7_INSTALL=$installRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Recheck package contracts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\ci\parse_powershell.ps1' -Root $env:CURA7_INSTALL
+          python '.\src\ci\regression_contracts.py' $env:CURA7_INSTALL
+          python '.\src\ci\audit_release.py' tree $env:CURA7_INSTALL $env:CURA7_VERSION
+
+      - name: CURA 7 hosted lifecycle and resize audit
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\ci\test_cura7_hosted_lifecycle.ps1' -InstallRoot $env:CURA7_INSTALL
