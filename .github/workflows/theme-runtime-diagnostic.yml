@@ -13,6 +13,7 @@ on:
 jobs:
   theme-runtime:
     runs-on: windows-latest
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,14 +46,16 @@ jobs:
           }
           Write-Host "Scripts normalizados com UTF-8 BOM: $($files.Count)"
 
-      - name: Hosted module theme runtime test
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          & '.\src\ci\test_hosted_theme_runtime.ps1' -GeneratedRoot '.\src\generated'
-
       - name: Central plus modules theme runtime test
+        timeout-minutes: 4
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           & '.\src\generated\Central de Trabalho.ps1' -ThemeRuntimeSelfTest
+
+      - name: Hosted module theme runtime test
+        timeout-minutes: 3
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\ci\test_hosted_theme_runtime.ps1' -GeneratedRoot '.\src\generated'
