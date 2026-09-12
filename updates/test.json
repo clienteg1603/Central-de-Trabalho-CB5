@@ -5,8 +5,8 @@
   "Version": "0.21.41",
   "MinimumUpdaterVersion": "1.0.0",
   "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.41.zip",
-  "PackageSha256": "A30DA9B0F8A7EA16B2D04BA314E3270F4EDF04DE8FB71115B6062F564519DC9C",
-  "PackageSize": 349032,
+  "PackageSha256": "32B0380381254C1396B454617C0533C3677B6506F77E1EE49C135FEAE97EF015",
+  "PackageSize": 349035,
   "PackageRoot": "Central-de-Trabalho-v0.21.41",
   "ReleaseNotes": [
     "Padronização visual: Gerenciador de Planilhas e Controle de NF agora seguem a linguagem estética da Central de Manutenção CB5.",
