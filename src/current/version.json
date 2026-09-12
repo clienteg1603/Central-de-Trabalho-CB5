@@ -1,6 +1,6 @@
 {
   "version": "0.21.46",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "CURA 8: fechamento final da cura visual e preventiva da Central de Trabalho no canal Teste.",
     "Controle de NF v2.6.15: EDITAR e SAÍDA agora mantêm texto branco e legível mesmo quando ficam desabilitados por não haver uma linha selecionada.",
