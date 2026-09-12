@@ -1,13 +1,12 @@
 {
   "version": "0.21.34",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
-    "A opção de Aparência foi removida da interface da Central para eliminar definitivamente os conflitos de sincronização entre Central e módulos.",
-    "A Central de Trabalho passa a usar exclusivamente o tema Técnico industrial em uso normal.",
-    "Preferências antigas de tema gravadas no computador deixam de alterar a aparência da Central; ao iniciar, o tema operacional é sempre Técnico industrial.",
-    "Gerenciador de Planilhas, Central de Manutenção e Controle de NF recebem o mesmo tema Técnico industrial ao serem abertos dentro da Central.",
-    "Nenhuma regra operacional, saldo, NF, histórico, planilha, componente ou registro de manutenção foi alterado por esta simplificação visual.",
-    "Central v0.21.34, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.9.",
-    "A Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
+    "Tema visual fixo: Tecnico industrial.",
+    "O seletor de Aparencia foi removido da Central.",
+    "Gerenciador, Manutencao e Controle de NF usam o mesmo tema quando abertos na Central.",
+    "Nenhum dado operacional foi alterado.",
+    "Central v0.21.34, Gerenciador v3.7.10, Manutencao v0.6.8 e Controle de NF v2.6.9.",
+    "A Estavel permanece v0.20.2; publicacao somente no canal Teste."
   ]
 }
