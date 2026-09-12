@@ -30,6 +30,19 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Transform falhou: $($transform.Name)" }
           }
 
+      - name: Normalize runtime scripts like the real package
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $utf8 = [Text.Encoding]::UTF8
+          $utf8Bom = New-Object Text.UTF8Encoding($true)
+          $files = @(Get-ChildItem -LiteralPath 'src/generated' -Filter '*.ps1' -File -Recurse)
+          foreach ($file in $files) {
+            $text = [IO.File]::ReadAllText($file.FullName, $utf8)
+            [IO.File]::WriteAllText($file.FullName, $text, $utf8Bom)
+          }
+          Write-Host "Scripts normalizados com UTF-8 BOM como no pacote real: $($files.Count)"
+
       - name: Hosted theme runtime test
         shell: powershell
         run: |
