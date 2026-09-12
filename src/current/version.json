@@ -1,14 +1,15 @@
 {
-  "version": "0.21.42",
+  "version": "0.21.43",
   "buildRevision": 1,
   "releaseNotes": [
-    "Refino visual do Gerenciador de Planilhas com identidade por produto e navegação alinhada à Central de Manutenção.",
-    "CB5 mantém o acento ciano do tema Técnico industrial; TV5 passa a usar um verde técnico suave da mesma família visual.",
-    "A troca CB5/TV5 reaplica imediatamente o acento do produto nos elementos de destaque do Gerenciador.",
-    "Os cinco botões de navegação Gerar, Manutenções, Componentes, Juntar lotes e Códigos agora usam maior altura, cantos arredondados e espaçamento real entre os itens, seguindo a geometria visual da Central de Manutenção.",
-    "O item ativo da navegação usa preenchimento com o acento do produto; os demais permanecem escuros com contorno discreto.",
-    "Nenhuma regra de geração de planilhas, manutenção, componentes, união de lotes ou códigos foi alterada.",
-    "Central v0.21.42, Gerenciador v3.7.14, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.12.",
+    "CURA 7 concluída e publicada no canal Teste.",
+    "Auditoria pós-publicação consolidada para os três módulos: Gerenciador de Planilhas, Central de Manutenção e Controle de NF de Entrada.",
+    "Os três módulos foram validados em ciclos repetidos de abertura, redimensionamento, fechamento e reabertura dentro da Central.",
+    "Controle de NF: mantidas as seis abas nativas, os contadores dinâmicos CB5/TV5 e a proteção contra OwnerDrawFixed e mecanismos instáveis de recálculo das abas.",
+    "Controle de NF: contratos de cadastro, edição, saída, estorno, histórico, persistência, integridade, backup e restauração permanecem validados.",
+    "Gerenciador: identidade CB5 ciano / TV5 verde técnico e navegação refinada permanecem preservadas após a CURA 7.",
+    "Nenhuma regra operacional de planilhas, manutenção ou NF foi alterada nesta etapa de fechamento; a publicação formaliza o estado validado da CURA 7.",
+    "Central v0.21.43, Gerenciador v3.7.14, Central de Manutenção v0.6.10 e Controle de NF de Entrada v2.6.12.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
