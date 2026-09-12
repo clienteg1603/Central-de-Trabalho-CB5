@@ -1,11 +1,12 @@
 {
-  "version": "0.21.30",
+  "version": "0.21.31",
   "buildRevision": 1,
   "releaseNotes": [
-    "CURA 2: correção da causa raiz do seletor de aparência da Central.",
-    "O evento do seletor volta a usar SelectedIndexChanged com trava de reentrada, cobrindo teclado, mouse e alterações do ComboBox que antes podiam mudar o texto sem reaplicar a interface.",
-    "A sincronização deixa de aceitar falso sucesso quando um módulo devolve múltiplas saídas do pipeline PowerShell; a última confirmação precisa ser verdadeira.",
-    "Central, Gerenciador, Manutenção e Controle de NF continuam com as mesmas regras operacionais e dados.",
+    "CURA 2: corrige a barra lateral da Central ao trocar aparência com um módulo aberto.",
+    "A Central passa a reaplicar explicitamente as cores de todos os textos, seletor e navegação da barra lateral em cada troca de tema.",
+    "O título CENTRAL DE TRABALHO, Organização • Controle, navegação, aparência, status e versão deixam de herdar cores do tema anterior.",
+    "A barra lateral é repintada por último, depois da sincronização visual, evitando texto escuro em fundo escuro ou texto claro em fundo claro.",
+    "Nenhuma regra operacional, dado ou fluxo dos módulos foi alterado.",
     "Central de Manutenção v0.6.6, Gerenciador v3.7.8 e Controle de NF v2.6.7.",
     "A Estável permanece v0.20.2; esta versão é somente Teste."
   ]
