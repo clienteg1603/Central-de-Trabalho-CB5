@@ -1,14 +1,13 @@
 {
-  "version": "0.21.48",
+  "version": "0.21.49",
   "buildRevision": 1,
   "releaseNotes": [
-    "Pós-cura visual: corrige a aba Resumo do Controle de NF para exibir as poucas informações disponíveis sem barras de rolagem desnecessárias.",
-    "Controle de NF v2.6.17: Saldo por produto e Saldo por código passam a usar linhas mais compactas no modo integrado e ficam sem barras de rolagem quando todo o conteúdo cabe na própria área.",
-    "A seção Atividade operacional foi compactada para evitar cortes nos cards MOVIMENTAÇÕES HOJE, PEÇAS SAÍRAM HOJE e PEÇAS EM 7 DIAS.",
-    "Margens e espaçamentos de Última movimentação e Pendências foram reduzidos para aproveitar melhor a altura disponível sem alterar funções.",
-    "O resumo persistente da Central de Manutenção v0.6.11 continua preservado acima da navegação.",
-    "A navegação do NF e o TabControl interno permanecem no caminho estável, sem OwnerDrawFixed, ItemSize, SizeChanged ou HandleCreated.",
-    "Central v0.21.48, Gerenciador v3.7.14, Central de Manutenção v0.6.11 e Controle de NF de Entrada v2.6.17.",
+    "GERAL 2 — Etapa 1: revisão da responsividade da casca principal da Central de Trabalho.",
+    "Maximizar, restaurar, redimensionar a janela e mudar DPI agora passam por uma única rotina de layout com pequeno debounce, reduzindo recalculos em excesso durante o arraste.",
+    "Quando o dashboard está visível, grade de módulos, cabeçalho e densidade são recalculados juntos; quando um módulo está aberto, o host força nova passagem de layout e pintura no conteúdo hospedado.",
+    "O modo compacto libera mais largura útil para o conteúdo ao reduzir a sidebar de 174 para 158 pixels e ajustar seu padding.",
+    "O autoteste visual da Central passa a incluir também uma janela de 900x620, além dos cenários compacto, balanceado e confortável já existentes.",
+    "Esta etapa não altera regras operacionais dos módulos; Gerenciador permanece v3.7.14, Manutenção v0.6.11 e Controle de NF v2.6.17.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
