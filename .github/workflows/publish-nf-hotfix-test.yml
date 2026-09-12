@@ -1,0 +1,222 @@
+name: Publish NF hotfix Test package
+
+on:
+  push:
+    paths:
+      - 'src/current/version.json'
+
+permissions:
+  contents: write
+
+jobs:
+  build-native-host:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build native Windows hosts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = (Get-Content -LiteralPath "src/current/version.json" -Raw | ConvertFrom-Json).version
+          $work = Join-Path $env:RUNNER_TEMP "nf-hotfix-host"
+          if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          $outDir = Join-Path $work "out"
+          & ".\src\launcher\build-host.ps1" -Version $version -OutputDirectory $outDir
+          & ".\src\launcher\build-updater-host.ps1" -Version $version -OutputDirectory $outDir
+          if (-not (Test-Path -LiteralPath (Join-Path $outDir "Central de Trabalho.exe") -PathType Leaf)) { throw "Host da Central ausente." }
+          if (-not (Test-Path -LiteralPath (Join-Path $outDir "Central de Trabalho Updater.exe") -PathType Leaf)) { throw "Host do Atualizador ausente." }
+      - name: Upload native hosts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nf-hotfix-native-host
+          path: |
+            ${{ runner.temp }}/nf-hotfix-host/out/Central de Trabalho.exe
+            ${{ runner.temp }}/nf-hotfix-host/out/Central de Trabalho Updater.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  build-package:
+    needs: build-native-host
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download native hosts
+        uses: actions/download-artifact@v4
+        with:
+          name: nf-hotfix-native-host
+          path: ${{ runner.temp }}/nf-hotfix-native-host
+      - name: Build and audit candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
+          BUILD_DIR="$RUNNER_TEMP/nf-hotfix-build"
+          SOURCE_ROOT="src/generated"
+          rm -rf "$BUILD_DIR"
+          mkdir -p "$BUILD_DIR"
+
+          if compgen -G "src/current/transforms/*.py" > /dev/null; then
+            for transform in src/current/transforms/*.py; do
+              echo "Aplicando transformação: $transform"
+              python3 "$transform"
+            done
+          fi
+
+          OUT_ROOT="$BUILD_DIR/Central-de-Trabalho-v${VERSION}"
+          mkdir -p "$OUT_ROOT/Atualizador" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5" "$OUT_ROOT/Modulos/Controle-NF-Entrada"
+          cp "$RUNNER_TEMP/nf-hotfix-native-host/Central de Trabalho.exe" "$OUT_ROOT/Central de Trabalho.exe"
+          cp "$SOURCE_ROOT/Central de Trabalho.ps1" "$OUT_ROOT/"
+          cp "$SOURCE_ROOT/Atualizador/CANAIS.json" "$OUT_ROOT/Atualizador/"
+          cp "$RUNNER_TEMP/nf-hotfix-native-host/Central de Trabalho Updater.exe" "$OUT_ROOT/Atualizador/Central de Trabalho Updater.exe"
+          cp "$SOURCE_ROOT/Atualizador/Central de Trabalho Updater.ps1" "$OUT_ROOT/Atualizador/"
+          cp "$SOURCE_ROOT/Atualizador/Update.Core.ps1" "$OUT_ROOT/Atualizador/"
+          cp "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Central Manutencao CB5.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
+          cp "$SOURCE_ROOT/Modulos/Central-de-Manutencao-CB5/Manutencao.Core.ps1" "$OUT_ROOT/Modulos/Central-de-Manutencao-CB5/"
+          cp "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Gerador Planilhas.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
+          cp "$SOURCE_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/Componentes.Core.ps1" "$OUT_ROOT/Modulos/Gerador-de-Planilhas-CB5-TV5/"
+          cp "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1" "$OUT_ROOT/Modulos/Controle-NF-Entrada/"
+          cp "$SOURCE_ROOT/Modulos/Controle-NF-Entrada/NFEntrada.Core.ps1" "$OUT_ROOT/Modulos/Controle-NF-Entrada/"
+
+          python3 - "$OUT_ROOT" <<'PY'
+          import pathlib, sys
+          root = pathlib.Path(sys.argv[1]); bom=b'\xef\xbb\xbf'
+          for p in root.rglob('*.ps1'):
+              raw=p.read_bytes()
+              if raw.startswith(bom): raw=raw[len(bom):]
+              p.write_bytes(bom+raw)
+          PY
+
+          python3 src/ci/audit_release.py tree "$OUT_ROOT" "$VERSION"
+          python3 src/ci/regression_contracts.py "$OUT_ROOT"
+          pwsh -NoProfile -NonInteractive -File src/ci/parse_powershell.ps1 -Root "$OUT_ROOT"
+
+          python3 - "$OUT_ROOT" "$VERSION" <<'PY'
+          import hashlib,json,pathlib,sys,zipfile
+          root=pathlib.Path(sys.argv[1]); version=sys.argv[2]
+          central=(root/'Central de Trabalho.ps1').read_text(encoding='utf-8-sig')
+          nf=(root/'Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1').read_text(encoding='utf-8-sig')
+          for marker in ['$settings.Theme = "Técnico industrial"','$sidebarThemeLabel.Visible = $false','$themeCombo.Visible = $false']:
+              if marker not in central: raise SystemExit('Tema fixo ausente: '+marker)
+          if '$script:ModuleVersion = "2.6.10"' not in nf: raise SystemExit('NF v2.6.10 não aplicado.')
+          if 'Update-NFMainTabStripLayout' in nf: raise SystemExit('Ajuste experimental que causava reentrada ainda presente no NF.')
+          files=[]
+          for p in sorted(x for x in root.rglob('*') if x.is_file() and x.name!='PACOTE-MANIFESTO.json'):
+              data=p.read_bytes(); files.append({'Path':p.relative_to(root).as_posix().replace('/','\\'),'Size':len(data),'Sha256':hashlib.sha256(data).hexdigest().upper()})
+          (root/'PACOTE-MANIFESTO.json').write_text(json.dumps({'SchemaVersion':1,'AppId':'central-de-trabalho','Version':version,'Files':files},ensure_ascii=False,indent=2),encoding='utf-8-sig')
+          out=pathlib.Path('updates/packages')/f'Central-de-Trabalho-v{version}.zip'; out.parent.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for p in sorted(x for x in root.rglob('*') if x.is_file()): z.write(p,pathlib.Path(root.name)/p.relative_to(root))
+          package=out.read_bytes(); meta=json.loads(pathlib.Path('src/current/version.json').read_text(encoding='utf-8'))
+          channel={'SchemaVersion':1,'AppId':'central-de-trabalho','Channel':'test','Version':version,'MinimumUpdaterVersion':'1.0.0','PackageUrl':f'https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v{version}.zip','PackageSha256':hashlib.sha256(package).hexdigest().upper(),'PackageSize':len(package),'PackageRoot':root.name,'ReleaseNotes':meta.get('releaseNotes',[])}
+          pathlib.Path('updates/test.json').write_text(json.dumps(channel,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(f'Pacote {version}: {len(package)} bytes / {channel["PackageSha256"]}')
+          PY
+          python3 src/ci/audit_release.py package "$OUT_ROOT" "$VERSION" "updates/packages/Central-de-Trabalho-v${VERSION}.zip" "updates/test.json"
+          CANDIDATE_DIR="$RUNNER_TEMP/nf-hotfix-candidate"; rm -rf "$CANDIDATE_DIR"; mkdir -p "$CANDIDATE_DIR"
+          cp "updates/packages/Central-de-Trabalho-v${VERSION}.zip" "$CANDIDATE_DIR/"
+          cp updates/test.json "$CANDIDATE_DIR/"
+      - name: Upload candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: nf-hotfix-test-candidate
+          path: ${{ runner.temp }}/nf-hotfix-candidate
+          if-no-files-found: error
+          retention-days: 7
+
+  validate-windows:
+    needs: build-package
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout validation sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: nf-hotfix-test-candidate
+          path: ${{ runner.temp }}/nf-hotfix-candidate
+      - name: Validate ZIP, NF hosted startup and executables
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version=(Get-Content -LiteralPath "src/current/version.json" -Raw | ConvertFrom-Json).version
+          $candidateDir=Join-Path $env:RUNNER_TEMP "nf-hotfix-candidate"
+          $zipPath=Join-Path $candidateDir "Central-de-Trabalho-v$version.zip"
+          $channelPath=Join-Path $candidateDir "test.json"
+          $channel=Get-Content -LiteralPath $channelPath -Raw | ConvertFrom-Json
+          if ((Get-FileHash $zipPath -Algorithm SHA256).Hash.ToUpperInvariant() -ne [string]$channel.PackageSha256) { throw "SHA divergente." }
+          $root=Join-Path $env:RUNNER_TEMP "nf-hotfix-validation"
+          if (Test-Path $root) { Remove-Item $root -Recurse -Force }
+          Expand-Archive $zipPath $root -Force
+          $installRoot=Join-Path $root ([string]$channel.PackageRoot)
+          & ".\src\ci\parse_powershell.ps1" -Root $installRoot
+          python src/ci/regression_contracts.py "$installRoot"
+          python src/ci/audit_release.py tree "$installRoot" "$version"
+          python src/ci/audit_release.py package "$installRoot" "$version" "$zipPath" "$channelPath"
+          $nfCore=Join-Path $installRoot "Modulos\Controle-NF-Entrada\NFEntrada.Core.ps1"
+          $nfUi=Join-Path $installRoot "Modulos\Controle-NF-Entrada\Controle NF Entrada.ps1"
+          $centralUi=Join-Path $installRoot "Central de Trabalho.ps1"
+          & ".\src\ci\test_nfentrada_final.ps1" -CorePath $nfCore -UiPath $nfUi -CentralPath $centralUi
+
+          $dataRoot=Join-Path $env:RUNNER_TEMP "nf-hotfix-runtime-data"
+          if (Test-Path $dataRoot) { Remove-Item $dataRoot -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path (Join-Path $dataRoot "CentralDeTrabalho"),(Join-Path $dataRoot "GeradorPlanilhasCB5TV5"),(Join-Path $dataRoot "CentralDeTrabalho\ManutencaoCB5") | Out-Null
+          $env:CENTRAL_THEME_RUNTIME_TEST="1"
+          $env:CENTRAL_THEME_TEST_DATA_ROOT=$dataRoot
+          & ".\src\ci\test_hosted_theme_runtime.ps1" -GeneratedRoot $installRoot
+
+          $hostExe=Join-Path $installRoot "Central de Trabalho.exe"
+          $updaterExe=Join-Path $installRoot "Atualizador\Central de Trabalho Updater.exe"
+          $p=Start-Process $hostExe -ArgumentList "--self-test" -WorkingDirectory $installRoot -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Smoke da Central falhou: $($p.ExitCode)." }
+          $args='--self-test -InstallRoot "'+$installRoot+'"'
+          $u=Start-Process $updaterExe -ArgumentList $args -WorkingDirectory (Split-Path -Parent $updaterExe) -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "Smoke do Atualizador falhou: $($u.ExitCode)." }
+          Write-Host "NF HOTFIX RUNTIME: OK - NF abriu hospedado, respondeu ao host e não travou."
+
+  publish-test:
+    needs: validate-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout publication target
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download validated candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: nf-hotfix-test-candidate
+          path: ${{ runner.temp }}/nf-hotfix-candidate
+      - name: Publish only to Test
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
+          STABLE_VERSION="$(python3 -c 'import json; print(json.load(open("updates/stable.json", encoding="utf-8"))["Version"])')"
+          test "$STABLE_VERSION" = "0.20.2"
+          DIR="$RUNNER_TEMP/nf-hotfix-candidate"
+          ZIP="$DIR/Central-de-Trabalho-v${VERSION}.zip"; JSON="$DIR/test.json"
+          test -s "$ZIP"; test -s "$JSON"
+          STABLE_JSON_HASH="$(sha256sum updates/stable.json | awk '{print $1}')"
+          STABLE_PACKAGE="updates/packages/Central-de-Trabalho-v${STABLE_VERSION}.zip"; STABLE_PACKAGE_HASH="$(sha256sum "$STABLE_PACKAGE" | awk '{print $1}')"
+          for package in updates/packages/Central-de-Trabalho-v*.zip; do
+            [ -e "$package" ] || continue; name="$(basename "$package")"
+            if [ "$name" != "Central-de-Trabalho-v${STABLE_VERSION}.zip" ] && [ "$name" != "Central-de-Trabalho-v${VERSION}.zip" ]; then rm -f "$package"; fi
+          done
+          cp "$ZIP" "updates/packages/Central-de-Trabalho-v${VERSION}.zip"
+          cp "$JSON" updates/test.json
+          test "$(sha256sum updates/stable.json | awk '{print $1}')" = "$STABLE_JSON_HASH"
+          test "$(sha256sum "$STABLE_PACKAGE" | awk '{print $1}')" = "$STABLE_PACKAGE_HASH"
+          git config user.name "Central de Trabalho Builder"; git config user.email "actions@users.noreply.github.com"
+          git add -A updates/packages updates/test.json
+          git commit -m "Publica Central de Trabalho v${VERSION} no canal Teste"
+          git push
