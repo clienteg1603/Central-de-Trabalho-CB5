@@ -90,28 +90,28 @@ new_summary_function = r'''function New-NFSummaryCard {
     $layout.Controls.Add($value, 0, 0)
     $layout.SetRowSpan($value, 2)
 
-    $title = New-Object Windows.Forms.Label
-    $title.Text = $Title
-    $title.Dock = [Windows.Forms.DockStyle]::Fill
-    $title.Margin = [Windows.Forms.Padding]::new(0)
-    $title.Padding = [Windows.Forms.Padding]::new(0, 0, 1, 0)
-    $title.Font = [Drawing.Font]::new("Segoe UI Semibold", $(if ($script:IsInProcessHosted) { 8.8 } else { 9.2 }))
-    $title.ForeColor = $script:CurrentPalette.Text
-    $title.TextAlign = [Drawing.ContentAlignment]::BottomRight
-    $title.AutoEllipsis = $true
-    $layout.Controls.Add($title, 1, 0)
+    $titleLabel = New-Object Windows.Forms.Label
+    $titleLabel.Text = $Title
+    $titleLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $titleLabel.Margin = [Windows.Forms.Padding]::new(0)
+    $titleLabel.Padding = [Windows.Forms.Padding]::new(0, 0, 1, 0)
+    $titleLabel.Font = [Drawing.Font]::new("Segoe UI Semibold", $(if ($script:IsInProcessHosted) { 8.8 } else { 9.2 }))
+    $titleLabel.ForeColor = $script:CurrentPalette.Text
+    $titleLabel.TextAlign = [Drawing.ContentAlignment]::BottomRight
+    $titleLabel.AutoEllipsis = $true
+    $layout.Controls.Add($titleLabel, 1, 0)
 
-    $hint = New-Object Windows.Forms.Label
-    $hint.Text = $Subtitle
-    $hint.Dock = [Windows.Forms.DockStyle]::Fill
-    $hint.Margin = [Windows.Forms.Padding]::new(0)
-    $hint.Padding = [Windows.Forms.Padding]::new(0, 1, 1, 0)
-    $hint.Font = [Drawing.Font]::new("Segoe UI", $(if ($script:IsInProcessHosted) { 8.0 } else { 8.4 }))
-    $hint.ForeColor = $script:CurrentPalette.Muted
-    $hint.Tag = "Theme.Muted"
-    $hint.TextAlign = [Drawing.ContentAlignment]::TopRight
-    $hint.AutoEllipsis = $true
-    $layout.Controls.Add($hint, 1, 1)
+    $hintLabel = New-Object Windows.Forms.Label
+    $hintLabel.Text = $Subtitle
+    $hintLabel.Dock = [Windows.Forms.DockStyle]::Fill
+    $hintLabel.Margin = [Windows.Forms.Padding]::new(0)
+    $hintLabel.Padding = [Windows.Forms.Padding]::new(0, 1, 1, 0)
+    $hintLabel.Font = [Drawing.Font]::new("Segoe UI", $(if ($script:IsInProcessHosted) { 8.0 } else { 8.4 }))
+    $hintLabel.ForeColor = $script:CurrentPalette.Muted
+    $hintLabel.Tag = "Theme.Muted"
+    $hintLabel.TextAlign = [Drawing.ContentAlignment]::TopRight
+    $hintLabel.AutoEllipsis = $true
+    $layout.Controls.Add($hintLabel, 1, 1)
 
     $ValueLabel.Value = $value
     return $panel
@@ -156,8 +156,8 @@ for marker in (
 for marker in (
     '$script:ModuleVersion = "2.6.16"',
     'POST_CURE_NF_SUMMARY_CARDS_V02616',
-    '$title.TextAlign = [Drawing.ContentAlignment]::BottomRight',
-    '$hint.TextAlign = [Drawing.ContentAlignment]::TopRight',
+    '$titleLabel.TextAlign = [Drawing.ContentAlignment]::BottomRight',
+    '$hintLabel.TextAlign = [Drawing.ContentAlignment]::TopRight',
     '$nfCardsHeight = if ($script:IsInProcessHosted) { 96 } else { 108 }',
 ):
     if marker not in nf:
