@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.25"
+$script:AppVersion = "0.21.26"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.7"
 $script:MaintenanceVersion = "0.6.6"
@@ -52,7 +52,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.6.4"
+$script:NFEntradaVersion = "2.6.5"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -1762,24 +1762,49 @@ $embeddedFolderButton.TabIndex = 1
 
 # Eventos
 $themeCombo.Add_SelectedIndexChanged({
+    $centralApplied = $false
     try {
+        # A Central muda primeiro e repinta imediatamente. A sincronização de um
+        # módulo nunca pode bloquear ou desfazer a aparência da janela principal.
         Apply-AppTheme
-        Save-AppSettings
-        $synced = Sync-HostedModuleTheme
         $form.PerformLayout()
         $form.Invalidate($true)
         $form.Update()
-
-        if ($synced) {
-            Set-StatusMessage ("Aparência aplicada: " + [string]$themeCombo.SelectedItem + ".") "Success"
-        }
-        else {
-            $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
-            Set-StatusMessage ("Aparência aplicada na Central, mas o módulo aberto não atualizou: " + $detail) "Warning"
-        }
+        $form.Refresh()
+        $centralApplied = $true
     }
     catch {
-        Set-StatusMessage ("Não foi possível aplicar a aparência: " + $_.Exception.Message) "Error"
+        Set-StatusMessage ("Não foi possível aplicar a aparência da Central: " + $_.Exception.Message) "Error"
+    }
+
+    try { Save-AppSettings } catch {}
+
+    $synced = $true
+    try { $synced = [bool](Sync-HostedModuleTheme) }
+    catch {
+        $synced = $false
+        $script:LastThemeSyncError = $_.Exception.Message
+    }
+
+    # Reafirma a aparência da Central depois da sincronização. Alguns módulos
+    # possuem eventos internos de ComboBox e não podem influenciar o repaint da
+    # janela hospedeira.
+    if ($centralApplied) {
+        try {
+            Apply-AppTheme
+            $form.PerformLayout()
+            $form.Invalidate($true)
+            $form.Update()
+            $form.Refresh()
+        } catch {}
+    }
+
+    if ($centralApplied -and $synced) {
+        Set-StatusMessage ("Aparência aplicada: " + [string]$themeCombo.SelectedItem + ".") "Success"
+    }
+    elseif ($centralApplied) {
+        $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "falha desconhecida" } else { $script:LastThemeSyncError }
+        Set-StatusMessage ("A Central mudou de aparência, mas o módulo aberto não atualizou: " + $detail) "Warning"
     }
 })
 $openGeneratorButton.Add_Click({ Start-GeneratorModule })

@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.6.4"
+$script:ModuleVersion = "2.6.5"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -2021,11 +2021,14 @@ function Set-HostedNFEntradaTheme {
 
     $oldPalette = $script:CurrentPalette
     $newPalette = Get-NFEntradaPalette $Theme
-    if ($null -eq $newPalette) { return $false }
+    if ($null -eq $newPalette -or $null -eq $form -or $form.IsDisposed) { return $false }
 
-    $mapColor = {
-        param([Drawing.Color]$Color)
-        if ($null -eq $oldPalette -or $null -eq $Color) { return $Color }
+    # Monta um mapa das cores da paleta anterior. Ele preserva os papéis visuais
+    # (fundo, card, texto, aviso, perigo etc.) sem depender de recursão por
+    # scriptblock. Controles que não pertenciam à paleta recebem um fallback
+    # semântico de acordo com o tipo.
+    $colorMap = @{}
+    if ($null -ne $oldPalette) {
         $pairs = @(
             @($oldPalette.Background, $newPalette.Background),
             @($oldPalette.Surface, $newPalette.Surface),
@@ -2045,75 +2048,120 @@ function Set-HostedNFEntradaTheme {
             @($oldPalette.DangerBack, $newPalette.DangerBack)
         )
         foreach ($pair in $pairs) {
-            try {
-                if ($Color.ToArgb() -eq $pair[0].ToArgb()) { return $pair[1] }
-            }
-            catch {}
-        }
-        return $Color
-    }
-
-    $applyControl = $null
-    $applyControl = {
-        param([Windows.Forms.Control]$Control)
-        if ($null -eq $Control -or $Control.IsDisposed) { return }
-
-        try {
-            $originalBack = $Control.BackColor
-            $originalFore = $Control.ForeColor
-            $mappedBack = & $mapColor $originalBack
-            $mappedFore = & $mapColor $originalFore
-            if ($null -ne $mappedBack) { $Control.BackColor = $mappedBack }
-            if ($null -ne $mappedFore) { $Control.ForeColor = $mappedFore }
-
-            # Controles de entrada e texto precisam ser sempre legíveis. Se uma
-            # cor não pertencia à paleta antiga, não a carregamos cegamente para
-            # o próximo tema.
-            if ($Control -is [Windows.Forms.TextBox] -or
-                $Control -is [Windows.Forms.ComboBox] -or
-                $Control -is [Windows.Forms.NumericUpDown] -or
-                $Control -is [Windows.Forms.DateTimePicker]) {
-                $Control.BackColor = $newPalette.Input
-                $Control.ForeColor = $newPalette.Text
-            }
-            elseif ($Control -is [Windows.Forms.Label]) {
-                if ($mappedFore.ToArgb() -eq $originalFore.ToArgb()) {
-                    $Control.ForeColor = $newPalette.Text
-                }
-            }
-            elseif ($Control -is [Windows.Forms.Button]) {
-                $Control.UseVisualStyleBackColor = $false
-                if (-not $Control.Enabled -and $mappedFore.ToArgb() -eq $originalFore.ToArgb()) {
-                    $Control.ForeColor = $newPalette.Muted
-                }
-            }
-
-            if ($Control -is [Windows.Forms.DataGridView]) {
-                $Control.BackgroundColor = $newPalette.Surface
-                $Control.GridColor = $newPalette.Border
-                $Control.EnableHeadersVisualStyles = $false
-                $Control.ColumnHeadersDefaultCellStyle.BackColor = $newPalette.Card
-                $Control.ColumnHeadersDefaultCellStyle.ForeColor = $newPalette.Text
-                $Control.DefaultCellStyle.BackColor = $newPalette.Surface
-                $Control.DefaultCellStyle.ForeColor = $newPalette.Text
-                $Control.DefaultCellStyle.SelectionBackColor = $newPalette.AccentStrong
-                $Control.DefaultCellStyle.SelectionForeColor = $newPalette.AccentText
-                $Control.AlternatingRowsDefaultCellStyle.BackColor = $newPalette.Surface
-                $Control.AlternatingRowsDefaultCellStyle.ForeColor = $newPalette.Text
-            }
-        }
-        catch {}
-
-        foreach ($child in @($Control.Controls)) {
-            & $applyControl $child
+            try { $colorMap[[int]$pair[0].ToArgb()] = $pair[1] } catch {}
         }
     }
 
     $script:CurrentPalette = $newPalette
-    & $applyControl $form
-    $form.PerformLayout()
-    $form.Invalidate($true)
-    $form.Update()
+    $queue = New-Object 'System.Collections.Generic.Queue[System.Windows.Forms.Control]'
+    $queue.Enqueue($form)
+
+    while ($queue.Count -gt 0) {
+        $control = $queue.Dequeue()
+        if ($null -eq $control -or $control.IsDisposed) { continue }
+
+        foreach ($child in @($control.Controls)) {
+            if ($null -ne $child -and -not $child.IsDisposed) { $queue.Enqueue($child) }
+        }
+
+        try {
+            $oldBackArgb = [int]$control.BackColor.ToArgb()
+            $oldForeArgb = [int]$control.ForeColor.ToArgb()
+            $mappedBack = if ($colorMap.ContainsKey($oldBackArgb)) { $colorMap[$oldBackArgb] } else { $null }
+            $mappedFore = if ($colorMap.ContainsKey($oldForeArgb)) { $colorMap[$oldForeArgb] } else { $null }
+
+            if ($null -ne $mappedBack) { $control.BackColor = $mappedBack }
+            if ($null -ne $mappedFore) { $control.ForeColor = $mappedFore }
+
+            if ($control -is [Windows.Forms.DataGridView]) {
+                $control.BackgroundColor = $newPalette.Surface
+                $control.GridColor = $newPalette.Border
+                $control.EnableHeadersVisualStyles = $false
+                $control.ColumnHeadersDefaultCellStyle.BackColor = $newPalette.Card
+                $control.ColumnHeadersDefaultCellStyle.ForeColor = $newPalette.Text
+                $control.DefaultCellStyle.BackColor = $newPalette.Surface
+                $control.DefaultCellStyle.ForeColor = $newPalette.Text
+                $control.DefaultCellStyle.SelectionBackColor = $newPalette.AccentStrong
+                $control.DefaultCellStyle.SelectionForeColor = $newPalette.AccentText
+                $control.AlternatingRowsDefaultCellStyle.BackColor = $newPalette.Surface
+                $control.AlternatingRowsDefaultCellStyle.ForeColor = $newPalette.Text
+            }
+            elseif ($control -is [Windows.Forms.TextBox] -or
+                    $control -is [Windows.Forms.ComboBox] -or
+                    $control -is [Windows.Forms.NumericUpDown] -or
+                    $control -is [Windows.Forms.DateTimePicker]) {
+                $control.BackColor = $newPalette.Input
+                $control.ForeColor = $newPalette.Text
+            }
+            elseif ($control -is [Windows.Forms.Button]) {
+                $text = ([string]$control.Text).Trim().ToUpperInvariant()
+                $wasDanger = $false
+                $wasPrimary = $false
+                if ($null -ne $oldPalette) {
+                    try { $wasDanger = ($oldBackArgb -eq [int]$oldPalette.DangerBack.ToArgb()) } catch {}
+                    try { $wasPrimary = ($oldBackArgb -eq [int]$oldPalette.AccentStrong.ToArgb() -or $oldBackArgb -eq [int]$oldPalette.Accent.ToArgb()) } catch {}
+                }
+                if ($text -match 'EXCLUIR|ESTORNAR') { $wasDanger = $true }
+                if ($text -match 'NOVA NF|EXCEL OFICIAL|REGISTRAR SAÍDA') { $wasPrimary = $true }
+
+                if ($wasDanger) { Set-NFButtonStyle $control "Danger" }
+                elseif ($wasPrimary) { Set-NFButtonStyle $control "Primary" }
+                else { Set-NFButtonStyle $control "Secondary" }
+            }
+            elseif ($control -is [Windows.Forms.GroupBox]) {
+                $control.ForeColor = $newPalette.Text
+                if ($null -eq $mappedBack) { $control.BackColor = $newPalette.Background }
+            }
+            elseif ($control -is [Windows.Forms.TabPage]) {
+                $control.BackColor = $newPalette.Background
+                $control.ForeColor = $newPalette.Text
+            }
+            elseif ($control -is [Windows.Forms.Label]) {
+                if ($null -eq $mappedFore) { $control.ForeColor = $newPalette.Text }
+            }
+            elseif (($control -is [Windows.Forms.Panel]) -or
+                    ($control -is [Windows.Forms.TableLayoutPanel]) -or
+                    ($control -is [Windows.Forms.FlowLayoutPanel])) {
+                if ($null -eq $mappedBack) { $control.BackColor = $newPalette.Background }
+            }
+        }
+        catch {
+            # Um controle visual isolado não deve impedir o restante da árvore de
+            # receber a aparência selecionada.
+        }
+    }
+
+    # Elementos estruturais e textos principais recebem cores explícitas.
+    try { $form.BackColor = $newPalette.Background; $form.ForeColor = $newPalette.Text } catch {}
+    foreach ($panel in @($root,$header,$heading,$cards)) {
+        try { if ($null -ne $panel) { $panel.BackColor = $newPalette.Background } } catch {}
+    }
+    foreach ($tab in @($computerTab,$keyboardTab,$movementTab,$historyTab,$securityTab,$summaryTab)) {
+        try { if ($null -ne $tab) { $tab.BackColor = $newPalette.Background; $tab.ForeColor = $newPalette.Text } } catch {}
+    }
+    try { $title.ForeColor = $newPalette.Text } catch {}
+    try { $subtitle.ForeColor = $newPalette.Muted } catch {}
+    try { $footerStatus.ForeColor = $newPalette.Muted } catch {}
+
+    # Reaplica os papéis dos botões principais, independente da cor que tinham
+    # antes da troca.
+    try { Set-NFButtonStyle $importButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $exportButton "Primary" } catch {}
+    try { Set-NFButtonStyle $newButton "Primary" } catch {}
+    try { Set-NFButtonStyle $editButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $outputButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $clearFiltersButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $exportListButton "Secondary" } catch {}
+    try { Set-NFButtonStyle $deleteButton "Danger" } catch {}
+    try { Set-NFButtonStyle $movementReverseButton "Danger" } catch {}
+
+    try {
+        $form.PerformLayout()
+        $form.Invalidate($true)
+        $form.Update()
+        $form.Refresh()
+    }
+    catch {}
     return $true
 }
 
