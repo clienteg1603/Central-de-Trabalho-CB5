@@ -1,6 +1,6 @@
 {
   "version": "0.21.41",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Padronização visual: Gerenciador de Planilhas e Controle de NF agora seguem a linguagem estética da Central de Manutenção CB5.",
     "Botões passam a usar o mesmo padrão visual: ciano para ações principais, laranja para ações de criação/execução e escuro contornado para ações secundárias.",
