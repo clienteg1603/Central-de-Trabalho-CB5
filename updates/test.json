@@ -2,18 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.34",
+  "Version": "0.21.35",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.34.zip",
-  "PackageSha256": "AC2E0084D0F66C342CC1E1F9632AFD4E5B649E1DE076DB65ACB9FA59279A7C86",
-  "PackageSize": 346381,
-  "PackageRoot": "Central-de-Trabalho-v0.21.34",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.35.zip",
+  "PackageSha256": "A2A231DB854377FD530302713899D16D533998A88BB4CB9B23D551AD67E15105",
+  "PackageSize": 345539,
+  "PackageRoot": "Central-de-Trabalho-v0.21.35",
   "ReleaseNotes": [
-    "Tema visual fixo: Tecnico industrial.",
-    "O seletor de Aparencia foi removido da Central.",
-    "Gerenciador, Manutencao e Controle de NF usam o mesmo tema quando abertos na Central.",
-    "Nenhum dado operacional foi alterado.",
-    "Central v0.21.34, Gerenciador v3.7.10, Manutencao v0.6.8 e Controle de NF v2.6.9.",
-    "A Estavel permanece v0.20.2; publicacao somente no canal Teste."
+    "Corrige o Controle de NF de Entrada que podia ficar preso em carregamento ao ser aberto dentro da Central.",
+    "Foi removido o ajuste experimental owner-draw das abas do NF que recalculava ItemSize durante SizeChanged/HandleCreated e podia causar reentrada no WinForms.",
+    "O Controle de NF volta a usar a estrutura estável das abas, mantendo o tema Técnico industrial fixo da Central.",
+    "A auditoria runtime das abas foi corrigida para validar a estrutura nativa e as páginas reais, sem depender do BackColor do TabControl nativo do Windows.",
+    "A publicação exige teste runtime hospedado dos três módulos; o NF precisa abrir, exportar controle hospedável e responder ao host sem travar.",
+    "Nenhuma regra operacional, saldo, NF, histórico, planilha, componente ou registro de manutenção foi alterado.",
+    "Central v0.21.35, Gerenciador v3.7.10, Central de Manutenção v0.6.8 e Controle de NF de Entrada v2.6.10.",
+    "A Estável permanece v0.20.2; esta versão é publicada somente no canal Teste."
   ]
 }
