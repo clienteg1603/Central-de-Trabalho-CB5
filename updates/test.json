@@ -2,22 +2,18 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.32",
+  "Version": "0.21.34",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.32.zip",
-  "PackageSha256": "6C85AF1B46048C93FF41E1F2CA50D7881ABE8F1D2DC1CC990649CC5272CD34C1",
-  "PackageSize": 335271,
-  "PackageRoot": "Central-de-Trabalho-v0.21.32",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.34.zip",
+  "PackageSha256": "AC2E0084D0F66C342CC1E1F9632AFD4E5B649E1DE076DB65ACB9FA59279A7C86",
+  "PackageSize": 346381,
+  "PackageRoot": "Central-de-Trabalho-v0.21.34",
   "ReleaseNotes": [
-    "CURA 2: correção profunda da troca de aparência com módulos abertos, validada em runtime no Windows.",
-    "O Gerenciador separa definitivamente aparência de dados: trocar tema não recarrega resumos, união, saldos ou componentes e não pode mais falhar por causa da base operacional.",
-    "O Gerenciador valida janela, cabeçalho, card principal, aviso informativo e página Gerar antes de confirmar a nova aparência.",
-    "A Central foi testada com Gerenciador em TV5, Manutenção e Controle de NF alternando Escuro profissional, Técnico industrial, Claro corporativo e Alto contraste, incluindo espera para detectar reaplicações tardias.",
-    "A Manutenção passa a aplicar e validar explicitamente a paleta na raiz da janela integrada.",
-    "O Controle de NF deixa erros de inicialização integrados subirem para a Central em vez de bloquear a interface com diálogo modal escondido; o fluxo normal de configuração inicial permanece inalterado.",
-    "Foi adicionado teste runtime permanente de aparência no runner Windows para impedir regressões futuras de sincronização visual.",
-    "Nenhuma regra operacional, planilha, saldo, histórico ou dado foi alterado.",
-    "Central de Manutenção v0.6.7, Gerenciador v3.7.9 e Controle de NF v2.6.8.",
-    "A Estável permanece v0.20.2; esta versão é somente Teste."
+    "Tema visual fixo: Tecnico industrial.",
+    "O seletor de Aparencia foi removido da Central.",
+    "Gerenciador, Manutencao e Controle de NF usam o mesmo tema quando abertos na Central.",
+    "Nenhum dado operacional foi alterado.",
+    "Central v0.21.34, Gerenciador v3.7.10, Manutencao v0.6.8 e Controle de NF v2.6.9.",
+    "A Estavel permanece v0.20.2; publicacao somente no canal Teste."
   ]
 }
