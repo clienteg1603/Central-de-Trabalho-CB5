@@ -1,17 +1,16 @@
 {
-  "version": "0.21.52",
+  "version": "0.21.53",
   "buildRevision": 1,
   "releaseNotes": [
-    "GERAL 2 — Etapa 4: revisão completa da responsividade do Controle de NF de Entrada.",
-    "Controle de NF v2.6.18: maximizar, restaurar, redimensionar e mudar DPI passam a recalcular a interface no modo integrado e também na janela independente.",
-    "A janela independente passa a aceitar 860x600 como mínimo, usando perfis Tight, Compact e Comfortable para ajustar densidade sem esconder funções.",
-    "Os quatro cards superiores passam de 4x1 para 2x2 quando a largura fica curta, evitando textos espremidos; a navegação visual também pode usar 3x2 sem alterar o TabControl nativo interno.",
-    "CB5 e Teclado V5 reduzem larguras fixas dos filtros conforme o espaço real; Movimentações e Histórico fazem o mesmo com pesquisa, produto, tipo, período e contadores.",
-    "Segurança, grades e rodapé acompanham a densidade da janela; ações quebram linha somente quando realmente necessário.",
-    "Resumo reorganiza a Atividade operacional em duas linhas no perfil Tight, preservando cards, Última movimentação e Pendências sem cortes e sem rolagem desnecessária.",
-    "O mecanismo estável das abas do NF foi preservado: sem SizeChanged/HandleCreated no TabControl, sem OwnerDrawFixed, sem ItemSize e sem Update-NFMainTabStripLayout.",
-    "Nenhuma regra de NF, saldo, entrada, saída, estorno, histórico, backup, restauração, importação ou exportação foi alterada.",
-    "Central v0.21.52, Gerenciador v3.7.15, Central de Manutenção v0.6.12 e Controle de NF de Entrada v2.6.18.",
+    "GERAL 2 — Etapa 5: fechamento e auditoria cruzada de toda a revisão responsiva.",
+    "A etapa final valida em conjunto a casca da Central, Gerenciador, Central de Manutenção e Controle de NF depois das quatro etapas anteriores, sem reabrir regras funcionais já estabilizadas.",
+    "A Central mantém a passagem responsiva única para maximizar, restaurar, redimensionar e mudar DPI; o Gerenciador mantém sua densidade adaptativa e o tratamento das cinco áreas principais.",
+    "A Central de Manutenção mantém responsividade integrada e independente, incluindo Histórico, Diagnóstico, Esquemáticos, Regras/Dados e Nova Passagem.",
+    "O Controle de NF mantém perfis Tight, Compact e Comfortable, cards e navegação adaptativos e a proteção permanente do TabControl nativo contra os mecanismos que já causaram instabilidade.",
+    "O Atualizador foi incluído na auditoria final sem alteração de suas regras: permanece com AutoScale por DPI, janela maximizável, conteúdo central rolável e rodapé de ações fora da rolagem.",
+    "Foi acrescentado um contrato automatizado específico da GERAL 2; a montagem do candidato falha se algum dos motores responsivos ou das proteções estruturais desaparecer.",
+    "Nenhuma regra de geração de planilhas, componentes, manutenção, NF, histórico, diagnóstico, backup, restauração, importação, exportação ou atualização foi alterada nesta etapa de fechamento.",
+    "Central v0.21.53, Gerenciador v3.7.15, Central de Manutenção v0.6.12 e Controle de NF de Entrada v2.6.18.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
