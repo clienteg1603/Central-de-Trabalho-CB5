@@ -20,12 +20,12 @@ jobs:
           fetch-depth: 0
 
       - name: Download current published Test package
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $channel = Get-Content -LiteralPath 'updates/test.json' -Raw | ConvertFrom-Json
           $zipPath = Join-Path $env:RUNNER_TEMP ("Central-de-Trabalho-v" + [string]$channel.Version + '.zip')
-          Invoke-WebRequest -Uri ([string]$channel.PackageUrl) -OutFile $zipPath -UseBasicParsing
+          Invoke-WebRequest -Uri ([string]$channel.PackageUrl) -OutFile $zipPath
           $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToUpperInvariant()
           if ($hash -ne [string]$channel.PackageSha256) { throw "SHA-256 divergente no pacote Teste publicado." }
           if ((Get-Item -LiteralPath $zipPath).Length -ne [int64]$channel.PackageSize) { throw "Tamanho divergente no pacote Teste publicado." }
@@ -34,7 +34,7 @@ jobs:
           "CURA7_ROOT=$($channel.PackageRoot)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Expand published Test package
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $extract = Join-Path $env:RUNNER_TEMP 'cura7-published-test'
@@ -45,7 +45,7 @@ jobs:
           "CURA7_INSTALL=$installRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Recheck package contracts
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           & '.\src\ci\parse_powershell.ps1' -Root $env:CURA7_INSTALL
@@ -53,7 +53,7 @@ jobs:
           python '.\src\ci\audit_release.py' tree $env:CURA7_INSTALL $env:CURA7_VERSION
 
       - name: CURA 7 hosted lifecycle and resize audit
-        shell: powershell
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           & '.\src\ci\test_cura7_hosted_lifecycle.ps1' -InstallRoot $env:CURA7_INSTALL
