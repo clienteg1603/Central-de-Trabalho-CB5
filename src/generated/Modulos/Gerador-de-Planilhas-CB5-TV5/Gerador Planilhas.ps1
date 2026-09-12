@@ -19,6 +19,7 @@ $script:EmbeddedParentHandle = [IntPtr]::new($EmbeddedParentHandle)
 $script:EmbeddedResizeTimer = $null
 $script:GeneratorHostedShell = $null
 $script:HostedCentralTheme = ""
+$script:HostedThemeSyncInProgress = $false
 
 if ($script:IsEmbedded -and -not ("CentralModuleEmbed.Native" -as [type])) {
     Add-Type -TypeDefinition @"
@@ -80,7 +81,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.6"
+$script:AppVersion = "3.7.7"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1758,17 +1759,23 @@ function Set-HostedGeneratorTheme {
     if (-not $themeCombo.Items.Contains($mapped)) { $mapped = "Escuro grafite" }
 
     $script:HostedCentralTheme = $CentralTheme
-    if ([string]$themeCombo.SelectedItem -ne $mapped) {
-        $themeCombo.SelectedItem = $mapped
-    }
+    $script:HostedThemeSyncInProgress = $true
+    try {
+        if ([string]$themeCombo.SelectedItem -ne $mapped) {
+            $themeCombo.SelectedItem = $mapped
+        }
 
-    Apply-AppTheme
-    Update-GeneratorResponsiveLayout
-    Update-RootLayout
-    $form.PerformLayout()
-    $form.Invalidate($true)
-    $form.Update()
-    return $true
+        Apply-AppTheme
+        Update-GeneratorResponsiveLayout
+        Update-RootLayout
+        $form.PerformLayout()
+        $form.Invalidate($true)
+        $form.Update()
+        return $true
+    }
+    finally {
+        $script:HostedThemeSyncInProgress = $false
+    }
 }
 
 function New-AppLogoBitmap {
@@ -2008,6 +2015,9 @@ function Get-SelectedBillingComponent {
 }
 
 function Update-BillingComponentsView {
+    if ($componentGrid.Columns.Count -eq 0 -or $componentHistoryGrid.Columns.Count -eq 0 -or $componentOperationsGrid.Columns.Count -eq 0) {
+        return
+    }
     $selectedId = ""
     if ($null -ne $componentGrid.CurrentRow) { $selectedId = [string]$componentGrid.CurrentRow.Tag }
     $componentGrid.Rows.Clear()
@@ -2417,9 +2427,13 @@ function Apply-AppTheme {
     Update-RootLayout
     $tabs.Invalidate()
     $componentTabs.Invalidate()
-    Update-LiveSummary
-    Update-CombineSummary
-    Update-BillingComponentsView
+    if ($script:UiReady) {
+        Update-LiveSummary
+        Update-CombineSummary
+        if ($null -ne $componentGrid -and $componentGrid.Columns.Count -gt 0) {
+            Update-BillingComponentsView
+        }
+    }
 }
 
 function Get-AdditionalDisplayText {
@@ -4015,6 +4029,7 @@ function Update-ProductInterface {
 
 $productCombo.Add_SelectedIndexChanged({ Update-ProductInterface })
 $themeCombo.Add_SelectedIndexChanged({
+    if ($script:HostedThemeSyncInProgress) { return }
     if ($script:UiReady) {
         Apply-AppTheme
         Save-AppSettings

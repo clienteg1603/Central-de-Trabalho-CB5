@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.6.5"
+$script:AppVersion = "0.6.6"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -142,6 +142,7 @@ $script:HostedOverviewLayout = $null
 $script:HostedSectionNavPanel = $null
 $script:HostedShell = $null
 $script:HostedCentralTheme = ""
+$script:HostedThemeSyncInProgress = $false
 
 try {
     $script:DatabasePath = Initialize-CB5DataStore -DataDirectory $script:DataDirectory
@@ -316,16 +317,22 @@ function Set-HostedMaintenanceTheme {
     if (-not $themeCombo.Items.Contains($mapped)) { $mapped = "Escuro grafite" }
 
     $script:HostedCentralTheme = $CentralTheme
-    if ([string]$themeCombo.SelectedItem -ne $mapped) {
-        $themeCombo.SelectedItem = $mapped
-    }
+    $script:HostedThemeSyncInProgress = $true
+    try {
+        if ([string]$themeCombo.SelectedItem -ne $mapped) {
+            $themeCombo.SelectedItem = $mapped
+        }
 
-    Apply-MaintenanceTheme
-    Update-MaintenanceResponsiveLayout
-    $form.PerformLayout()
-    $form.Invalidate($true)
-    $form.Update()
-    return $true
+        Apply-MaintenanceTheme
+        Update-MaintenanceResponsiveLayout
+        $form.PerformLayout()
+        $form.Invalidate($true)
+        $form.Update()
+        return $true
+    }
+    finally {
+        $script:HostedThemeSyncInProgress = $false
+    }
 }
 
 function Set-MaintenanceButtonStyle {
@@ -3174,7 +3181,13 @@ $mainTabs.Add_DrawItem({
     finally { $brush.Dispose(); $lineBrush.Dispose() }
 })
 
-$themeCombo.Add_SelectedIndexChanged({ Apply-MaintenanceTheme; Update-MaintenanceResponsiveLayout; Update-MaintenanceInternalNavigation; Save-MaintenanceSettings })
+$themeCombo.Add_SelectedIndexChanged({
+    if ($script:HostedThemeSyncInProgress) { return }
+    Apply-MaintenanceTheme
+    Update-MaintenanceResponsiveLayout
+    Update-MaintenanceInternalNavigation
+    Save-MaintenanceSettings
+})
 $dashboardNewButton.Add_Click({ Reset-PassageForm; $mainTabs.SelectedTab = $passageTab })
 $dashboardHistoryButton.Add_Click({ $mainTabs.SelectedTab = $historyTab })
 $dashboardStatsButton.Add_Click({ $mainTabs.SelectedTab = $statisticsTab })
