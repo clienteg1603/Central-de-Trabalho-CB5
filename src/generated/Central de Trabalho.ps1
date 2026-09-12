@@ -33,9 +33,9 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.28"
+$script:AppVersion = "0.21.29"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.7.7"
+$script:GeneratorVersion = "3.7.8"
 $script:MaintenanceVersion = "0.6.6"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(

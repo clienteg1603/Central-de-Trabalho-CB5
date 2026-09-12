@@ -18,7 +18,7 @@ $script:HostedControlExport = $null
 $script:EmbeddedParentHandle = [IntPtr]::new($EmbeddedParentHandle)
 $script:EmbeddedResizeTimer = $null
 $script:GeneratorHostedShell = $null
-$script:HostedCentralTheme = ""
+$script:HostedCentralTheme = $(if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($HostTheme)) { [string]$HostTheme } else { "" })
 $script:HostedThemeSyncInProgress = $false
 
 if ($script:IsEmbedded -and -not ("CentralModuleEmbed.Native" -as [type])) {
@@ -81,7 +81,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.7"
+$script:AppVersion = "3.7.8"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1756,14 +1756,15 @@ function Set-HostedGeneratorTheme {
     if ([string]::IsNullOrWhiteSpace($CentralTheme)) { $CentralTheme = "Escuro profissional" }
 
     $mapped = Get-GeneratorThemeFromHost $CentralTheme
-    if (-not $themeCombo.Items.Contains($mapped)) { $mapped = "Escuro grafite" }
+    if (-not $themeCombo.Items.Contains($mapped)) { return $false }
 
     $script:HostedCentralTheme = $CentralTheme
     $script:HostedThemeSyncInProgress = $true
     try {
-        if ([string]$themeCombo.SelectedItem -ne $mapped) {
-            $themeCombo.SelectedItem = $mapped
-        }
+        # Atualiza o seletor interno e aplica explicitamente. O evento interno é
+        # bloqueado durante esta operação para não criar um segundo ciclo.
+        $themeCombo.SelectedItem = $mapped
+        if ([string]$themeCombo.SelectedItem -ne $mapped) { return $false }
 
         Apply-AppTheme
         Update-GeneratorResponsiveLayout
@@ -1771,7 +1772,21 @@ function Set-HostedGeneratorTheme {
         $form.PerformLayout()
         $form.Invalidate($true)
         $form.Update()
+        $form.Refresh()
+        [Windows.Forms.Application]::DoEvents()
+
+        # Validação visual real: não basta o ComboBox ter mudado. A raiz do
+        # Gerenciador precisa terminar com a cor da paleta correspondente.
+        $product = [string]$productCombo.SelectedItem
+        if (@("CB5", "TV5") -notcontains $product) { $product = "CB5" }
+        $expectedPalette = Get-ThemePalette $mapped $product
+        if ($null -eq $expectedPalette) { return $false }
+        if ([int]$form.BackColor.ToArgb() -ne [int]$expectedPalette.Background.ToArgb()) { return $false }
+
         return $true
+    }
+    catch {
+        return $false
     }
     finally {
         $script:HostedThemeSyncInProgress = $false
@@ -2361,6 +2376,21 @@ function Show-BillingComponentDialog {
 
 function Apply-AppTheme {
     $theme = [string]$themeCombo.SelectedItem
+
+    if ($script:IsInProcessHosted -and -not [string]::IsNullOrWhiteSpace($script:HostedCentralTheme)) {
+        $hostMappedTheme = Get-GeneratorThemeFromHost $script:HostedCentralTheme
+        if (-not $themeCombo.Items.Contains($hostMappedTheme)) {
+            throw "O tema hospedado '$hostMappedTheme' não existe no Gerenciador."
+        }
+        if ([string]$themeCombo.SelectedItem -ne $hostMappedTheme) {
+            $oldSyncFlag = $script:HostedThemeSyncInProgress
+            $script:HostedThemeSyncInProgress = $true
+            try { $themeCombo.SelectedItem = $hostMappedTheme }
+            finally { $script:HostedThemeSyncInProgress = $oldSyncFlag }
+        }
+        $theme = $hostMappedTheme
+    }
+
     if ([string]::IsNullOrWhiteSpace($theme)) { $theme = "Claro moderno" }
     $product = [string]$productCombo.SelectedItem
     if (@("CB5", "TV5") -notcontains $product) { $product = "CB5" }
@@ -4029,7 +4059,7 @@ function Update-ProductInterface {
 
 $productCombo.Add_SelectedIndexChanged({ Update-ProductInterface })
 $themeCombo.Add_SelectedIndexChanged({
-    if ($script:HostedThemeSyncInProgress) { return }
+    if ($script:IsInProcessHosted -or $script:HostedThemeSyncInProgress) { return }
     if ($script:UiReady) {
         Apply-AppTheme
         Save-AppSettings
