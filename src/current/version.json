@@ -1,6 +1,6 @@
 {
   "version": "0.21.45",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Refino visual das abas do Controle de NF de Entrada para igualar a navegação ao estilo da Central de Manutenção.",
     "COMPUTADOR DE BORDO CB5, TECLADO V5, MOVIMENTAÇÕES, HISTÓRICO, SEGURANÇA e RESUMO agora aparecem como botões escuros arredondados com espaçamento real entre eles.",
