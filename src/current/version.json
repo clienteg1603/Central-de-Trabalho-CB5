@@ -1,6 +1,6 @@
 {
   "version": "0.21.56",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "GERAL 2 — Etapa 8: auditoria final de tamanhos, responsividade e regressão.",
     "A Central amplia o autoteste de layout para cinco faixas reais: 900x600, 1180x700, 1366x768, 1600x900 e 1920x1080.",
