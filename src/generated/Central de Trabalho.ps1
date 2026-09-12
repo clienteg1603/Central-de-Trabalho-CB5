@@ -1,3 +1,7 @@
+param(
+    [switch]$ThemeRuntimeSelfTest
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -33,10 +37,10 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.31"
+$script:AppVersion = "0.21.32"
 $script:RootPath = $PSScriptRoot
-$script:GeneratorVersion = "3.7.8"
-$script:MaintenanceVersion = "0.6.6"
+$script:GeneratorVersion = "3.7.9"
+$script:MaintenanceVersion = "0.6.7"
 $script:UpdaterVersion = "1.0.0"
 $script:GeneratorDirectory = [IO.Path]::Combine(
     $script:RootPath,
@@ -52,7 +56,7 @@ $script:MaintenanceDirectory = [IO.Path]::Combine(
 )
 $script:MaintenanceScript = [IO.Path]::Combine($script:MaintenanceDirectory, "Central Manutencao CB5.ps1")
 $script:MaintenanceCore = [IO.Path]::Combine($script:MaintenanceDirectory, "Manutencao.Core.ps1")
-$script:NFEntradaVersion = "2.6.7"
+$script:NFEntradaVersion = "2.6.8"
 $script:NFEntradaDirectory = [IO.Path]::Combine(
     $script:RootPath,
     "Modulos",
@@ -1906,6 +1910,135 @@ $openNFEntradaFolderButton.TabIndex = 15
 $embeddedBackButton.TabIndex = 0
 $embeddedFolderButton.TabIndex = 1
 
+function Invoke-CentralThemeRuntimeSelfTest {
+    $themes = @("Escuro profissional", "Técnico industrial", "Claro corporativo", "Alto contraste")
+    $modules = @("Generator", "Maintenance", "NFEntrada")
+
+    $form.StartPosition = [Windows.Forms.FormStartPosition]::Manual
+    $form.Location = [Drawing.Point]::new(-2200, -2200)
+    $form.ShowInTaskbar = $false
+    $form.Show()
+    [Windows.Forms.Application]::DoEvents()
+
+    try {
+        foreach ($moduleName in $modules) {
+            Write-Host "CENTRAL THEME TEST: abrindo $moduleName"
+            Start-EmbeddedModule $moduleName
+            [Windows.Forms.Application]::DoEvents()
+            if ($script:EmbeddedModule -ne $moduleName -or $null -eq $script:HostedModule -or $null -eq $script:HostedForm) {
+                throw "A Central não conseguiu hospedar $moduleName no autoteste de aparência."
+            }
+
+            # Reproduz o cenário real do print: Gerenciador aberto em TV5.
+            if ($moduleName -eq "Generator") {
+                & $script:HostedModule {
+                    if ([string]$productCombo.SelectedItem -ne "TV5") { $productCombo.SelectedItem = "TV5" }
+                }
+                [Windows.Forms.Application]::DoEvents()
+            }
+
+            foreach ($themeName in $themes) {
+                Write-Host "CENTRAL THEME TEST: $moduleName -> $themeName"
+                $themeCombo.SelectedItem = $themeName
+
+                # Mantém o loop de mensagens ativo por tempo suficiente para capturar
+                # timers/eventos tardios que poderiam reaplicar a aparência anterior.
+                for ($wait = 0; $wait -lt 6; $wait++) {
+                    [Windows.Forms.Application]::DoEvents()
+                    Start-Sleep -Milliseconds 100
+                }
+
+                if ((Get-CentralSelectedTheme) -ne $themeName) {
+                    throw "O seletor da Central não permaneceu em '$themeName'."
+                }
+                $expectedCentral = Get-ThemePalette $themeName
+                $expectedSidebar = Get-SidebarColor $themeName
+                if ([int]$form.BackColor.ToArgb() -ne [int]$expectedCentral.Background.ToArgb()) {
+                    throw "A raiz da Central não recebeu '$themeName'."
+                }
+                if ([int]$sidebar.BackColor.ToArgb() -ne [int]$expectedSidebar.ToArgb()) {
+                    throw "A barra lateral da Central não recebeu '$themeName'."
+                }
+
+                $state = & $script:HostedModule {
+                    param($targetModule, $hostTheme)
+                    switch ($targetModule) {
+                        "Generator" {
+                            $mapped = Get-GeneratorThemeFromHost $hostTheme
+                            $product = [string]$productCombo.SelectedItem
+                            if (@("CB5", "TV5") -notcontains $product) { $product = "CB5" }
+                            $p = Get-ThemePalette $mapped $product
+                            return [pscustomobject]@{
+                                Combo = [string]$themeCombo.SelectedItem
+                                ExpectedCombo = $mapped
+                                HostTheme = [string]$script:HostedCentralTheme
+                                Root = [int]$form.BackColor.ToArgb()
+                                ExpectedRoot = [int]$p.Background.ToArgb()
+                                Header = [int]$headerPanel.BackColor.ToArgb()
+                                ExpectedHeader = [int]$p.Surface.ToArgb()
+                                Card = [int]$masterCard.BackColor.ToArgb()
+                                ExpectedCard = [int]$p.Surface.ToArgb()
+                                Info = [int]$infoBox.BackColor.ToArgb()
+                                ExpectedInfo = [int]$p.Info.ToArgb()
+                                Page = [int]$tabGenerate.BackColor.ToArgb()
+                                ExpectedPage = [int]$p.Background.ToArgb()
+                            }
+                        }
+                        "Maintenance" {
+                            $mapped = Get-MaintenanceThemeFromHost $hostTheme
+                            $p = Get-MaintenancePalette $mapped
+                            return [pscustomobject]@{
+                                Combo = [string]$themeCombo.SelectedItem
+                                ExpectedCombo = $mapped
+                                HostTheme = [string]$script:HostedCentralTheme
+                                Root = [int]$form.BackColor.ToArgb()
+                                ExpectedRoot = [int]$p.Background.ToArgb()
+                            }
+                        }
+                        "NFEntrada" {
+                            $p = Get-NFEntradaPalette $hostTheme
+                            return [pscustomobject]@{
+                                Combo = $hostTheme
+                                ExpectedCombo = $hostTheme
+                                HostTheme = $hostTheme
+                                Root = [int]$form.BackColor.ToArgb()
+                                ExpectedRoot = [int]$p.Background.ToArgb()
+                            }
+                        }
+                    }
+                } $moduleName $themeName
+
+                if ($null -eq $state) { throw "$moduleName não retornou estado visual." }
+                if ($state.Combo -ne $state.ExpectedCombo) {
+                    throw "$moduleName não acompanhou o seletor em '$themeName': '$($state.Combo)' != '$($state.ExpectedCombo)'."
+                }
+                if ($moduleName -ne "NFEntrada" -and $state.HostTheme -ne $themeName) {
+                    throw "$moduleName perdeu a autoridade do tema da Central: '$($state.HostTheme)' != '$themeName'."
+                }
+                if ($state.Root -ne $state.ExpectedRoot) {
+                    $detail = if ([string]::IsNullOrWhiteSpace($script:LastThemeSyncError)) { "sem detalhe de sincronização" } else { $script:LastThemeSyncError }
+                    throw "$moduleName não acompanhou a paleta em '$themeName': $($state.Root) != $($state.ExpectedRoot). $detail"
+                }
+                if ($moduleName -eq "Generator") {
+                    if ($state.Header -ne $state.ExpectedHeader) { throw "Gerenciador: cabeçalho não acompanhou '$themeName'." }
+                    if ($state.Card -ne $state.ExpectedCard) { throw "Gerenciador: card principal não acompanhou '$themeName'." }
+                    if ($state.Info -ne $state.ExpectedInfo) { throw "Gerenciador: aviso informativo não acompanhou '$themeName'." }
+                    if ($state.Page -ne $state.ExpectedPage) { throw "Gerenciador: página Gerar não acompanhou '$themeName'." }
+                }
+            }
+
+            Close-EmbeddedModule -Force
+            [Windows.Forms.Application]::DoEvents()
+        }
+        Write-Host "CENTRAL THEME RUNTIME: OK — Central + 3 módulos x 4 temas, com validação tardia."
+    }
+    finally {
+        try { Close-EmbeddedModule -Force } catch {}
+        try { $form.Hide() } catch {}
+        try { $form.Close() } catch {}
+    }
+}
+
 # Eventos
 $themeCombo.Add_SelectedIndexChanged({
     if ($script:CentralThemeChanging) { return }
@@ -2015,6 +2148,10 @@ $form.Add_KeyDown({
 $form.Add_FormClosing({ Close-EmbeddedModule; Save-AppSettings })
 
     Apply-CentralTheme
+    if ($ThemeRuntimeSelfTest) {
+        Invoke-CentralThemeRuntimeSelfTest
+        return
+    }
     [void]$form.ShowDialog()
 }
 catch {

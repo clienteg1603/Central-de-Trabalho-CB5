@@ -15,7 +15,7 @@ $script:IsInProcessHosted = [bool]$HostedInCentral
 $script:HostedFormExport = $null
 $script:HostedControlExport = $null
 $script:ModuleRoot = $PSScriptRoot
-$script:ModuleVersion = "2.6.7"
+$script:ModuleVersion = "2.6.8"
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "NFEntrada.Core.ps1")
 $script:DataDirectory = ""
 $script:DatabasePath = ""
@@ -25,8 +25,10 @@ $script:ComputerProduct = "COMPUTADOR DE BORDO V5"
 $script:KeyboardProduct = "TECLADO V5"
 
 if (-not [IO.File]::Exists($script:CorePath)) {
+    $message = "O núcleo do Controle de NF de Entrada não foi encontrado.`r`n`r`n$($script:CorePath)"
+    if ($script:IsInProcessHosted) { throw $message }
     [Windows.Forms.MessageBox]::Show(
-        "O núcleo do Controle de NF de Entrada não foi encontrado.`r`n`r`n$($script:CorePath)",
+        $message,
         "Controle de NF de Entrada",
         [Windows.Forms.MessageBoxButtons]::OK,
         [Windows.Forms.MessageBoxIcon]::Error
@@ -41,8 +43,10 @@ try {
     $script:Store = Read-NFEntradaStore -Path $script:DatabasePath
 }
 catch {
+    $message = "Não foi possível preparar a base do Controle de NF de Entrada.`r`n`r`n$($_.Exception.Message)"
+    if ($script:IsInProcessHosted) { throw $message }
     [Windows.Forms.MessageBox]::Show(
-        "Não foi possível preparar a base do Controle de NF de Entrada.`r`n`r`n$($_.Exception.Message)",
+        $message,
         "Controle de NF de Entrada — base preservada",
         [Windows.Forms.MessageBoxButtons]::OK,
         [Windows.Forms.MessageBoxIcon]::Error
@@ -2001,7 +2005,9 @@ Refresh-NFAll
 Update-NFActions
 
 $localTemplatePath = Get-NFEntradaTemplatePath -DataDirectory $script:DataDirectory
-if (-not [IO.File]::Exists($localTemplatePath)) {
+# O prompt continua normal em produção. Apenas o autoteste não interativo do runner
+# o ignora para poder validar a aparência de uma instalação limpa.
+if (-not [IO.File]::Exists($localTemplatePath) -and $env:CENTRAL_THEME_RUNTIME_TEST -ne "1") {
     $answer = [Windows.Forms.MessageBox]::Show(
         "Este é o primeiro uso do Controle de NF de Entrada.
 

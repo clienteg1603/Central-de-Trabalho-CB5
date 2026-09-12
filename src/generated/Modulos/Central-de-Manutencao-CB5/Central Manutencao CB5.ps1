@@ -79,7 +79,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "0.6.6"
+$script:AppVersion = "0.6.7"
 $script:ModuleRoot = $PSScriptRoot
 $script:CorePath = [IO.Path]::Combine($script:ModuleRoot, "Manutencao.Core.ps1")
 if (-not [IO.File]::Exists($script:CorePath)) {
@@ -324,10 +324,18 @@ function Set-HostedMaintenanceTheme {
         }
 
         Apply-MaintenanceTheme
+        # A raiz precisa receber a paleta explicitamente. O teste runtime encontrou
+        # casos em que a árvore interna mudava, mas o Form permanecia no cinza padrão.
+        $script:CurrentPalette = Get-MaintenancePalette $mapped
+        $form.BackColor = $script:CurrentPalette.Background
+        $form.ForeColor = $script:CurrentPalette.Text
         Update-MaintenanceResponsiveLayout
         $form.PerformLayout()
         $form.Invalidate($true)
         $form.Update()
+        $form.Refresh()
+        [Windows.Forms.Application]::DoEvents()
+        if ([int]$form.BackColor.ToArgb() -ne [int]$script:CurrentPalette.Background.ToArgb()) { return $false }
         return $true
     }
     finally {

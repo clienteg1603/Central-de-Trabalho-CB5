@@ -81,7 +81,7 @@ function Initialize-EmbeddedModuleWindow {
 }
 
 
-$script:AppVersion = "3.7.8"
+$script:AppVersion = "3.7.9"
 . ([IO.Path]::Combine($PSScriptRoot, "Componentes.Core.ps1"))
 
 $script:SingleInstanceMutex = $null
@@ -1782,6 +1782,10 @@ function Set-HostedGeneratorTheme {
         $expectedPalette = Get-ThemePalette $mapped $product
         if ($null -eq $expectedPalette) { return $false }
         if ([int]$form.BackColor.ToArgb() -ne [int]$expectedPalette.Background.ToArgb()) { return $false }
+        if ([int]$headerPanel.BackColor.ToArgb() -ne [int]$expectedPalette.Surface.ToArgb()) { return $false }
+        if ([int]$masterCard.BackColor.ToArgb() -ne [int]$expectedPalette.Surface.ToArgb()) { return $false }
+        if ([int]$infoBox.BackColor.ToArgb() -ne [int]$expectedPalette.Info.ToArgb()) { return $false }
+        if ([int]$tabGenerate.BackColor.ToArgb() -ne [int]$expectedPalette.Background.ToArgb()) { return $false }
 
         return $true
     }
@@ -2457,13 +2461,9 @@ function Apply-AppTheme {
     Update-RootLayout
     $tabs.Invalidate()
     $componentTabs.Invalidate()
-    if ($script:UiReady) {
-        Update-LiveSummary
-        Update-CombineSummary
-        if ($null -ne $componentGrid -and $componentGrid.Columns.Count -gt 0) {
-            Update-BillingComponentsView
-        }
-    }
+    # Aparência não recarrega dados. Resumos, união e componentes são
+    # atualizados apenas pelos seus próprios eventos operacionais. Isso impede
+    # que uma falha de dados interrompa uma troca puramente visual.
 }
 
 function Get-AdditionalDisplayText {
