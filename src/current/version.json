@@ -1,15 +1,16 @@
 {
-  "version": "0.21.55",
-  "buildRevision": 2,
+  "version": "0.21.56",
+  "buildRevision": 1,
   "releaseNotes": [
-    "GERAL 2 — Etapa 7: fluidez e desempenho do redimensionamento das interfaces.",
-    "A Central deixa de recalcular a faixa de módulos a cada pixel e reaproveita o debounce responsivo já criado para maximizar, restaurar e arrastar a janela.",
-    "Gerenciador v3.7.16: mudanças de tamanho do host passam por uma única fila curta de atualização, reduzindo chamadas repetidas de layout durante o arraste da janela.",
-    "Central de Manutenção v0.6.13: resize do formulário, shell hospedado e viewport técnico são consolidados em uma única passagem responsiva, com atualização imediata ao terminar o redimensionamento.",
-    "Controle de NF v2.6.19: o motor Tight/Compact/Comfortable agora é acionado por debounce no formulário, reduzindo redraw e cálculo repetido sem tocar no TabControl nativo protegido.",
-    "Os timers de fluidez são encerrados e descartados junto com cada módulo para evitar recursos pendentes após fechar ou trocar de programa.",
-    "Nenhuma regra de planilhas, saldos, manutenção, NF, histórico, backup, importação, exportação ou atualização foi alterada.",
-    "Central v0.21.55, Gerenciador v3.7.16, Central de Manutenção v0.6.13, Controle de NF de Entrada v2.6.19 e Atualizador v1.0.1.",
+    "GERAL 2 — Etapa 8: auditoria final de tamanhos, responsividade e regressão.",
+    "A Central amplia o autoteste de layout para cinco faixas reais: 900x600, 1180x700, 1366x768, 1600x900 e 1920x1080.",
+    "A validação Windows do pacote real agora executa uma matriz equivalente nos módulos Gerenciador, Central de Manutenção e Controle de NF hospedados dentro de um host redimensionável.",
+    "Em cada tamanho a auditoria confirma área útil mínima, visibilidade, acompanhamento do host e ativação válida dos perfis Tight, Compact e Comfortable.",
+    "A matriz também fecha e reabre cada um dos três módulos para detectar regressões de ciclo de vida, timers pendentes ou falhas após troca de programa.",
+    "A Etapa 8 exige que cada módulo atravesse pelo menos duas densidades responsivas diferentes entre a janela compacta e Full HD; caso contrário o pacote não é publicado.",
+    "As proteções permanentes do Controle de NF continuam ativas: nada de SizeChanged/HandleCreated no TabControl nativo, OwnerDrawFixed, ItemSize ou o antigo Update-NFMainTabStripLayout.",
+    "Nenhuma regra operacional de planilhas, saldos, manutenção, NF, histórico, backup, importação, exportação ou atualização foi alterada.",
+    "Central v0.21.56, Gerenciador v3.7.16, Central de Manutenção v0.6.13, Controle de NF de Entrada v2.6.19 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
