@@ -1,6 +1,6 @@
 {
   "version": "0.21.55",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "GERAL 2 — Etapa 7: fluidez e desempenho do redimensionamento das interfaces.",
     "A Central deixa de recalcular a faixa de módulos a cada pixel e reaproveita o debounce responsivo já criado para maximizar, restaurar e arrastar a janela.",
