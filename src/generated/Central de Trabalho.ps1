@@ -33,7 +33,7 @@ function Set-CentralTitleBarTheme {
     } catch {}
 }
 
-$script:AppVersion = "0.21.29"
+$script:AppVersion = "0.21.30"
 $script:RootPath = $PSScriptRoot
 $script:GeneratorVersion = "3.7.8"
 $script:MaintenanceVersion = "0.6.6"
@@ -395,22 +395,28 @@ function Sync-HostedModuleTheme {
                 "Maintenance" {
                     $cmd = Get-Command -Name Set-HostedMaintenanceTheme -CommandType Function -ErrorAction SilentlyContinue
                     if ($null -eq $cmd) { throw "A função de aparência da Manutenção não foi encontrada." }
-                    $result = Set-HostedMaintenanceTheme $hostTheme
-                    if ($result -is [bool] -and -not $result) { throw "A Manutenção recusou a aparência selecionada." }
+                    $resultItems = @(Set-HostedMaintenanceTheme $hostTheme)
+                    if ($resultItems.Count -eq 0) { throw "Manutenção não retornou confirmação de aparência." }
+                    $resultOk = [bool]$resultItems[$resultItems.Count - 1]
+                    if (-not $resultOk) { throw "A Manutenção recusou a aparência selecionada." }
                     return $true
                 }
                 "Generator" {
                     $cmd = Get-Command -Name Set-HostedGeneratorTheme -CommandType Function -ErrorAction SilentlyContinue
                     if ($null -eq $cmd) { throw "A função de aparência do Gerenciador não foi encontrada." }
-                    $result = Set-HostedGeneratorTheme $hostTheme
-                    if ($result -is [bool] -and -not $result) { throw "O Gerenciador recusou a aparência selecionada." }
+                    $resultItems = @(Set-HostedGeneratorTheme $hostTheme)
+                    if ($resultItems.Count -eq 0) { throw "Gerenciador não retornou confirmação de aparência." }
+                    $resultOk = [bool]$resultItems[$resultItems.Count - 1]
+                    if (-not $resultOk) { throw "O Gerenciador recusou a aparência selecionada." }
                     return $true
                 }
                 "NFEntrada" {
                     $cmd = Get-Command -Name Set-HostedNFEntradaTheme -CommandType Function -ErrorAction SilentlyContinue
                     if ($null -eq $cmd) { throw "A função de aparência do Controle de NF não foi encontrada." }
-                    $result = Set-HostedNFEntradaTheme $hostTheme
-                    if ($result -is [bool] -and -not $result) { throw "O Controle de NF não conseguiu aplicar a aparência selecionada." }
+                    $resultItems = @(Set-HostedNFEntradaTheme $hostTheme)
+                    if ($resultItems.Count -eq 0) { throw "Controle de NF não retornou confirmação de aparência." }
+                    $resultOk = [bool]$resultItems[$resultItems.Count - 1]
+                    if (-not $resultOk) { throw "O Controle de NF não conseguiu aplicar a aparência selecionada." }
                     return $true
                 }
                 default { throw "Módulo integrado desconhecido: $targetModule" }
@@ -1842,7 +1848,7 @@ $embeddedBackButton.TabIndex = 0
 $embeddedFolderButton.TabIndex = 1
 
 # Eventos
-$themeCombo.Add_SelectionChangeCommitted({
+$themeCombo.Add_SelectedIndexChanged({
     if ($script:CentralThemeChanging) { return }
     $script:CentralThemeChanging = $true
     $theme = Get-CentralSelectedTheme
