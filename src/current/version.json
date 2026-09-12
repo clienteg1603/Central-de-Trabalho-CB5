@@ -1,15 +1,15 @@
 {
-  "version": "0.21.54",
+  "version": "0.21.55",
   "buildRevision": 1,
   "releaseNotes": [
-    "GERAL 2 — Etapa 6: consistência visual e de usabilidade global.",
-    "O Atualizador deixa de ser a última janela clara do conjunto e passa a usar a mesma linguagem Técnico industrial da Central, Gerenciador, Manutenção e Controle de NF.",
-    "Fundo, cards, campos, textos auxiliares e estados de sucesso, aviso e erro do Atualizador foram convertidos para a paleta escura já adotada pelo restante do programa.",
-    "Os botões do Atualizador agora seguem a mesma hierarquia visual: ações secundárias escuras com contorno, procurar atualização em ciano e baixar/instalar em laranja.",
-    "Os botões do Atualizador também recebem cursor de mão, fonte Semibold e cantos arredondados, mantendo o mesmo acabamento dos módulos principais.",
-    "O diálogo de configuração de endereço também passa a respeitar o tema Técnico industrial, eliminando a quebra visual ao abrir essa janela auxiliar.",
-    "Nenhuma regra de consulta, download, SHA-256, backup, restauração, instalação, canais Estável/Teste ou fechamento da Central foi alterada.",
-    "Atualizador v1.0.1; Central v0.21.54, Gerenciador v3.7.15, Central de Manutenção v0.6.12 e Controle de NF de Entrada v2.6.18.",
+    "GERAL 2 — Etapa 7: fluidez e desempenho do redimensionamento das interfaces.",
+    "A Central deixa de recalcular a faixa de módulos a cada pixel e reaproveita o debounce responsivo já criado para maximizar, restaurar e arrastar a janela.",
+    "Gerenciador v3.7.16: mudanças de tamanho do host passam por uma única fila curta de atualização, reduzindo chamadas repetidas de layout durante o arraste da janela.",
+    "Central de Manutenção v0.6.13: resize do formulário, shell hospedado e viewport técnico são consolidados em uma única passagem responsiva, com atualização imediata ao terminar o redimensionamento.",
+    "Controle de NF v2.6.19: o motor Tight/Compact/Comfortable agora é acionado por debounce no formulário, reduzindo redraw e cálculo repetido sem tocar no TabControl nativo protegido.",
+    "Os timers de fluidez são encerrados e descartados junto com cada módulo para evitar recursos pendentes após fechar ou trocar de programa.",
+    "Nenhuma regra de planilhas, saldos, manutenção, NF, histórico, backup, importação, exportação ou atualização foi alterada.",
+    "Central v0.21.55, Gerenciador v3.7.16, Central de Manutenção v0.6.13, Controle de NF de Entrada v2.6.19 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
