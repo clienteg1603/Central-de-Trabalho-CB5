@@ -45,8 +45,14 @@ jobs:
           }
           Write-Host "Scripts normalizados com UTF-8 BOM: $($files.Count)"
 
-      - name: Hosted theme runtime test
+      - name: Hosted module theme runtime test
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           & '.\src\ci\test_hosted_theme_runtime.ps1' -GeneratedRoot '.\src\generated'
+
+      - name: Central plus modules theme runtime test
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\generated\Central de Trabalho.ps1' -ThemeRuntimeSelfTest
