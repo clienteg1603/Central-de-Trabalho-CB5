@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 central_path = Path('src/generated/Central de Trabalho.ps1')
 nf_path = Path('src/generated/Modulos/Controle-NF-Entrada/Controle NF Entrada.ps1')
@@ -12,6 +13,14 @@ def one(text: str, old: str, new: str, label: str) -> str:
     if count != 1:
         raise SystemExit(f'{label}: esperado 1 marcador, encontrado {count}')
     return text.replace(old, new, 1)
+
+
+def append_after_button_style(text: str, variable: str, caption: str, label: str) -> str:
+    pattern = rf'(\${re.escape(variable)}\.Text\s*=\s*"{re.escape(caption)}"[^\n]*Set-NFButtonStyle\s+\${re.escape(variable)}\s+"Secondary")'
+    updated, count = re.subn(pattern, rf'\1; Add-NFReadableDisabledText ${variable}', text, count=1)
+    if count != 1:
+        raise SystemExit(f'{label}: esperado 1 marcador, encontrado {count}')
+    return updated
 
 
 # CURA 8: fechamento final da cura visual/preventiva no canal Teste.
@@ -36,9 +45,8 @@ new_secondary = '''        default {
 nf = one(nf, old_secondary, new_secondary, 'contraste dos botoes secundarios')
 
 # WinForms substitui ForeColor pelo texto de sistema quando Button.Enabled=False.
-# EDITAR e SAÍDA ficam desabilitados sem seleção, que é exatamente o estado da
-# captura enviada pelo usuário. Pintamos apenas o texto desabilitado por cima do
-# desenho nativo, mantendo Enabled=False e toda a segurança operacional.
+# EDITAR e SAÍDA ficam desabilitados sem seleção. Desenhamos o texto branco por
+# cima do estado desabilitado, mantendo Enabled=False e toda a segurança.
 style_anchor = '''    Set-NFRoundedRegion $Button 10
 }'''
 readable_disabled = '''    Set-NFRoundedRegion $Button 10
@@ -66,21 +74,9 @@ function Add-NFReadableDisabledText {
 }'''
 nf = one(nf, style_anchor, readable_disabled, 'helper de texto desabilitado')
 
-nf = one(
-    nf,
-    '$editButton.Text = "EDITAR"; $editButton.Width = 78; $editButton.Height = 34; Set-NFButtonStyle $editButton "Secondary"',
-    '$editButton.Text = "EDITAR"; $editButton.Width = 78; $editButton.Height = 34; Set-NFButtonStyle $editButton "Secondary"; Add-NFReadableDisabledText $editButton',
-    'contraste do EDITAR'
-)
-nf = one(
-    nf,
-    '$outputButton.Text = "SAÍDA"; $outputButton.Width = 78; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"',
-    '$outputButton.Text = "SAÍDA"; $outputButton.Width = 78; $outputButton.Height = 34; Set-NFButtonStyle $outputButton "Secondary"; Add-NFReadableDisabledText $outputButton',
-    'contraste da SAIDA'
-)
+nf = append_after_button_style(nf, 'editButton', 'EDITAR', 'contraste do EDITAR')
+nf = append_after_button_style(nf, 'outputButton', 'SAÍDA', 'contraste da SAIDA')
 
-# Contratos finais da cura: tema único, navegação nova e proteção do mecanismo
-# nativo de abas permanecem obrigatórios.
 for marker in (
     'NF_SECTION_NAV_MAINTENANCE_STYLE_V02614',
     'function Update-NFSectionNavigation',
