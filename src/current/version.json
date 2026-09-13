@@ -1,20 +1,14 @@
 {
-  "version": "0.21.57",
-  "buildRevision": 7,
+  "version": "0.21.58",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Revisão visual pós-GERAL 2: corrige o recorte da área Conferência automática no Resumo do Controle de NF, inclusive com a janela maximizada e em DPI alto.",
-    "Controle de NF v2.6.21: as seis linhas da Conferência automática passam a ter RowStyles percentuais explícitos, impedindo que Pendências, Exportação Excel ou Situação geral fiquem fora do GroupBox.",
-    "O Resumo foi rebalanceado: Conferência automática e Atividade operacional recebem mais altura; Saldo por código cede espaço porque possui poucas linhas e continua sem rolagem desnecessária.",
-    "A varredura ampla do Controle de NF também corrigiu os TableLayoutPanel de uma única linha do cabeçalho, filtros de Movimentações e Histórico, rodapé de Movimentações, ações de Segurança e rodapé geral, fazendo os filhos respeitarem a altura real do container após resize, maximização e DPI alto.",
-    "Gerenciador v3.7.17: a auditoria ampla encontrou na área Componentes cartões métricos sem RowStyle explícito e grades internas que podiam conservar dimensões de uma viewport anterior; ambos agora acompanham a área real disponível.",
-    "Central de Manutenção v0.6.16: os cartões do resumo têm linha explícita, permanecem em uma única faixa nos viewports usuais e ajustam valor, legenda, padding e proporção vertical à altura realmente disponível.",
-    "A área Atualização / próxima etapa da Nova Passagem agora reserva altura suficiente nos perfis Tight, Compact e Comfortable, mantendo o aviso completo sem corte em 1366x768, maximizado e DPI alto.",
-    "As ações e grades internas verificadas passam a acompanhar a viewport atual em vez de conservar dimensões de um tamanho anterior.",
-    "A matriz de validação percorre as abas do Gerenciador, Manutenção e Controle de NF em notebook e Full HD, procurando controles visíveis que escapem de seus containers ou textos verticais comprimidos.",
-    "A nova auditoria visual complementa a validação de tamanho já existente e passa a proteger contra regressões semelhantes aos recortes encontrados no uso real.",
-    "As proteções permanentes do TabControl do NF continuam intactas, sem SizeChanged, HandleCreated, OwnerDrawFixed, ItemSize ou Update-NFMainTabStripLayout.",
-    "Nenhuma regra operacional de planilhas, manutenção, saldos, NF, histórico, backup, importação, exportação ou atualização foi alterada.",
-    "Central v0.21.57, Gerenciador v3.7.17, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.21 e Atualizador v1.0.1.",
+    "Controle de NF v2.6.22: corrige o bloco Saldo por código do Resumo mostrado no uso real.",
+    "A grade agora reserva altura suficiente para exibir simultaneamente os quatro códigos do resumo — 800, 100, 850 e Garantia — sem depender de rolagem.",
+    "A faixa Saldo por código deixa de competir apenas por percentual com Conferência automática e Atividade operacional e passa a ter altura responsiva reservada nos perfis Tight, Compact e Comfortable.",
+    "As colunas CÓDIGO, COMPUTADOR CB5, TECLADO V5 e TOTAL passam a distribuir a largura de forma proporcional; TOTAL não ocupa mais sozinho todo o espaço restante em telas largas.",
+    "As correções anteriores da Conferência automática, Atividade operacional, layouts de uma linha e proteções do TabControl permanecem preservadas.",
+    "Nenhuma regra operacional de saldos, códigos, NF, movimentações, importação, exportação, manutenção ou geração de planilhas foi alterada.",
+    "Central v0.21.58, Gerenciador v3.7.17, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.22 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
