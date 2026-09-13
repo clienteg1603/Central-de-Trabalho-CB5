@@ -1,14 +1,13 @@
 {
-  "version": "0.21.58",
+  "version": "0.21.59",
   "buildRevision": 1,
   "releaseNotes": [
-    "Controle de NF v2.6.22: corrige o bloco Saldo por código do Resumo mostrado no uso real.",
-    "A grade agora reserva altura suficiente para exibir simultaneamente os quatro códigos do resumo — 800, 100, 850 e Garantia — sem depender de rolagem.",
-    "A faixa Saldo por código deixa de competir apenas por percentual com Conferência automática e Atividade operacional e passa a ter altura responsiva reservada nos perfis Tight, Compact e Comfortable.",
-    "As colunas CÓDIGO, COMPUTADOR CB5, TECLADO V5 e TOTAL passam a distribuir a largura de forma proporcional; TOTAL não ocupa mais sozinho todo o espaço restante em telas largas.",
-    "As correções anteriores da Conferência automática, Atividade operacional, layouts de uma linha e proteções do TabControl permanecem preservadas.",
-    "Nenhuma regra operacional de saldos, códigos, NF, movimentações, importação, exportação, manutenção ou geração de planilhas foi alterada.",
-    "Central v0.21.58, Gerenciador v3.7.17, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.22 e Atualizador v1.0.1.",
+    "Controle de NF v2.6.23: Saldo por código foi redesenhado em quatro cards fixos 2x2.",
+    "800, 100, 850 e Garantia ficam sempre visíveis no Resumo, cada um com CB5, TV5 e TOTAL.",
+    "O novo bloco não depende de rolagem nem da altura de linhas da grade para exibir os quatro códigos.",
+    "A altura do bloco se adapta aos perfis Tight, Compact e Comfortable.",
+    "As correções anteriores de Conferência automática, Atividade operacional e as proteções do TabControl foram preservadas.",
+    "Central v0.21.59, Gerenciador v3.7.17, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.23 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
