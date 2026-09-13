@@ -1,9 +1,10 @@
 {
   "version": "0.21.59",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Controle de NF v2.6.23: Saldo por código foi redesenhado em quatro cards fixos 2x2.",
     "800, 100, 850 e Garantia ficam sempre visíveis no Resumo, cada um com CB5, TV5 e TOTAL.",
+    "As métricas dos cards usam uma linha compacta para evitar recorte vertical em notebook, janela maximizada e DPI alto.",
     "O novo bloco não depende de rolagem nem da altura de linhas da grade para exibir os quatro códigos.",
     "A altura do bloco se adapta aos perfis Tight, Compact e Comfortable.",
     "As correções anteriores de Conferência automática, Atividade operacional e as proteções do TabControl foram preservadas.",
