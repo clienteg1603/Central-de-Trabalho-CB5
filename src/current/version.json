@@ -1,6 +1,6 @@
 {
   "version": "0.21.59",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Controle de NF v2.6.23: Saldo por código foi redesenhado em quatro cards fixos 2x2.",
     "800, 100, 850 e Garantia ficam sempre visíveis no Resumo, cada um com CB5, TV5 e TOTAL.",
