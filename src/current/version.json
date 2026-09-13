@@ -1,6 +1,6 @@
 {
   "version": "0.21.57",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Revisão visual pós-GERAL 2: corrige o recorte da área Conferência automática no Resumo do Controle de NF, inclusive com a janela maximizada e em DPI alto.",
     "Controle de NF v2.6.20: as seis linhas da Conferência automática passam a ter RowStyles percentuais explícitos, impedindo que Pendências, Exportação Excel ou Situação geral fiquem fora do GroupBox.",
