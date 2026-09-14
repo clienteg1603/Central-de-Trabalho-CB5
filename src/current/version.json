@@ -1,13 +1,12 @@
 {
-  "version": "0.21.65",
-  "buildRevision": 5,
+  "version": "0.21.66",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Central v0.21.65: corrige a geometria da interface ao restaurar a janela depois de ela ficar minimizada na barra de tarefas.",
-    "Enquanto a Central está minimizada, o motor responsivo não recalcula mais a interface usando a área cliente transitória do Windows.",
-    "Ao restaurar a janela, a Central refaz a árvore de layout imediatamente e novamente após a área cliente estabilizar, reposicionando sidebar, conteúdo principal e módulo hospedado sem exigir maximizar e restaurar manualmente.",
-    "A correção também reaplica o layout ao reativar a janela por clique na barra de tarefas ou Alt+Tab, mantendo o comportamento normal de maximizar, restaurar e redimensionar.",
-    "Nenhuma regra funcional dos módulos ou dados do usuário foi alterada.",
-    "Central v0.21.65, Gerenciador v3.7.20, Central de Manutenção v0.6.17, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
+    "Central v0.21.66: elimina o quadro intermediário deformado que ainda podia aparecer por um instante ao restaurar a Central depois de minimizá-la.",
+    "Enquanto a janela permanece minimizada, a árvore de layout fica suspensa e o motor responsivo continua impedido de usar o tamanho transitório informado pelo Windows.",
+    "Ao restaurar, a Central observa o tamanho da área cliente em ciclos curtos e só retoma o layout depois que esse tamanho permanece estável, em vez de redesenhar imediatamente e corrigir novamente depois.",
+    "Sidebar, conteúdo principal e módulo hospedado são recalculados juntos somente após a estabilização, evitando o flash visual sem alterar o funcionamento dos módulos.",
+    "Central v0.21.66, Gerenciador v3.7.20, Central de Manutenção v0.6.17, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
