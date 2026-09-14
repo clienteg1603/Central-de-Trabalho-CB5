@@ -1,6 +1,6 @@
 {
   "version": "0.21.69",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Central v0.21.69 — restauração da janela, Etapa 3 direcionada ao Gerenciador e à Central de Manutenção.",
     "O Controle de NF de Entrada mantém exatamente o caminho da v0.21.68, pois esse módulo já ficou estável ao minimizar e restaurar.",
