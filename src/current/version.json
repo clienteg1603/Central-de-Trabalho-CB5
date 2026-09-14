@@ -1,15 +1,13 @@
 {
-  "version": "0.21.62",
-  "buildRevision": 3,
+  "version": "0.21.63",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Gerenciador v3.7.19: corrige a tela de Componentes que podia permanecer em 'Carregando componentes...' sem preencher saldos, histórico e operações ao entrar na área.",
-    "O histórico agora é recarregado explicitamente ao abrir Componentes e ao alternar entre Saldos, Histórico e Uniões processadas.",
-    "Foi acrescentada recuperação automática não destrutiva: ao iniciar, o Gerenciador procura em locais antigos conhecidos uma base de componentes objetivamente mais rica em movimentos/operações e a recupera sem apagar a base atual sem antes criar uma cópia de segurança.",
-    "A área Componentes ganhou o botão Recuperar dados, que executa uma varredura profunda em AppData, Documentos, Downloads, pastas antigas do programa, temporários e backups para tentar reencontrar componentes, lançamentos e movimentações anteriores de CB5 e TV5.",
-    "A recuperação escolhe a cópia com maior histórico real e preserva registros únicos da base atual durante a união.",
-    "Componentes.Core v1.4.0 passa a manter snapshots automáticos persistentes em Backups-Automaticos antes das gravações da base oficial, conservando as 40 cópias mais recentes para evitar nova perda silenciosa.",
-    "Nenhum histórico é inventado a partir de planilhas ou exemplos: somente arquivos de dados realmente encontrados no computador são usados na recuperação.",
-    "Central v0.21.62, Gerenciador v3.7.19, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
+    "Gerenciador v3.7.20: corrige a troca de produto na área Componentes.",
+    "Ao alternar entre CB5 e TV5, Saldos, Histórico e Uniões processadas agora são recarregados imediatamente para o produto selecionado.",
+    "O histórico do CB5 não permanece mais visível ao mudar para TV5, e o mesmo vale no sentido inverso.",
+    "O botão Recuperar dados continua disponível apenas para recuperação de arquivos antigos; ele não é mais necessário para atualizar a visualização ao trocar de produto.",
+    "A recuperação e os snapshots automáticos introduzidos na v0.21.62 permanecem preservados.",
+    "Central v0.21.63, Gerenciador v3.7.20, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
