@@ -1,6 +1,6 @@
 {
   "version": "0.21.62",
-  "buildRevision": 2,
+  "buildRevision": 3,
   "releaseNotes": [
     "Gerenciador v3.7.19: corrige a tela de Componentes que podia permanecer em 'Carregando componentes...' sem preencher saldos, histórico e operações ao entrar na área.",
     "O histórico agora é recarregado explicitamente ao abrir Componentes e ao alternar entre Saldos, Histórico e Uniões processadas.",
