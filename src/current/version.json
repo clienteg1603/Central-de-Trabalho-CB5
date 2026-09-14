@@ -1,13 +1,12 @@
 {
-  "version": "0.21.63",
-  "buildRevision": 2,
+  "version": "0.21.64",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Gerenciador v3.7.20: corrige a troca de produto na área Componentes.",
-    "Ao alternar entre CB5 e TV5, Saldos, Histórico e Uniões processadas agora são recarregados imediatamente para o produto selecionado.",
-    "O histórico do CB5 não permanece mais visível ao mudar para TV5, e o mesmo vale no sentido inverso.",
-    "O botão Recuperar dados continua disponível apenas para recuperação de arquivos antigos; ele não é mais necessário para atualizar a visualização ao trocar de produto.",
-    "A recuperação e os snapshots automáticos introduzidos na v0.21.62 permanecem preservados.",
-    "Central v0.21.63, Gerenciador v3.7.20, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
+    "Central de Manutenção v0.6.17: corrige os quatro cartões superiores que permaneciam em zero mesmo quando o Histórico já possuía passagens registradas.",
+    "A causa era o fast-start hospedado: a primeira tela carregava somente o Histórico, enquanto os cartões visíveis no topo dependiam do refresh do Dashboard que não era executado.",
+    "Os cartões Séries diferentes, Passagens registradas, Em aberto e Retornos identificados agora usam um refresh leve próprio, diretamente sobre a mesma Store real usada pelo Histórico.",
+    "O resumo é sincronizado ao abrir o módulo, trocar de seção e após operações que disparam o refresh geral, sem exigir entrar no Dashboard e sem remover a otimização de abertura.",
+    "Central v0.21.64, Gerenciador v3.7.20, Central de Manutenção v0.6.17, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
