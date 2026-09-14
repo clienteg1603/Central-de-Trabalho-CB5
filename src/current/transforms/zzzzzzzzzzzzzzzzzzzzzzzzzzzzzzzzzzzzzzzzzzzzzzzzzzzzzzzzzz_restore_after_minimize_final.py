@@ -360,11 +360,15 @@ for marker in (
 for forbidden in (
     'function Suspend-CentralRestoreLayout',
     'function Resume-CentralRestoreLayout',
-    '$script:HostedForm.Bounds = $embeddedContent.ClientRectangle\n            $script:HostedForm.PerformLayout()',
     '$embeddedFolderButton.Left = [Math]::Max(380, $embeddedToolbar.ClientSize.Width - $embeddedFolderButton.Width - 12); Update-CentralAdaptiveLayout',
 ):
     if forbidden in s:
         raise SystemExit('RESTORE AFTER MINIMIZE FINAL regressao ainda presente: ' + forbidden)
+
+# A atribuição manual de Bounds é permitida uma única vez na abertura inicial do
+# módulo; ela não pode reaparecer no callback de SizeChanged.
+if s.count('$script:HostedForm.Bounds = $embeddedContent.ClientRectangle') != 1:
+    raise SystemExit('RESTORE AFTER MINIMIZE FINAL: Bounds manual deve existir somente na abertura inicial do modulo')
 
 p.write_text(s, encoding='utf-8')
 print('RESTORE AFTER MINIMIZE FINAL: OK - etapa 1 remove suspensão global, elimina callbacks imediatos do módulo e finaliza o layout somente após o viewport estabilizar.')
