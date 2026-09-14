@@ -1,6 +1,6 @@
 {
   "version": "0.21.63",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Gerenciador v3.7.20: corrige a troca de produto na área Componentes.",
     "Ao alternar entre CB5 e TV5, Saldos, Histórico e Uniões processadas agora são recarregados imediatamente para o produto selecionado.",
