@@ -1,6 +1,6 @@
 {
   "version": "0.21.65",
-  "buildRevision": 3,
+  "buildRevision": 4,
   "releaseNotes": [
     "Central v0.21.65: corrige a geometria da interface ao restaurar a janela depois de ela ficar minimizada na barra de tarefas.",
     "Enquanto a Central está minimizada, o motor responsivo não recalcula mais a interface usando a área cliente transitória do Windows.",
