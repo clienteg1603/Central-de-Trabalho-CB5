@@ -1,6 +1,6 @@
 {
   "version": "0.21.67",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Central v0.21.67 — restauração da janela, Etapa 1: corrige a regressão introduzida na v0.21.66 e volta a deixar a Visão geral livre do bloqueio global de layout.",
     "A revisão identificou dois callbacks antigos exclusivos da tela com módulo aberto que escapavam do debounce: o host integrado recalculava o layout adaptativo imediatamente e o conteúdo hospedado reescrevia Bounds/PerformLayout a cada SizeChanged transitório.",
