@@ -2,21 +2,17 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "stable",
-  "Version": "0.20.2",
+  "Version": "0.22.0",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.20.2.zip",
-  "PackageSha256": "51A3E82A84940C4BCAF3735F0D413398F8AE3BA99F5DF92B17B9BDA56290BEC9",
-  "PackageSize": 132811,
-  "PackageRoot": "Central-de-Trabalho-v0.20.2",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.22.0.zip",
+  "PackageSha256": "6BCCF9FF46EB2E916AEC02E39EAF0687248C86DA3EA60C162B8097C6D218EAD8",
+  "PackageSize": 365949,
+  "PackageRoot": "Central-de-Trabalho-v0.22.0",
   "ReleaseNotes": [
-    "Versão v0.20.2 promovida ao canal Estável após aprovação explícita e validação em uso real no Windows.",
-    "Central de Trabalho.exe e Central de Trabalho Updater.exe usam hosts nativos gráficos com engine PowerShell em processo, sem lançadores externos VBS, BAT, CMD, powershell.exe ou pwsh.exe no runtime distribuído.",
-    "O Atualizador nativo foi validado em ciclo real de atualização, incluindo download, validação, fechamento da Central, substituição de arquivos ocultos e reabertura automática.",
-    "A recuperação por backup foi fortalecida para arquivos ocultos e para cenários em que uma tentativa de atualização já tenha removido arquivos essenciais.",
-    "A distribuição está limpa e utiliza somente os 10 arquivos operacionais necessários mais o manifesto interno, com Central de Trabalho.exe como ponto de entrada principal.",
-    "Todo o runtime atual vem do fonte versionado do projeto; o build não depende mais de reaproveitar arquivos de versões Estáveis antigas.",
-    "Os executáveis possuem identidade Windows padronizada, ícone CT azul e branco, metadados de produto e autoteste interno silencioso usado pelo pipeline.",
-    "Antes de publicar novas versões, o pipeline executa smoke test nativo no Windows, auditoria de árvore, regressão funcional, parser dos scripts, validação do ZIP, SHA-256 e manifesto.",
-    "Gerenciador de Planilhas permanece em v3.7.3 e Central de Manutenção permanece em v0.6.1; as regras operacionais e os dados do usuário foram preservados."
+    "Central v0.22.0 promovida ao canal Estável após aprovação explícita e validação em uso real da base v0.21.69.",
+    "Corrigida a restauração da Central após minimizar: Visão geral, Gerenciador, Central de Manutenção e Controle de NF retornam sem a deformação temporária de layout observada durante os testes.",
+    "Gerenciador e Central de Manutenção preservam a geometria durante a restauração e liberam a pintura somente após a janela estabilizar; o caminho já estável do Controle de NF foi mantido.",
+    "A promoção não adiciona nova lógica funcional em relação à v0.21.69 aprovada; consolida a mesma base validada como linha Estável v0.22.0.",
+    "Central v0.22.0, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.25 e Atualizador v1.0.1."
   ]
 }
