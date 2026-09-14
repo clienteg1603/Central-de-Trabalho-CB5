@@ -1,12 +1,13 @@
 {
-  "version": "0.21.66",
+  "version": "0.21.67",
   "buildRevision": 1,
   "releaseNotes": [
-    "Central v0.21.66: elimina o quadro intermediário deformado que ainda podia aparecer por um instante ao restaurar a Central depois de minimizá-la.",
-    "Enquanto a janela permanece minimizada, a árvore de layout fica suspensa e o motor responsivo continua impedido de usar o tamanho transitório informado pelo Windows.",
-    "Ao restaurar, a Central observa o tamanho da área cliente em ciclos curtos e só retoma o layout depois que esse tamanho permanece estável, em vez de redesenhar imediatamente e corrigir novamente depois.",
-    "Sidebar, conteúdo principal e módulo hospedado são recalculados juntos somente após a estabilização, evitando o flash visual sem alterar o funcionamento dos módulos.",
-    "Central v0.21.66, Gerenciador v3.7.20, Central de Manutenção v0.6.17, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
+    "Central v0.21.67 — restauração da janela, Etapa 1: corrige a regressão introduzida na v0.21.66 e volta a deixar a Visão geral livre do bloqueio global de layout.",
+    "A revisão identificou dois callbacks antigos exclusivos da tela com módulo aberto que escapavam do debounce: o host integrado recalculava o layout adaptativo imediatamente e o conteúdo hospedado reescrevia Bounds/PerformLayout a cada SizeChanged transitório.",
+    "Esses recálculos imediatos foram removidos. O Form hospedado continua em Dock=Fill e o ajuste do módulo passa por uma rotina coordenada e atrasada, sem disputar geometria com o WinForms durante a animação de restauração.",
+    "Ao minimizar, somente a área interna do módulo aberto fica temporariamente oculta; a casca da Central e a Visão geral não são suspensas. Ao voltar, a Central espera duas medições estáveis do ClientSize e só então executa a passagem final da casca e do módulo.",
+    "Foram adicionados contratos no próprio transform para impedir o retorno da suspensão global da v0.21.66 e dos dois caminhos de recálculo imediato que causavam a deformação visual.",
+    "Central v0.21.67, Gerenciador v3.7.20, Central de Manutenção v0.6.17, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
