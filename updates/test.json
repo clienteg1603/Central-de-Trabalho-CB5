@@ -2,19 +2,17 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.21.69",
+  "Version": "0.22.0",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.21.69.zip",
-  "PackageSha256": "60E6291C1CE6A30A00372EC04ABAC5907FC874F4A99C7EC85A3B0D25014D2D2C",
-  "PackageSize": 365978,
-  "PackageRoot": "Central-de-Trabalho-v0.21.69",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.22.0.zip",
+  "PackageSha256": "6BCCF9FF46EB2E916AEC02E39EAF0687248C86DA3EA60C162B8097C6D218EAD8",
+  "PackageSize": 365949,
+  "PackageRoot": "Central-de-Trabalho-v0.22.0",
   "ReleaseNotes": [
-    "Central v0.21.69 — restauração da janela, Etapa 3 direcionada ao Gerenciador e à Central de Manutenção.",
-    "O Controle de NF de Entrada mantém exatamente o caminho da v0.21.68, pois esse módulo já ficou estável ao minimizar e restaurar.",
-    "Gerenciador e Manutenção deixam de ser escondidos internamente durante a restauração; em vez disso, a Central bloqueia temporariamente apenas a pintura desses módulos enquanto Dock e ClientSize continuam acompanhando o tamanho real da janela.",
-    "Quando o tamanho estabiliza, a Central libera o gate interno, executa a passagem responsiva usando a geometria final e só então reativa a pintura em um único quadro.",
-    "A mudança ataca a diferença observada entre o NF, que já funcionava, e os dois módulos mais pesados, que ainda podiam reaparecer com geometria intermediária ou antiga.",
-    "Central v0.21.69, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.25 e Atualizador v1.0.1.",
-    "A Estável permanece v0.20.2; publicação somente no canal Teste."
+    "Central v0.22.0 — promoção para o canal Estável da base validada em uso real na v0.21.69.",
+    "Corrigida a restauração da Central após minimizar: Visão geral, Gerenciador, Central de Manutenção e Controle de NF retornam sem a deformação temporária de layout observada nas versões de teste anteriores.",
+    "Gerenciador e Manutenção preservam a geometria viva durante a restauração e têm a pintura liberada somente após o tamanho final da janela estar estabilizado; o caminho já estável do Controle de NF foi preservado.",
+    "Nenhuma nova alteração funcional foi adicionada na promoção: a v0.22.0 mantém a mesma lógica aprovada da v0.21.69, apenas consolidada como versão Estável.",
+    "Central v0.22.0, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.25 e Atualizador v1.0.1."
   ]
 }
