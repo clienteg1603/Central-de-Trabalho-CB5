@@ -1,14 +1,18 @@
 {
-  "version": "0.21.59",
-  "buildRevision": 3,
+  "version": "0.21.60",
+  "buildRevision": 1,
   "releaseNotes": [
-    "Controle de NF v2.6.23: Saldo por código foi redesenhado em quatro cards fixos 2x2.",
-    "800, 100, 850 e Garantia ficam sempre visíveis no Resumo, cada um com CB5, TV5 e TOTAL.",
-    "As métricas dos cards usam uma linha compacta para evitar recorte vertical em notebook, janela maximizada e DPI alto.",
-    "O novo bloco não depende de rolagem nem da altura de linhas da grade para exibir os quatro códigos.",
-    "A altura do bloco se adapta aos perfis Tight, Compact e Comfortable.",
-    "As correções anteriores de Conferência automática, Atividade operacional e as proteções do TabControl foram preservadas.",
-    "Central v0.21.59, Gerenciador v3.7.17, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.23 e Atualizador v1.0.1.",
+    "Controle de NF v2.6.24: revisão responsiva do cabeçalho, navegação e Resumo a partir do uso real em tela menor.",
+    "IMPORTAR EXCEL e EXCEL OFICIAL recebem largura, margem, padding e fonte responsivos para manter o texto inteiro dentro dos botões em modo hospedado e DPI alto.",
+    "O botão visual de COMPUTADOR DE BORDO CB5 passa a usar o rótulo compacto COMPUTADOR CB5 com contador, centralizado e sem reticências; o nome completo continua preservado na aba interna.",
+    "O Resumo deixa de comprimir Saldo por produto e Conferência automática por percentuais insuficientes: as faixas passam a ter alturas mínimas reais para exibir todas as linhas.",
+    "Saldo por produto mantém as três linhas de produto/total visíveis e sem rolagem interna.",
+    "Conferência automática mantém as seis verificações completas, sem elipse vertical.",
+    "Em telas menores, quando a soma mínima das áreas não cabe, a rolagem ocorre apenas no Resumo como página; as informações internas não desaparecem nem são cortadas.",
+    "Os quatro cards 800, 100, 850 e Garantia permanecem fixos no bloco Saldo por código e continuam sem depender de DataGridView para a exibição.",
+    "As proteções permanentes do TabControl do NF continuam intactas, sem SizeChanged, HandleCreated, OwnerDrawFixed, ItemSize ou Update-NFMainTabStripLayout.",
+    "Nenhuma regra operacional de NF, saldos, códigos, movimentações, importação, exportação, backup ou histórico foi alterada.",
+    "Central v0.21.60, Gerenciador v3.7.17, Central de Manutenção v0.6.16, Controle de NF de Entrada v2.6.24 e Atualizador v1.0.1.",
     "A Estável permanece v0.20.2; publicação somente no canal Teste."
   ]
 }
