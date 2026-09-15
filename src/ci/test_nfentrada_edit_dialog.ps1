@@ -16,6 +16,8 @@ if (-not (Test-Path -LiteralPath $modulePath -PathType Leaf)) {
 $tempRoot = if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) { [IO.Path]::GetTempPath() } else { $env:RUNNER_TEMP }
 $dataRoot = Join-Path $tempRoot ('nf-edit-dialog-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $dataRoot | Out-Null
+$previousRuntimeTest = $env:CENTRAL_THEME_RUNTIME_TEST
+$previousDataRoot = $env:CENTRAL_THEME_TEST_DATA_ROOT
 $env:CENTRAL_THEME_RUNTIME_TEST = '1'
 $env:CENTRAL_THEME_TEST_DATA_ROOT = $dataRoot
 
@@ -127,4 +129,6 @@ finally {
     try { if ($null -ne $hostedControl -and -not $hostedControl.IsDisposed) { $hostedControl.Dispose() } } catch {}
     try { if ($null -ne $moduleInfo) { Remove-Module -ModuleInfo $moduleInfo -Force -ErrorAction SilentlyContinue } } catch {}
     try { if (Test-Path -LiteralPath $dataRoot) { Remove-Item -LiteralPath $dataRoot -Recurse -Force } } catch {}
+    $env:CENTRAL_THEME_RUNTIME_TEST = $previousRuntimeTest
+    $env:CENTRAL_THEME_TEST_DATA_ROOT = $previousDataRoot
 }
