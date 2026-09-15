@@ -1,11 +1,13 @@
 {
-  "version": "0.22.0",
+  "version": "0.22.1",
   "buildRevision": 1,
   "releaseNotes": [
-    "Central v0.22.0 — promoção para o canal Estável da base validada em uso real na v0.21.69.",
-    "Corrigida a restauração da Central após minimizar: Visão geral, Gerenciador, Central de Manutenção e Controle de NF retornam sem a deformação temporária de layout observada nas versões de teste anteriores.",
-    "Gerenciador e Manutenção preservam a geometria viva durante a restauração e têm a pintura liberada somente após o tamanho final da janela estar estabilizado; o caminho já estável do Controle de NF foi preservado.",
-    "Nenhuma nova alteração funcional foi adicionada na promoção: a v0.22.0 mantém a mesma lógica aprovada da v0.21.69, apenas consolidada como versão Estável.",
-    "Central v0.22.0, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.25 e Atualizador v1.0.1."
+    "Central v0.22.1 — hotfix do Controle de NF de Entrada para restaurar o funcionamento do botão EDITAR.",
+    "Corrigido o erro de ForeColor nulo que podia encerrar a abertura da janela Editar registro no Controle de NF v2.6.25.",
+    "A causa era um problema de escopo do GetNewClosure: Store e paleta do módulo eram acessados pelo escopo de script errado durante a validação do formulário. O diálogo agora captura essas dependências locais corretamente.",
+    "O pipeline Windows passa a abrir a janela real de EDITAR com um registro de teste e só aprova o pacote se o formulário abrir sem exceção.",
+    "A lógica já validada de minimizar/restaurar da Central v0.22.0 foi preservada sem alterações.",
+    "Central v0.22.1, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.26 e Atualizador v1.0.1.",
+    "Publicação inicial no canal Teste para validação do hotfix antes da substituição da Estável v0.22.0."
   ]
 }
