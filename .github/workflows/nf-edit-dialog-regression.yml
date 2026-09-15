@@ -1,0 +1,30 @@
+name: NF edit dialog regression
+
+on:
+  push:
+    paths:
+      - 'src/ci/test_nfentrada_edit_dialog.ps1'
+      - '.github/workflows/nf-edit-dialog-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce-edit-dialog:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Expand current stable v0.22.0
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $PWD 'updates\packages\Central-de-Trabalho-v0.22.0.zip'
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Pacote Estável v0.22.0 ausente." }
+          $root = Join-Path $env:RUNNER_TEMP 'nf-edit-current-stable'
+          if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }
+          Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
+          $install = Join-Path $root 'Central-de-Trabalho-v0.22.0'
+          & '.\src\ci\test_nfentrada_edit_dialog.ps1' -GeneratedRoot $install
