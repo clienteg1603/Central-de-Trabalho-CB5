@@ -3,10 +3,8 @@ name: NF output dialog regression
 on:
   push:
     paths:
-      - 'src/current/version.json'
-      - 'src/current/transforms/**_nf_output_display_dialog_v0222.py'
-      - 'src/ci/test_nfentrada_output_dialog.ps1'
-      - '.github/workflows/nf-output-dialog-regression.yml'
+      - 'updates/test.json'
+      - 'updates/packages/Central-de-Trabalho-v*.zip'
   workflow_dispatch:
 
 permissions:
@@ -22,26 +20,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply current transforms
+      - name: Validate exact published Test package
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Get-ChildItem -LiteralPath '.\src\current\transforms' -Filter '*.py' |
-            Sort-Object Name |
-            ForEach-Object {
-              Write-Host "Aplicando $($_.Name)"
-              python $_.FullName
-              if ($LASTEXITCODE -ne 0) { throw "Transformação falhou: $($_.Name)" }
-            }
+          $channel = Get-Content -LiteralPath '.\updates\test.json' -Raw | ConvertFrom-Json
+          $version = [string]$channel.Version
+          if ([string]::IsNullOrWhiteSpace($version)) { throw 'Versão Teste ausente.' }
+          $zip = Join-Path $PWD ("updates\packages\Central-de-Trabalho-v" + $version + ".zip")
+          if (-not (Test-Path -LiteralPath $zip -PathType Leaf)) { throw "Pacote Teste v$version ausente." }
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToUpperInvariant()
+          if ($hash -ne [string]$channel.PackageSha256) { throw "SHA divergente no pacote Teste v$version." }
+          if (([IO.FileInfo]$zip).Length -ne [int64]$channel.PackageSize) { throw "Tamanho divergente no pacote Teste v$version." }
 
-      - name: Parse transformed PowerShell
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          & '.\src\ci\parse_powershell.ps1' -Root '.\src\generated'
+          $root = Join-Path $env:RUNNER_TEMP ('nf-output-published-' + [Guid]::NewGuid().ToString('N'))
+          Expand-Archive -LiteralPath $zip -DestinationPath $root -Force
+          $install = Join-Path $root ([string]$channel.PackageRoot)
+          if (-not (Test-Path -LiteralPath $install -PathType Container)) { throw "Raiz do pacote não encontrada: $install" }
 
-      - name: Open real output dialog and register 49 pieces
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          & '.\src\ci\test_nfentrada_output_dialog.ps1' -GeneratedRoot '.\src\generated'
+          & '.\src\ci\parse_powershell.ps1' -Root $install
+          & '.\src\ci\test_nfentrada_output_dialog.ps1' -GeneratedRoot $install
+          Write-Host "NF OUTPUT PACKAGE: OK — pacote Teste v$version validado exatamente como publicado."
