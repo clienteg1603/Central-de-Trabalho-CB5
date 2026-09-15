@@ -2,19 +2,20 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "test",
-  "Version": "0.22.1",
+  "Version": "0.22.2",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.22.1.zip",
-  "PackageSha256": "DC37BC9ADD389956214A25A6F596BEF3901FB03CDF4CE254E8EFD4BF8AA0DEB9",
-  "PackageSize": 366067,
-  "PackageRoot": "Central-de-Trabalho-v0.22.1",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.22.2.zip",
+  "PackageSha256": "748BF482345D7A14C1D8F602545084D64B788B454F775C0E2385EECADA72E438",
+  "PackageSize": 366915,
+  "PackageRoot": "Central-de-Trabalho-v0.22.2",
   "ReleaseNotes": [
-    "Central v0.22.1 — hotfix do Controle de NF de Entrada para restaurar o funcionamento do botão EDITAR.",
-    "Corrigido o erro de ForeColor nulo que podia encerrar a abertura da janela Editar registro no Controle de NF v2.6.25.",
-    "A causa era um problema de escopo do GetNewClosure: Store e paleta do módulo eram acessados pelo escopo de script errado durante a validação do formulário. O diálogo agora captura essas dependências locais corretamente.",
-    "O pipeline Windows passa a abrir a janela real de EDITAR com um registro de teste e só aprova o pacote se o formulário abrir sem exceção.",
-    "A lógica já validada de minimizar/restaurar da Central v0.22.0 foi preservada sem alterações.",
-    "Central v0.22.1, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.26 e Atualizador v1.0.1.",
-    "Publicação inicial no canal Teste para validação do hotfix antes da substituição da Estável v0.22.0."
+    "Central v0.22.2 — corrige o fluxo de SAÍDA do Controle de NF e reorganiza o modal Registrar saída.",
+    "Ao registrar uma saída, a coluna NF DE SAÍDA / MOVIMENTAÇÕES passa a gravar e exibir o padrão completo com quantidade e referência, por exemplo: (49 PÇS NF 2327), em vez de mostrar somente 2327.",
+    "Registros feitos nas versões 0.22.0/0.22.1 que ficaram com a referência crua são apresentados corretamente usando a movimentação estruturada já salva, sem exigir alteração destrutiva da base existente.",
+    "A exportação para o Excel oficial usa o mesmo texto formatado da grade, mantendo a informação de quantidade de peças e NF de saída.",
+    "A janela Registrar saída foi realinhada: margens consistentes, campos de quantidade e referência alinhados, valores de saldo centralizados na mesma grade visual, botões nivelados e controles coerentes com o tema Técnico industrial.",
+    "A correção anterior do botão EDITAR e a lógica validada de minimizar/restaurar permanecem preservadas.",
+    "Central v0.22.2, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.27 e Atualizador v1.0.1.",
+    "Publicação inicial no canal Teste; promoção para Estável somente após as validações reais do modal de saída e do pacote Windows."
   ]
 }
