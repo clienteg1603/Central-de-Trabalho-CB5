@@ -78,14 +78,17 @@ try {
 
         if (-not $editButton.Enabled) { throw 'EDITAR não ficou habilitado para o registro de teste.' }
 
-        $script:NFEditDialogClosedByTest = $false
+        # GetNewClosure cria seu próprio escopo de script. Para o próprio teste
+        # não cair na mesma armadilha do bug que estamos auditando, usamos um
+        # objeto local compartilhado, preservado por referência pelo closure.
+        $dialogState = [pscustomobject]@{ ClosedByTest = $false }
         $timer = New-Object Windows.Forms.Timer
         $timer.Interval = 350
         $timer.Add_Tick({
             foreach ($openForm in @([Windows.Forms.Application]::OpenForms)) {
                 if ($null -eq $openForm -or $openForm.IsDisposed) { continue }
                 if ([string]$openForm.Text -like 'Editar registro*') {
-                    $script:NFEditDialogClosedByTest = $true
+                    $dialogState.ClosedByTest = $true
                     $openForm.DialogResult = [Windows.Forms.DialogResult]::Cancel
                     $openForm.Close()
                     break
@@ -115,7 +118,7 @@ try {
             $timer.Dispose()
         }
 
-        if (-not $script:NFEditDialogClosedByTest) {
+        if (-not [bool]$dialogState.ClosedByTest) {
             throw 'A janela real de EDITAR não chegou a abrir para o registro de teste.'
         }
         return $true
