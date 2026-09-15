@@ -93,7 +93,20 @@ try {
 
         try {
             $timer.Start()
-            Edit-NFRecordFromUI
+            try {
+                Edit-NFRecordFromUI
+            }
+            catch {
+                $details = @(
+                    'NF EDIT DIALOG EXCEPTION',
+                    ('Type: ' + $_.Exception.GetType().FullName),
+                    ('Message: ' + $_.Exception.Message),
+                    ('Position: ' + [string]$_.InvocationInfo.PositionMessage),
+                    ('ScriptStackTrace: ' + [string]$_.ScriptStackTrace),
+                    ('ErrorRecord: ' + [string]$_)
+                ) -join "`r`n"
+                throw $details
+            }
         }
         finally {
             $timer.Stop()
