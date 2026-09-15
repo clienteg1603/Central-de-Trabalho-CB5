@@ -225,6 +225,7 @@ jobs:
           $env:CENTRAL_THEME_RUNTIME_TEST = "1"
           $env:CENTRAL_THEME_TEST_DATA_ROOT = $dataRoot
           & ".\src\ci\test_hosted_theme_runtime.ps1" -GeneratedRoot $installRoot
+          & ".\src\ci\test_nfentrada_edit_dialog.ps1" -GeneratedRoot $installRoot
 
           $hostExe = Join-Path $installRoot "Central de Trabalho.exe"
           $updaterExe = Join-Path $installRoot "Atualizador\Central de Trabalho Updater.exe"
@@ -233,7 +234,7 @@ jobs:
           $args = '--self-test -InstallRoot "' + $installRoot + '"'
           $u = Start-Process $updaterExe -ArgumentList $args -WorkingDirectory (Split-Path -Parent $updaterExe) -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "Smoke do Atualizador falhou: $($u.ExitCode)." }
-          Write-Host "PACOTE WINDOWS REAL: OK — dados, módulos, tema único, Central e Atualizador validados."
+          Write-Host "PACOTE WINDOWS REAL: OK — dados, módulos, tema único, edição real do NF, Central e Atualizador validados."
 
   publish-test-package:
     needs: validate-test-package-windows
@@ -256,7 +257,8 @@ jobs:
           set -euo pipefail
           VERSION="$(python3 -c 'import json; print(json.load(open("src/current/version.json", encoding="utf-8"))["version"])')"
           STABLE_VERSION="$(python3 -c 'import json; print(json.load(open("updates/stable.json", encoding="utf-8"))["Version"])')"
-          test "$STABLE_VERSION" = "0.20.2"
+          test -n "$STABLE_VERSION"
+          test "$STABLE_VERSION" != "$VERSION"
           DIR="$RUNNER_TEMP/central-test-candidate"
           ZIP="$DIR/Central-de-Trabalho-v${VERSION}.zip"
           JSON="$DIR/test.json"
