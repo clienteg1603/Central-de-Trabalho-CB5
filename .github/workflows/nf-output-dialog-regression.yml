@@ -1,0 +1,47 @@
+name: NF output dialog regression
+
+on:
+  push:
+    paths:
+      - 'src/current/version.json'
+      - 'src/current/transforms/**_nf_output_display_dialog_v0222.py'
+      - 'src/ci/test_nfentrada_output_dialog.ps1'
+      - '.github/workflows/nf-output-dialog-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-output-dialog:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply current transforms
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem -LiteralPath '.\src\current\transforms' -Filter '*.py' |
+            Sort-Object Name |
+            ForEach-Object {
+              Write-Host "Aplicando $($_.Name)"
+              python $_.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Transformação falhou: $($_.Name)" }
+            }
+
+      - name: Parse transformed PowerShell
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\ci\parse_powershell.ps1' -Root '.\src\generated'
+
+      - name: Open real output dialog and register 49 pieces
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\src\ci\test_nfentrada_output_dialog.ps1' -GeneratedRoot '.\src\generated'
