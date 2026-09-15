@@ -2,17 +2,18 @@
   "SchemaVersion": 1,
   "AppId": "central-de-trabalho",
   "Channel": "stable",
-  "Version": "0.22.0",
+  "Version": "0.22.1",
   "MinimumUpdaterVersion": "1.0.0",
-  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.22.0.zip",
-  "PackageSha256": "6BCCF9FF46EB2E916AEC02E39EAF0687248C86DA3EA60C162B8097C6D218EAD8",
-  "PackageSize": 365949,
-  "PackageRoot": "Central-de-Trabalho-v0.22.0",
+  "PackageUrl": "https://cdn.jsdelivr.net/gh/clienteg1603/Central-de-Trabalho-CB5@main/updates/packages/Central-de-Trabalho-v0.22.1.zip",
+  "PackageSha256": "DC37BC9ADD389956214A25A6F596BEF3901FB03CDF4CE254E8EFD4BF8AA0DEB9",
+  "PackageSize": 366067,
+  "PackageRoot": "Central-de-Trabalho-v0.22.1",
   "ReleaseNotes": [
-    "Central v0.22.0 promovida ao canal Estável após aprovação explícita e validação em uso real da base v0.21.69.",
-    "Corrigida a restauração da Central após minimizar: Visão geral, Gerenciador, Central de Manutenção e Controle de NF retornam sem a deformação temporária de layout observada durante os testes.",
-    "Gerenciador e Central de Manutenção preservam a geometria durante a restauração e liberam a pintura somente após a janela estabilizar; o caminho já estável do Controle de NF foi mantido.",
-    "A promoção não adiciona nova lógica funcional em relação à v0.21.69 aprovada; consolida a mesma base validada como linha Estável v0.22.0.",
-    "Central v0.22.0, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.25 e Atualizador v1.0.1."
+    "Central v0.22.1 — hotfix Estável do Controle de NF de Entrada para restaurar o funcionamento do botão EDITAR.",
+    "Corrigido o erro de ForeColor nulo que impedia a abertura da janela Editar registro no Controle de NF v2.6.25.",
+    "A causa era um problema de escopo do GetNewClosure: Store e paleta do módulo eram consultados pelo escopo de script criado pelo closure, fazendo a validação perder suas dependências. O diálogo agora captura Store e paleta localmente.",
+    "A correção foi reproduzida e validada no Windows com um teste de interface que seleciona uma NF e abre a janela real de EDITAR; o mesmo fluxo que falhava na v0.22.0 passou sem exceção na v0.22.1.",
+    "A lógica de minimizar/restaurar validada na v0.22.0 foi preservada sem alterações.",
+    "Central v0.22.1, Gerenciador v3.7.21, Central de Manutenção v0.6.18, Controle de NF de Entrada v2.6.26 e Atualizador v1.0.1."
   ]
 }
