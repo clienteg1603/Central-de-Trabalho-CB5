@@ -1,6 +1,6 @@
 {
   "version": "0.22.1",
-  "buildRevision": 1,
+  "buildRevision": 2,
   "releaseNotes": [
     "Central v0.22.1 — hotfix do Controle de NF de Entrada para restaurar o funcionamento do botão EDITAR.",
     "Corrigido o erro de ForeColor nulo que podia encerrar a abertura da janela Editar registro no Controle de NF v2.6.25.",
