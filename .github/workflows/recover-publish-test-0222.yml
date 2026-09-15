@@ -1,0 +1,73 @@
+name: Recover Test v0.22.2 publication
+
+on:
+  push:
+    paths:
+      - '.github/workflows/recover-publish-test-0222.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish-validated-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download candidate already validated on Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: central-test-candidate
+          path: ${{ runner.temp }}/candidate
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 34967883303
+
+      - name: Publish exact validated candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="0.22.2"
+          STABLE_VERSION="$(python3 -c 'import json; print(json.load(open("updates/stable.json", encoding="utf-8"))["Version"])')"
+          test "$STABLE_VERSION" = "0.22.1"
+          ZIP="$RUNNER_TEMP/candidate/Central-de-Trabalho-v${VERSION}.zip"
+          JSON="$RUNNER_TEMP/candidate/test.json"
+          test -s "$ZIP"
+          test -s "$JSON"
+          test "$(python3 -c 'import json; print(json.load(open("'"$JSON"'", encoding="utf-8"))["Version"])')" = "$VERSION"
+
+          mkdir -p updates/packages
+          for package in updates/packages/Central-de-Trabalho-v*.zip; do
+            [ -e "$package" ] || continue
+            name="$(basename "$package")"
+            if [ "$name" != "Central-de-Trabalho-v${STABLE_VERSION}.zip" ] && [ "$name" != "Central-de-Trabalho-v${VERSION}.zip" ]; then
+              rm -f "$package"
+            fi
+          done
+          cp "$ZIP" "updates/packages/Central-de-Trabalho-v${VERSION}.zip"
+          cp "$JSON" updates/test.json
+
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          channel = json.loads(pathlib.Path('updates/test.json').read_text(encoding='utf-8'))
+          package = pathlib.Path('updates/packages') / f"Central-de-Trabalho-v{channel['Version']}.zip"
+          data = package.read_bytes()
+          assert hashlib.sha256(data).hexdigest().upper() == channel['PackageSha256']
+          assert len(data) == channel['PackageSize']
+          stable = json.loads(pathlib.Path('updates/stable.json').read_text(encoding='utf-8'))
+          assert stable['Version'] == '0.22.1'
+          print('RECOVERY PUBLISH: candidato validado e Estável preservada.')
+          PY
+
+          git config user.name "Central de Trabalho Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A updates/packages updates/test.json
+          if git diff --cached --quiet; then
+            echo "v0.22.2 já publicada."
+            exit 0
+          fi
+          git commit -m "Publica Central de Trabalho v0.22.2 no canal Teste"
+          git push
